@@ -1,6 +1,9 @@
 # Local agent tooling and skills — not part of the product
 .agents/
 
+# Local environment overrides (dev credentials live here, never in git)
+.env
+
 # OS junk
 .DS_Store
 Thumbs.db

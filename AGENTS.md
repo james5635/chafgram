@@ -15,6 +15,7 @@ assume public-social-network semantics anywhere in the codebase.
 ```
 backend/    Spring Boot 4 (Java 21) service — Maven wrapper, package io.github.james5635.chafgram
 frontend/   TanStack Start (React 19, Vite, Tailwind v4) app — file-based routing
+compose.yaml  Local dev MySQL 8.0 (dev-only throwaway credentials)
 product.md  Product definition (what/who/why, goals, non-goals)
 design.md   Design system (tokens, components, motion, a11y)
 README.md   Human-facing overview and quick start
@@ -23,17 +24,25 @@ README.md   Human-facing overview and quick start
 
 ## Commands
 
+A `justfile` at the repo root wraps common dev tasks — `just` lists them,
+`just dev` runs backend + frontend (run `just mysql` first for the database), `just check` is the
+pre-commit sanity check. The raw commands below remain the source of truth.
+
 ### Backend (`backend/`)
 
 ```bash
+just mysql                 # start local MySQL 8.0 via compose.yaml, wait for healthy (just db-down to stop)
 ./mvnw spring-boot:run     # run dev server (default port 8080)
 ./mvnw test                # run tests
 ./mvnw package             # build jar (target/)
 ```
 
-- Requires JDK 21. MySQL + Flyway are the configured persistence stack; a datasource is
-  **not yet configured** in `application.properties` — add one (or a profile) before
-  running anything that touches the database. Never commit credentials.
+`just dev` / `just dev-backend` do not start the database — run `just mysql` first.
+
+- Requires JDK 21. Local dev MySQL runs via `compose.yaml`; the datasource in
+  `application.properties` defaults to the compose dev credentials
+  (`chafgram` / `chafgram`, db `chafgram`, overridable via `SPRING_DATASOURCE_*` env
+  vars or a git-ignored `.env`/profile). Never commit real credentials.
 - GraphQL client codegen (DGS) runs on `generate` against
   `src/main/resources/graphql-client/` → `target/generated-sources`, package
   `io.github.james5635.chafgram.codegen`. Generated code is not committed source you hand-edit.

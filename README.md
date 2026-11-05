@@ -40,25 +40,34 @@ open source under MIT. See **[product.md](product.md)** for the full product def
 ## Repository layout
 
 ```
-backend/    Spring Boot service (Maven wrapper)
-frontend/   TanStack Start web app
-product.md  Product definition
-design.md   Design system
-AGENTS.md   Guide for AI agents and contributors
+backend/      Spring Boot service (Maven wrapper)
+frontend/     TanStack Start web app
+compose.yaml  Local dev MySQL 8.0
+product.md    Product definition
+design.md     Design system
+AGENTS.md     Guide for AI agents and contributors
 ```
 
 ## Quick start
 
+A [`justfile`](justfile) wraps the common dev tasks (`just` to list, `just dev` to run
+both apps, `just check` for the pre-commit sanity check). The raw commands:
+
 ### Backend
 
 ```bash
+just mysql          # start local MySQL 8.0 and wait until healthy, or: docker compose up -d --wait mysql
 cd backend
 ./mvnw spring-boot:run
 ```
 
-Requires JDK 21. MySQL must be configured before database-backed features will run —
-set the datasource via environment variables or a local profile (never commit
-credentials). Migrations are applied by Flyway from `db/migration/`.
+Run `just mysql` first if the backend needs the database (it is not auto-started).
+
+Requires JDK 21. The datasource defaults in `application.properties` match the
+`compose.yaml` dev credentials (`chafgram` / `chafgram`, database `chafgram`); override
+with `SPRING_DATASOURCE_*` environment variables or a git-ignored profile for anything
+beyond local dev — never commit credentials. Migrations are applied by Flyway from
+`db/migration/`.
 
 ```bash
 ./mvnw test        # run backend tests

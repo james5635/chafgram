@@ -1,0 +1,38 @@
+# Chafgram — local development services.
+#
+#   docker compose up -d mysql     # or: just db-up
+#   docker compose logs -f mysql   # or: just db-logs
+#   docker compose down            # or: just db-down
+#
+# Dev-only credentials below are throwaway defaults for your local machine.
+# Override any of them with a git-ignored .env file (never commit it):
+#
+#   MYSQL_PORT=3307
+#   MYSQL_DATABASE=chafgram
+#   MYSQL_USER=chafgram
+#   MYSQL_PASSWORD=something-else
+#   MYSQL_ROOT_PASSWORD=something-else-too
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: chafgram-mysql
+    restart: unless-stopped
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-chafgram}
+      MYSQL_USER: ${MYSQL_USER:-chafgram}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-chafgram}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  mysql-data:
