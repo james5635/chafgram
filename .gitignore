@@ -1,0 +1,6 @@
+# Local agent tooling and skills — not part of the product
+.agents/
+
+# OS junk
+.DS_Store
+Thumbs.db
