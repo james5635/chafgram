@@ -1,0 +1,21 @@
+# Backend tasks — run as `just backend::<recipe>`
+
+# Download all backend dependencies (go-offline)
+install:
+    ./mvnw -q dependency:go-offline
+
+# Run the backend dev server (port 8080; requires MySQL — run `just mysql` first)
+dev:
+    ./mvnw spring-boot:run
+
+# Build the backend jar (target/)
+build:
+    ./mvnw package
+
+# Run backend tests (WIPES the dev chafgram schema; restore afterwards with: just seed)
+test:
+    ./mvnw test
+
+# Remove build artifacts (target/)
+clean:
+    ./mvnw clean

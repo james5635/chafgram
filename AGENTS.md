@@ -16,6 +16,10 @@ assume public-social-network semantics anywhere in the codebase.
 backend/    Spring Boot 4 (Java 21) service — Maven wrapper, package io.github.james5635.chafgram
 frontend/   TanStack Start (React 19, Vite, Tailwind v4) app — file-based routing
 compose.yaml  Local dev MySQL 8.0 (dev-only throwaway credentials)
+docs/plans.md    Functional requirements & business rules (FR/BR)
+docs/architecture.md  Architecture (system design)
+docs/roadmap.md    Build order (phases, milestones)
+docs/db-schema.md  Database schema — rationale, tables, indexes, migrations
 product.md  Product definition (what/who/why, goals, non-goals)
 design.md   Design system (tokens, components, motion, a11y)
 README.md   Human-facing overview and quick start
@@ -25,28 +29,57 @@ README.md   Human-facing overview and quick start
 ## Commands
 
 A `justfile` at the repo root wraps common dev tasks — `just` lists them,
-`just dev` runs backend + frontend (run `just mysql` first for the database), `just check` is the
-pre-commit sanity check. The raw commands below remain the source of truth.
+`just dev` runs backend + frontend (run `just mysql` first for the database), `just test` runs the test suites, `just verify` runs just test + just build.
+Per-package recipes live in `backend/justfile` and `frontend/justfile` — `just install`
+is a root alias for `backend::install` + `frontend::install`. The raw commands below remain the source of truth.
 
 ### Backend (`backend/`)
 
 ```bash
-just mysql                 # start local MySQL 8.0 via compose.yaml, wait for healthy (just db-down to stop)
+just mysql                 # start local MySQL 8.0 via compose.yaml, wait for healthy (stop with: docker compose down)
+just seed                  # RESET dev DB: wipe, Flyway-migrate, insert full demo fixtures (admin + members, posts, comments, DMs, notifications, reports, audit log)
 ./mvnw spring-boot:run     # run dev server (default port 8080)
-./mvnw test                # run tests
+./mvnw test                # run tests (wipes the dev chafgram schema)
+just migrate               # apply Flyway migrations only, no data wiped
+just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 ./mvnw package             # build jar (target/)
 ```
 
-`just dev` / `just dev-backend` do not start the database — run `just mysql` first.
+`just dev` / `just backend::dev` / `just frontend::dev` do not start the database — run `just mysql` first.
 
 - Requires JDK 21. Local dev MySQL runs via `compose.yaml`; the datasource in
   `application.properties` defaults to the compose dev credentials
   (`chafgram` / `chafgram`, db `chafgram`, overridable via `SPRING_DATASOURCE_*` env
   vars or a git-ignored `.env`/profile). Never commit real credentials.
+- `./mvnw test` uses the dev MySQL from `compose.yaml` (`just mysql` must be running)
+  and **wipes the dev `chafgram` schema on every run**. Afterwards run `just seed` to
+  restore the dev fixtures. Override the connection with
+  `CHAFGRAM_TEST_DATASOURCE_URL|_USERNAME|_PASSWORD` (it wipes whatever it points at —
+  not for shared databases).
+- Identity module is implemented under `identity/` (entities, repositories, services,
+  REST controllers under `/api/v1`). See `docs/roadmap.md` Phase 1.
+- Passkeys are handled by Spring Security WebAuthn; the `user_entities` and
+  `user_credentials` tables are framework-managed — do not add JPA entities on top of
+  them or alter their DDL. Configure via env `CHAFGRAM_WEBAUTHN_RP_ID` (default
+  `localhost`) and `CHAFGRAM_WEBAUTHN_ALLOWED_ORIGINS` (default `http://localhost:3000`,
+  comma-separated if several).
+- Authentication is session-cookie based; passkey ceremonies are at
+  `/webauthn/register/*` (authenticated) and `/login/webauthn` +
+  `/webauthn/authenticate/options` (unauthenticated). CSRF: double-submit cookie,
+  readable JS header `X-XSRF-TOKEN` (CookieCsrfTokenRepository) — BFF clients must
+  send it on mutating requests.
+- Public endpoints by design: `GET /api/v1/workspace`, `POST /api/v1/bootstrap`
+  (first admin only, no members yet), `POST /api/v1/register` (only when
+  `signup_mode=open`), `POST /api/v1/invites/accept`. Admin-only: member role/status
+  actions, invite create/list/revoke. Method security (`@PreAuthorize`) + service
+  layer checks; suspended members can sign in but cannot write (`MemberAccess`).
 - GraphQL client codegen (DGS) runs on `generate` against
   `src/main/resources/graphql-client/` → `target/generated-sources`, package
   `io.github.james5635.chafgram.codegen`. Generated code is not committed source you hand-edit.
 - Migrations go in `src/main/resources/db/migration/` as `V<n>__snake_case.sql` (Flyway).
+  `V1__init.sql` is the baseline; design rationale, table semantics, and FK rules are
+  documented in `docs/db-schema.md` — update both together. `spring.jpa.hibernate.ddl-auto`
+  is `validate` — Hibernate never creates or updates; Flyway owns the schema.
 - Both `spring-boot-starter-webmvc` and `-webflux` are present; prefer the MVC/servlet path
   unless a reactive endpoint is explicitly needed.
 

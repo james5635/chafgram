@@ -1,0 +1,21 @@
+# Frontend tasks — run as `just frontend::<recipe>`
+
+# Install frontend dependencies from the lockfile
+install:
+    npm ci
+
+# Start the frontend dev server (port 3000)
+dev:
+    npm run dev
+
+# Build the frontend production bundle
+build:
+    npm run build
+
+# Run frontend tests (no test runner configured yet — no-op until one is added)
+test:
+    npm run test --if-present
+
+# Remove build artifacts (.output, dist)
+clean:
+    rm -rf .output dist

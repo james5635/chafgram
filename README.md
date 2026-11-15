@@ -43,6 +43,10 @@ open source under MIT. See **[product.md](product.md)** for the full product def
 backend/      Spring Boot service (Maven wrapper)
 frontend/     TanStack Start web app
 compose.yaml  Local dev MySQL 8.0
+docs/plans.md    Functional requirements & business rules
+docs/architecture.md  Architecture (system design)
+docs/roadmap.md    Build order (phases, milestones)
+docs/db-schema.md  Database schema (design rationale + V1 baseline)
 product.md    Product definition
 design.md     Design system
 AGENTS.md     Guide for AI agents and contributors
@@ -50,8 +54,11 @@ AGENTS.md     Guide for AI agents and contributors
 
 ## Quick start
 
-A [`justfile`](justfile) wraps the common dev tasks (`just` to list, `just dev` to run
-both apps, `just check` for the pre-commit sanity check). The raw commands:
+A [`justfile`](justfile) wraps the common dev tasks (`just` to list, `just install` to
+fetch backend and frontend dependencies, `just dev` to run both apps, `just test` for
+the test suite, `just verify` for tests + build).
+Per-package recipes live in `backend/justfile` and `frontend/justfile` (e.g. `just install`
+runs `backend::install` and `frontend::install`). The raw commands:
 
 ### Backend
 
@@ -63,15 +70,35 @@ cd backend
 
 Run `just mysql` first if the backend needs the database (it is not auto-started).
 
+```bash
+./mvnw test        # requires `just mysql` — WIPES the dev `chafgram` schema; restore with `just seed`
+just seed           # reset dev DB: wipe, Flyway-migrate, insert full fixtures
+just migrate        # apply Flyway migrations only (data untouched)
+just unseed         # empty dev DB: wipe, Flyway-migrate, no fixtures
+```
+
+`just seed` resets the dev database to a fully populated demo workspace:
+users `admin` (admin) and `maya` / `tao` / `lena` (members) — all with the dev password
+`chafgram-dev-password` — plus a reusable demo invite (`/join?token=demo-invite-token`),
+a follows graph, posts (note/photo/video and one moderator-tombstoned post), comments
+(with a reply), reactions, saved posts, a block, 2 direct chats + a group chat with
+messages (text + one image), all notification types, one open and one actioned report,
+audit-log entries and an email-verification token row. Media rows reference fake
+`demo/...` keys — no blobs exist until real uploads happen. Dev fixtures only.
+
+The API base is `/api/v1` (see `docs/architecture.md`). Public endpoints by design:
+`GET /api/v1/workspace`, `POST /api/v1/bootstrap` (first member only), and
+`POST /api/v1/invites/accept`. Everything else requires an authenticated session
+(passkey or password); admin actions require `ROLE_ADMIN`. Example — see the OpenAPI
+UI at `http://localhost:8080/swagger-ui.html` after signing in.
+
 Requires JDK 21. The datasource defaults in `application.properties` match the
 `compose.yaml` dev credentials (`chafgram` / `chafgram`, database `chafgram`); override
 with `SPRING_DATASOURCE_*` environment variables or a git-ignored profile for anything
 beyond local dev — never commit credentials. Migrations are applied by Flyway from
 `db/migration/`.
-
-```bash
-./mvnw test        # run backend tests
-```
+`CHAFGRAM_WEBAUTHN_RP_ID` and `CHAFGRAM_WEBAUTHN_ALLOWED_ORIGINS` configure the WebAuthn
+relying party (defaults: `localhost`, `http://localhost:3000`).
 
 ### Frontend
 
@@ -90,6 +117,13 @@ npm run preview    # serve the production build
 
 - **[product.md](product.md)** — what Chafgram is, who it's for, goals/non-goals, open
   questions
+- **[docs/plans.md](docs/plans.md)** — functional requirements & business rules (FR/BR,
+  MoSCoW-prioritized, roles: member/moderator/admin)
+- **[docs/architecture.md](docs/architecture.md)** — architecture: system topology, module
+  map, API surface, media/messaging pipelines, deployment and operations
+- **[docs/roadmap.md](docs/roadmap.md)** — build order: phases, milestones, exit criteria
+- **[docs/db-schema.md](docs/db-schema.md)** — database schema: design rationale, tables,
+  indexes, migrations
 - **[design.md](design.md)** — design system: tokens, theming, components, motion,
   accessibility
 - **[AGENTS.md](AGENTS.md)** — repo conventions, commands, and guardrails for contributors

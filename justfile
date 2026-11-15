@@ -6,9 +6,15 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 backend_dir := "backend"
 frontend_dir := "frontend"
 
+mod backend "backend/justfile"
+mod frontend "frontend/justfile"
+
 # List available recipes
 default:
-    @just --list
+    @just --list --list-submodules
+
+# Install backend and frontend dependencies
+install: backend::install frontend::install
 
 # Check local toolchain (JDK 21, Node, npm)
 doctor:
@@ -27,68 +33,54 @@ doctor:
     fi
     command -v node >/dev/null && echo "node: $(node -v)" || echo "node: MISSING"
     command -v npm >/dev/null && echo "npm: $(npm -v)" || echo "npm: MISSING"
-    echo "backend needs local MySQL — run it with: just mysql"
+    echo "backend needs local MySQL for dev and tests — run it with: just mysql (reset with: just seed)"
     echo "  (compose.yaml dev defaults; override via git-ignored .env)"
-
-# Install frontend dependencies from the lockfile
-setup:
-    cd {{frontend_dir}} && npm ci
 
 # Start local MySQL 8.0 and wait until it reports healthy
 mysql:
     docker compose up -d --wait mysql
 
-# Backwards-compatible alias for the old db-up recipe
-alias db-up := mysql
+# Apply Flyway migrations to the dev database (no data is touched)
+migrate: mysql
+    cd {{backend_dir}} && ./mvnw -q flyway:migrate
 
-# Stop local dev services (data volume is kept)
-db-down:
-    docker compose down
+# Reset the dev database to full fixtures (WIPES ALL dev data)
+# Every table seeded except user_entities/user_credentials (passkeys — register via UI) and flyway_schema_history.
+# admin / members with password `chafgram-dev-password`; reusable demo invite token: demo-invite-token
+seed: mysql
+    #!/usr/bin/env bash
+    set -euo pipefail
+    read -r -p "This DELETES ALL DATA in the dev chafgram database. Type 'yes' to continue: " confirm
+    if [ "$confirm" != "yes" ]; then echo "aborted"; exit 1; fi
+    docker compose exec -T mysql mysql -uroot -proot -e "DROP DATABASE IF EXISTS chafgram; CREATE DATABASE chafgram CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+    cd {{backend_dir}} && ./mvnw -q flyway:migrate
+    docker compose exec -T mysql mysql -uroot -proot chafgram < "{{justfile_directory()}}/scripts/dev-seed.sql"
+    echo "dev database reset and seeded (admin@chafgram.test / password: chafgram-dev-password)"
 
-# Tail MySQL logs
-db-logs:
-    docker compose logs -f mysql
+# Empty the dev database and re-apply migrations (WIPES ALL dev data, no fixtures)
+unseed: mysql
+    #!/usr/bin/env bash
+    set -euo pipefail
+    read -r -p "This DELETES ALL DATA in the dev chafgram database (leaves empty, migrated schema). Type 'yes' to continue: " confirm
+    if [ "$confirm" != "yes" ]; then echo "aborted"; exit 1; fi
+    docker compose exec -T mysql mysql -uroot -proot -e "DROP DATABASE IF EXISTS chafgram; CREATE DATABASE chafgram CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+    cd {{backend_dir}} && ./mvnw -q flyway:migrate
+    echo "dev database emptied and migrated"
 
 # Run backend and frontend together (Ctrl-C stops both)
 # Requires MySQL — run `just mysql` first.
-dev:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "backend → http://localhost:8080"
-    echo "frontend → http://localhost:3000"
-    trap 'kill $(jobs -p) 2>/dev/null || true' EXIT INT TERM
-    (cd {{backend_dir}} && ./mvnw spring-boot:run) &
-    (cd {{frontend_dir}} && npm run dev) &
-    wait
-
-# Run only the backend (port 8080; requires just mysql first)
-dev-backend:
-    cd {{backend_dir}} && ./mvnw spring-boot:run
-
-# Run only the frontend (port 3000)
-dev-frontend:
-    cd {{frontend_dir}} && npm run dev
+[parallel]
+dev: backend::dev frontend::dev
 
 # Build backend jar (target/) and frontend production bundle
-build: build-backend build-frontend
+build: backend::build frontend::build
 
-build-backend:
-    cd {{backend_dir}} && ./mvnw package
+# Run backend and frontend tests (backend wipes the dev chafgram schema; restore afterwards with: just seed)
+test: backend::test frontend::test
 
-build-frontend:
-    cd {{frontend_dir}} && npm run build
+# Verify the repo is healthy: run just test and just build
+# (run before pushing or on a fresh clone)
+verify: test build
 
-# Run backend tests (frontend has no test script yet)
-test:
-    cd {{backend_dir}} && ./mvnw test
-
-# Pre-commit sanity check: backend tests + frontend production build
-check: test build-frontend
-
-# Serve the frontend production build
-preview:
-    cd {{frontend_dir}} && npm run preview
-
-# Remove build artifacts (not node_modules, not .agents, not sources)
-clean:
-    rm -rf {{backend_dir}}/target {{frontend_dir}}/.output {{frontend_dir}}/dist
+# Remove build artifacts in backend and frontend (not node_modules, not .agents, not sources)
+clean: backend::clean frontend::clean

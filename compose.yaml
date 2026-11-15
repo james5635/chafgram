@@ -1,8 +1,8 @@
 # Chafgram — local development services.
 #
-#   docker compose up -d mysql     # or: just db-up
-#   docker compose logs -f mysql   # or: just db-logs
-#   docker compose down            # or: just db-down
+#   docker compose up -d mysql     # or: just mysql
+#   docker compose logs -f mysql
+#   docker compose down
 #
 # Dev-only credentials below are throwaway defaults for your local machine.
 # Override any of them with a git-ignored .env file (never commit it):
