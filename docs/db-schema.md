@@ -149,9 +149,9 @@ Short video vs long video: not a schema concern — both are `media_assets.kind=
 the **watch feed** is `WHERE kind='video' AND status='ready' ORDER BY created_at` and
 short vs long is a `duration_ms` cut-off (≤ 60 s) applied by the query layer.
 
-**post_media** — `post_id` PK-part, `media_id` PK-part, `position TINYINT`; PK `(post_id, media_id)`; FKs CASCADE.
+**post_media** — `post_id` PK-part, `media_id` PK-part, `position SMALLINT`; PK `(post_id, media_id)`; FKs CASCADE.
 
-**message_media** — same shape; PK `(message_id, media_id)`.
+**message_media** — same shape with `position SMALLINT`; PK `(message_id, media_id)`.
 
 ### 4.3 Social graph & feed
 
