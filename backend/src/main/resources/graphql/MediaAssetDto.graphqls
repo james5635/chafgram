@@ -1,0 +1,11 @@
+type MediaAsset {
+  id: ID!
+  kind: String!
+  status: String!
+  ownerId: ID!
+  mimeType: String!
+  width: Int
+  height: Int
+  sizeBytes: String!
+  createdAt: String!
+}

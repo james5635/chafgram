@@ -1,0 +1,11 @@
+type Comment {
+  id: ID!
+  author: Member!
+  postId: ID!
+  parentId: ID
+  body: String!
+  editedAt: String
+  createdAt: String!
+  reactionCount: Int!
+  myReaction: ReactionType
+}

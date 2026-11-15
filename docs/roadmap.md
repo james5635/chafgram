@@ -81,48 +81,54 @@ deploy story before this exits.
 
 ### Phase 2 — Core social (Facebook/Instagram behavior)
 
-- [ ] Posts (`note`/`photo`/`video`), comments (threaded), reactions
-      (post/comment), saves, follows, blocks.
-- [ ] Home feed: following-feed query (indexed `posts(author_id, created_at)` +
-      `follows(followee_id, follower_id)`), with cursor pagination.
-- [ ] Notifications: emit on follow/like/comment/reply/mention; unread badge + list;
-      mark-read.
-- [ ] Full-text search on `posts.body` (FULLTEXT index already in V1).
+- [x] Posts (`note`/`photo`/`video`), comments (threaded, one level), reactions
+      (post/comment), saves, follows, blocks — backend complete.
+- [x] Home feed: following-feed + discover feed (id-keyset cursor pagination), own
+      posts included, blocked authors excluded — backend complete.
+- [x] Notifications: follow/like/comment/reply/mention/message emit, unread count +
+      list, mark-read; per-type mutes — backend complete.
+- [x] Full-text search on `posts.body` (FULLTEXT) — backend complete.
 - [ ] Feed UI in the sea/lagoon system: composer, post card, comment thread, profile
-      pages (header/avatar/bio/follow button), empty states.
+      pages — not done (frontend).
 
 **Exit:** two members can post, follow, react, comment, and receive notifications.
 
 ### Phase 3 — Media & short video
 
-- [ ] Upload endpoints with chunked/large-file support; `media_assets` rows
-      `status=processing`; ffmpeg worker (sidecar or queue-consumer) sets `ready`.
-- [ ] Video posts + watch view (dark-first theater per design.md §13); short-video
-      vertical feed (≤ 60 s cut-off on `duration_ms`).
-- [ ] Avatars/workspace logo via same pipeline (`users.avatar_media_id`).
-- [ ] Image posts via same media table; blurhash placeholders.
-- [ ] Storage abstraction: local disk and S3-compatible both behind one interface.
+- [x] Upload endpoints (multipart, 4 GB cap, local-disk storage, `MediaStorage`
+      interface) — done. Images are `ready` on upload; videos stay `processing`
+      until a transcoder flips them. **ffmpeg worker is NOT done** — videos never
+      reach `ready` without it.
+- [ ] Video posts + watch view — post type `VIDEO` and media pipeline ready;
+      short vs. long via `duration_ms ≤ 60000`; UI/theater not done.
+- [~] Avatars — `avatar_media_id` exists, pipeline serves `/api/v1/media/…`; no
+      endpoint to set avatar/logo yet.
+- [ ] Blurhash — not wired (no hashing dependency).
+- [x] Storage abstraction — done (`MediaStorage`, local disk; S3 pending).
 
 **Exit:** a member can upload a short video, another watches it; profile pictures work.
 
 ### Phase 4 — Messaging
 
-- [ ] `conversations`/`conversation_members`/`messages` wiring; 1:1 and group
-      conversations; cursor pagination by `(conversation_id, id)`.
-- [ ] Real-time transport per Phase 0 decision; unread badges via
-      `last_read_message_id`; muted conversations; member list management for groups
-      (add/remove, admin role).
-- [ ] Media in messages via `message_media`.
-- [ ] DM UI: conversation list, thread, composer, inline media.
+- [x] conversations/members/messages wiring; 1:1 and groups; cursor pagination —
+      done.
+- [x] unread badges via `last_read_message_id`, muted conversations, group member
+      management (add/remove/admin), leave/mark read — done. **No realtime transport
+      yet** — v1 is GraphQL + polling; WebSocket/SSE is still undecided (Phase 0).
+- [~] Media in messages — schema exists (`message_media`); no send-media endpoint yet.
+- [ ] DM UI — not done (frontend).
 
 **Exit:** two members exchange messages in real time with unread counts.
 
 ### Phase 5 — Moderation & hardening
 
-- [ ] Reports (post/comment/message/user), moderator queue with
-      `open → reviewing → actioned|dismissed`, actions write `audit_log` rows.
-- [ ] Suspension/deactivation enforcement everywhere (feed, comments, messages, login).
-- [ ] Admin audit log view; content removal with tombstones (`deleted_at`).
+- [x] Reports (post/comment/message/user), moderator queue with
+      `open → reviewing → actioned|dismissed`; resolving as `actioned` tombstones
+      post/comment; every transition writes `audit_log` — done.
+- [x] Suspension/deactivation enforcement — login (deactivated can't authenticate),
+      posting, commenting, messaging — done. Feed filtering of blocked members — done.
+- [x] Audit log viewer (`GET /api/v1/admin/audit-log`); staff deletes write
+      `audit_log`; content tombstones via `deleted_at` — done.
 - [ ] Backup/restore and upgrade docs; Flyway migration discipline for releases;
       admin-facing data export (member GDPR-style export). *(proposal)*
 - [ ] Accessibility pass, reduced-motion audit, keyboard-nav audit (design.md §10).

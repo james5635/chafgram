@@ -33,8 +33,9 @@ open source under MIT. See **[product.md](product.md)** for the full product def
 
 | Layer    | Technology |
 |----------|------------|
-| Backend  | Spring Boot 4 (Java 21), Spring Security + WebAuthn (passkeys), Spring Data JPA + MySQL, Flyway migrations, Spring GraphQL (+ REST via springdoc-openapi), Actuator |
+| Backend  | Spring Boot 4 (Java 21), Spring Security + WebAuthn (passkeys), Spring Data JPA + MySQL, Flyway migrations, Spring GraphQL (GraphQL-first; REST only for the keep-list in `docs/architecture.md`), Actuator |
 | Frontend | TanStack Start (React 19), TanStack Router (file-based), Vite, Tailwind CSS v4, TypeScript |
+| Media    | S3-compatible object storage — locally [Garage](https://garagehq.deuxfleurs.fr/) via `compose.yaml` (`garage`, `garage-init`), bucket `chafgram-media`, endpoint `http://localhost:3900`, region `garage` |
 | Design   | "Sea/lagoon" system — Fraunces + Manrope, token-driven light/dark/auto themes — see [design.md](design.md) |
 
 ## Repository layout
@@ -86,11 +87,19 @@ messages (text + one image), all notification types, one open and one actioned r
 audit-log entries and an email-verification token row. Media rows reference fake
 `demo/...` keys — no blobs exist until real uploads happen. Dev fixtures only.
 
-The API base is `/api/v1` (see `docs/architecture.md`). Public endpoints by design:
-`GET /api/v1/workspace`, `POST /api/v1/bootstrap` (first member only), and
-`POST /api/v1/invites/accept`. Everything else requires an authenticated session
-(passkey or password); admin actions require `ROLE_ADMIN`. Example — see the OpenAPI
-UI at `http://localhost:8080/swagger-ui.html` after signing in.
+The API is GraphQL-first (see `docs/architecture.md`): all operations go through
+`POST /graphql` — social data (feed, posts, comments, reactions, follows), identity
+(members, workspace), invites, messaging, reports, audit log. Explore it with
+GraphiQL at `http://localhost:8080/graphiql` (dev). Authorization failures return
+HTTP 200 with a GraphQL `errors[]` (classification `UNAUTHENTICATED`/`UNAUTHORIZED`),
+and every resolver class enforces `isFullyAuthenticated()` except explicitly-public
+operations. CSRF is enforced for browser clients.
+
+REST exists only for what GraphQL cannot express — the keep-list lives in
+`docs/architecture.md`: session ceremonies (`/api/v1/bootstrap`, `/api/v1/register`,
+`/api/v1/invites/accept`), Spring Security's WebAuthn endpoints, media upload
+(`POST /api/v1/media`) and byte serving (`GET /api/v1/media/{id}/bytes`), and
+Actuator. Public branding is a public GraphQL query: `{ workspace { name slug } }`.
 
 Requires JDK 21. The datasource defaults in `application.properties` match the
 `compose.yaml` dev credentials (`chafgram` / `chafgram`, database `chafgram`); override

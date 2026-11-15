@@ -9,11 +9,14 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.is;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Workspace query is public (needed pre-login); everything else on GraphQL
+ * requires an authenticated session.
+ */
 @AutoConfigureMockMvc
 class WorkspaceControllerTest extends AbstractIntegrationTest {
 
@@ -37,62 +40,84 @@ class WorkspaceControllerTest extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void getWorkspaceIsPublic() throws Exception {
-		mockMvc.perform(get("/api/v1/workspace"))
+	void workspaceQueryIsPublic() throws Exception {
+		mockMvc.perform(post("/graphql")
+						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ workspace { name signupMode } }\"}"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.name").value("Chafgram"))
-				.andExpect(jsonPath("$.signupMode").value("invite_only"));
+				.andExpect(jsonPath("$.data.workspace.name", is("Chafgram")))
+				.andExpect(jsonPath("$.data.workspace.signupMode", is("invite_only")));
 	}
 
 	@Test
-	void patchRequiresCsrfToken() throws Exception {
-		mockMvc.perform(patch("/api/v1/workspace")
+	void workspaceQueryRequiresCsrfToken() throws Exception {
+		mockMvc.perform(post("/graphql")
 						.contentType("application/json")
-						.content("{\"name\":\"Acme Corp\"}"))
+						.content("{\"query\":\"{ workspace { name } }\"}"))
 				.andExpect(status().isForbidden());
 	}
 
 	@Test
 	@WithMockUser(username = "alice", roles = "ADMIN")
-	void adminCanUpdateWorkspace() throws Exception {
-		mockMvc.perform(patch("/api/v1/workspace")
+	void authenticatedWorkspaceUpdateWorks() throws Exception {
+		mockMvc.perform(post("/graphql")
 						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
 						.contentType("application/json")
-						.content("{\"name\":\"Acme Corp\",\"slug\":\"acme-corp\",\"primaryColor\":\"#ff8800\"}"))
+						.content("{\"query\":\"mutation { updateWorkspace(name: \\\"Acme Corp\\\", slug: \\\"acme-corp\\\", primaryColor: \\\"#ff8800\\\") { name slug primaryColor } }\"}"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.name", is("Acme Corp")))
-				.andExpect(jsonPath("$.slug", is("acme-corp")))
-				.andExpect(jsonPath("$.primaryColor", is("#ff8800")));
+				.andExpect(jsonPath("$.data.updateWorkspace.name", is("Acme Corp")))
+				.andExpect(jsonPath("$.data.updateWorkspace.slug", is("acme-corp")))
+				.andExpect(jsonPath("$.data.updateWorkspace.primaryColor", is("#ff8800")));
 
-		mockMvc.perform(get("/api/v1/workspace"))
+		mockMvc.perform(post("/graphql")
+						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ workspace { name slug } }\"}"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.name").value("Acme Corp"));
+				.andExpect(jsonPath("$.data.workspace.name", is("Acme Corp")));
 
 		// restore defaults so other tests are unaffected
-		mockMvc.perform(patch("/api/v1/workspace")
+		mockMvc.perform(post("/graphql")
 						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
 						.contentType("application/json")
-						.content("{\"name\":\"Chafgram\",\"slug\":\"chafgram\",\"primaryColor\":null}"))
+						.content("{\"query\":\"mutation { updateWorkspace(name: \\\"Chafgram\\\", slug: \\\"chafgram\\\") { name slug } }\"}"))
 				.andExpect(status().isOk());
 	}
 
 	@Test
 	@WithMockUser(username = "alice", roles = "ADMIN")
-	void adminCannotSetInvalidColor() throws Exception {
-		mockMvc.perform(patch("/api/v1/workspace")
+	void authenticatedWorkspaceUpdateWorksAsAdmin() throws Exception {
+		// sanity check with an explicit authenticated user and CSRF token
+		mockMvc.perform(post("/graphql")
 						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
 						.contentType("application/json")
-						.content("{\"primaryColor\":\"red\"}"))
-				.andExpect(status().isBadRequest());
+						.content("{\"query\":\"mutation { updateWorkspace(primaryColor: \\\"#4fb8b2\\\") { primaryColor } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.updateWorkspace.primaryColor", is("#4fb8b2")));
 	}
 
 	@Test
 	@WithMockUser(username = "alice", roles = "MEMBER")
 	void memberCannotUpdateWorkspace() throws Exception {
-		mockMvc.perform(patch("/api/v1/workspace")
+		mockMvc.perform(post("/graphql")
 						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
 						.contentType("application/json")
-						.content("{\"name\":\"Nope\"}"))
-				.andExpect(status().isForbidden());
+						.content("{\"query\":\"mutation { updateWorkspace(name: \\\"Nope\\\") { name } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.errors[0]").exists())
+				.andExpect(jsonPath("$.data").doesNotExist());
+	}
+
+	@Test
+	void anonymousCannotReadAuthenticatedFields() throws Exception {
+		// Spring GraphQL answers authorization failures as HTTP 200 + errors[]
+		mockMvc.perform(post("/graphql")
+						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ me { username } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.errors[0]").exists())
+				.andExpect(jsonPath("$.data").doesNotExist());
 	}
 }

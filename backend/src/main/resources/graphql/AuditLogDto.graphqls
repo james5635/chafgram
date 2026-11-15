@@ -1,0 +1,8 @@
+type AuditLogEntry {
+  id: ID!
+  actorId: ID
+  action: String!
+  targetType: String
+  targetId: ID
+  createdAt: String!
+}

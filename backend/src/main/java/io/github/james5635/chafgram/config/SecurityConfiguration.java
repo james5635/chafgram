@@ -46,6 +46,10 @@ public class SecurityConfiguration {
 				.requestMatchers("/actuator/health", "/actuator/info").permitAll()
 				.requestMatchers("/login", "/login/webauthn", "/webauthn/authenticate/options",
 						"/error").permitAll()
+				// GraphQL and GraphiQL are public at the HTTP boundary; authorization
+				// is enforced per resolver (class-level @PreAuthorize("isFullyAuthenticated()"),
+				// with "permitAll()" on explicit public operations only).
+				.requestMatchers("/graphql", "/graphiql").permitAll()
 				.anyRequest().authenticated())
 				.formLogin(Customizer.withDefaults())
 			.webAuthn(webAuthn -> webAuthn

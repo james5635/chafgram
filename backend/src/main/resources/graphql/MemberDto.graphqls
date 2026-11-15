@@ -1,0 +1,13 @@
+type Member {
+  id: ID!
+  username: String!
+  displayName: String!
+  bio: String
+  avatarMediaId: ID
+  role: String!
+  status: String!
+  createdAt: String!
+  followerCount: Int!
+  followingCount: Int!
+  isFollowing: Boolean!
+}

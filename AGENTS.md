@@ -38,6 +38,8 @@ is a root alias for `backend::install` + `frontend::install`. The raw commands b
 ```bash
 just mysql                 # start local MySQL 8.0 via compose.yaml, wait for healthy (stop with: docker compose down)
 just seed                  # RESET dev DB: wipe, Flyway-migrate, insert full demo fixtures (admin + members, posts, comments, DMs, notifications, reports, audit log)
+docker compose up -d       # start MySQL AND Garage (S3-compatible dev object storage, bucket chafgram-media)
+docker compose up garage-init   # one-shot: layout assign, dev key import, bucket create, permissions — idempotent
 ./mvnw spring-boot:run     # run dev server (default port 8080)
 ./mvnw test                # run tests (wipes the dev chafgram schema)
 just migrate               # apply Flyway migrations only, no data wiped
@@ -51,13 +53,18 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
   `application.properties` defaults to the compose dev credentials
   (`chafgram` / `chafgram`, db `chafgram`, overridable via `SPRING_DATASOURCE_*` env
   vars or a git-ignored `.env`/profile). Never commit real credentials.
+- Dev object storage: Garage (S3-compatible API on `http://localhost:3900`, region
+  `garage`, bucket `chafgram-media`, dev key + secret in `scripts/garage-init.sh`).
+  Bucket/layout/key are created by `garage-init` on first run — re-running is safe.
 - `./mvnw test` uses the dev MySQL from `compose.yaml` (`just mysql` must be running)
   and **wipes the dev `chafgram` schema on every run**. Afterwards run `just seed` to
   restore the dev fixtures. Override the connection with
   `CHAFGRAM_TEST_DATASOURCE_URL|_USERNAME|_PASSWORD` (it wipes whatever it points at —
   not for shared databases).
-- Identity module is implemented under `identity/` (entities, repositories, services,
-  REST controllers under `/api/v1`). See `docs/roadmap.md` Phase 1.
+- Identity Backend modules implemented: `identity` (users/invites/workspace, REST
+  `/api/v1`), `social` (posts/comments/reactions/follows/feed/search + GraphQL at
+  `/graphql`), `messaging` (1:1 + groups, REST), `notifications`, `moderation`
+  (reports + audit log), `media` (local-disk upload). See `docs/roadmap.md` Phases 1–2.
 - Passkeys are handled by Spring Security WebAuthn; the `user_entities` and
   `user_credentials` tables are framework-managed — do not add JPA entities on top of
   them or alter their DDL. Configure via env `CHAFGRAM_WEBAUTHN_RP_ID` (default
@@ -109,9 +116,13 @@ npm run preview            # serve the production build
 
 - **Java:** 21, Lombok for boilerplate, constructor injection, records for DTOs where
   practical. Keep the base package `io.github.james5635.chafgram`.
-- **API surface:** GraphQL for app data + REST/springdoc-openapi for ops/health or where
-  OpenAPI consumers need it; WebAuthn/passkeys for strong auth (Spring Security). Choose
-  deliberately per endpoint and document it in the PR/commit.
+- **API surface:** GraphQL-first — everything goes through `/graphql` (social, identity,
+  invites, workspace, messaging, moderation). REST only for the documented keep-list in
+  `docs/architecture.md` (session ceremonies, WebAuthn, media upload/bytes, Actuator).
+  Resolver classes carry class-level `@PreAuthorize("isFullyAuthenticated()")`; only
+  explicitly public operations carry `permitAll()` (workspace branding query).
+  Authorization failures return HTTP 200 + `errors[]` with `extensions.classification`,
+  not HTTP 403/401 — tests must assert on `$.errors`, not the status code.
 - **Frontend:** TypeScript strict; function components; colocate components in
   `src/components/`; routes thin, components dumb; server logic via TanStack Start server
   functions, not ad-hoc fetch wrappers.

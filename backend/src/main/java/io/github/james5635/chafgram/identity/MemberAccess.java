@@ -36,6 +36,24 @@ public class MemberAccess {
 		return user;
 	}
 
+	/** Admin operations: active admin only. */
+	public User requireAdmin(String username) {
+		User user = requireWriteable(username);
+		if (user.getRole() != Role.ADMIN) {
+			throw new ApiException(HttpStatus.FORBIDDEN, "Requires admin");
+		}
+		return user;
+	}
+
+	/** Staff operations (moderation + admin): active moderator or admin. */
+	public User requireStaff(String username) {
+		User user = requireWriteable(username);
+		if (user.getRole() != Role.ADMIN && user.getRole() != Role.MODERATOR) {
+			throw new ApiException(HttpStatus.FORBIDDEN, "Requires moderator or admin");
+		}
+		return user;
+	}
+
 	public void requireWriteable(User user) {
 		if (user.getStatus() != UserStatus.ACTIVE) {
 			throw new ApiException(HttpStatus.FORBIDDEN,

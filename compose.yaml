@@ -1,11 +1,16 @@
 # Chafgram — local development services.
 #
 #   docker compose up -d mysql     # or: just mysql
-#   docker compose logs -f mysql
-#   docker compose down
+#   docker compose exec garage /garage -c /etc/garage.toml bucket list
+#
+#   Garage (S3-compatible object storage, dev-only) listens on 3900 (S3 API)
+#   and 3903 (admin API). After `docker compose up -d garage`, `garage-init`
+#   runs once to create the `chafgram-media` bucket and import the dev key
+#   `GK79f786d196b75cf59fce1c69e06e6d42` — all dev-only throwaway credentials.
 #
 # Dev-only credentials below are throwaway defaults for your local machine.
-# Override any of them with a git-ignored .env file (never commit it):
+# Credentials can also come from a git-ignored `.env` file — see `.env.example`
+# (copy it to `.env`) for the full list of variables and how to override.
 #
 #   MYSQL_PORT=3307
 #   MYSQL_DATABASE=chafgram
@@ -34,5 +39,46 @@ services:
       retries: 20
       start_period: 30s
 
+  # S3-compatible object storage (dev-only). S3 API on :3900, admin API on :3903.
+  garage:
+    image: dxflrs/garage:99923a87182ae9252b421dda65c935b9c06b1444
+    container_name: chafgram-garage
+    restart: unless-stopped
+    ports:
+      - "3900:3900"
+      - "3903:3903"
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:-4ed9483a69dd3e3e78df949608f020fb10858f5c56e572dfc30c958335919cec}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:-c550efd14088f04414caa03396fc2785baa912ee9f3bbef18dea0612d8cac0f6}
+      GARAGE_METRICS_TOKEN: ${GARAGE_METRICS_TOKEN:-61ac6d636d85aec61b79a8d16fb1b22a}
+    volumes:
+      - ./scripts/garage.toml:/etc/garage.toml:ro
+      - garage-data:/var/lib/garage
+    healthcheck:
+      test: ["CMD", "/garage", "-c", "/etc/garage.toml", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  # One-shot: assign the single-node layout, import the dev key, create the
+  # chafgram-media bucket and grant the key read/write (idempotent). The garage
+  # image has no shell, so this one-shot drives the admin API v2 over HTTP.
+  garage-init:
+    image: alpine:3
+    container_name: chafgram-garage-init
+    restart: "no"
+    depends_on:
+      garage:
+        condition: service_healthy
+    volumes:
+      - ./scripts/garage-init.sh:/init/garage-init.sh:ro
+    environment:
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:-c550efd14088f04414caa03396fc2785baa912ee9f3bbef18dea0612d8cac0f6}
+      GARAGE_ACCESS_KEY: ${GARAGE_ACCESS_KEY:-GK67304d5c49c3278bab342460}
+      GARAGE_SECRET_KEY: ${GARAGE_SECRET_KEY:-d53617c73b0711ab876d08d4072f4f45a65b7f0a150fcf00d38133737d0040f3}
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache curl jq >/dev/null && exec /bin/sh /init/garage-init.sh"]
+
 volumes:
   mysql-data:
+  garage-data:

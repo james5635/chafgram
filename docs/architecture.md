@@ -87,7 +87,7 @@
 Package root `io.github.james5635.chafgram`. Layers per module:
 `api` (GraphQL resolvers / REST controllers) → `service` (transactional) →
 `domain` (JPA entities) → `repository` (Spring Data). *(`identity`, `common`,
-`config` implemented; the rest land per phase.)*
+all implemented)*
 
 ```
 io.github.james5635.chafgram
@@ -95,23 +95,38 @@ io.github.james5635.chafgram
 ├── identity         users, invites, passkeys (Spring Security `user_entities`/`user_credentials`),
 │                    workspace_settings, roles & member lifecycle  ← implemented
 ├── social           posts, comments, reactions, follows, saved_posts, feed,
-│                    user_blocks, search (FULLTEXT)
+│                    user_blocks, search (FULLTEXT)  ← implemented
 ├── media            media_assets lifecycle, upload endpoints, transcode orchestration,
-│                    storage abstraction (local disk | S3-compatible)
-├── messaging        conversations, conversation_members, messages, realtime transport
-├── notifications    emit/consume, unread badges, (no push in v1)
-├── moderation       reports workflow, audit_log, content tombstones
-└── common           errors (RFC-7807), paging cursors, mappers, constants
+│                    storage abstraction (local disk | S3-compatible)  ← implemented
+├── messaging        conversations, conversation_members, messages, realtime transport  ← implemented
+├── notifications    emit/consume, unread badges, (no push in v1)  ← implemented
+├── moderation       reports workflow, audit_log, content tombstones  ← implemented
+└── common           errors (RFC-7807), paging cursors, mappers, constants  ← implemented
 ```
 
 ### 4.1 API surface
 
 | Surface | Used for | Notes |
 |---------|----------|-------|
-| **GraphQL** (Spring GraphQL) | Feed, posts, comments, follows, profiles, notifications — the app's read/mutate model | Single endpoint `/graphql`; DGS codegen applies to any *client* of external GraphQL (not required today) |
-| **REST / OpenAPI** (springdoc) | Auth ceremonies (passkey register/authenticate, invite accept), file upload/download, admin ops, health | `/api/v1/...`; OpenAPI at `/v3/api-docs`, UI at `/swagger-ui.html` |
-| **Actuator** | `/actuator/health`, `/actuator/metrics` for ops | Exposed internally; behind admin role or network boundary |
+| **GraphQL** (Spring GraphQL) | **Every API operation** — social data, identity, invites, workspace, messaging, moderation, media metadata | Single endpoint `POST /graphql`. Class-level `@PreAuthorize("isFullyAuthenticated()")` on every resolver class; `permitAll()` only on the public `workspace` branding query. Authorization failures return HTTP 200 with `errors[]` and `extensions.classification` (`UNAUTHENTICATED`/`UNAUTHORIZED`); assert on `$.errors`, never the HTTP status. |
+| **REST** | Session ceremonies, WebAuthn, media upload/bytes, Actuator | The keep-list below — mandated by the fact that a GraphQL operation cannot set the session cookie a login needs, cannot receive multipart bodies, and cannot stream bytes. |
+| **Actuator** | `/actuator/health`, `/actuator/info` for ops | Exposed; network-boundary or proxy auth expected in production |
 | **WebSocket/SSE** *(proposal)* | Messaging delivery (see §6) | Transport decision pending (roadmap Phase 0) |
+
+**REST keep-list (all other APIs are GraphQL):**
+
+- `POST /api/v1/bootstrap` — first-run setup; creates the first admin session
+- `POST /api/v1/register` — self-serve signup (only when `signup_mode=open`)
+- `POST /api/v1/invites/accept` — invite claim; creates account + session
+- `POST /login/webauthn`, `/webauthn/authenticate/options` — passkey authentication (Spring Security built-ins)
+- `POST /webauthn/register/options`, `POST /webauthn/register` — passkey registration (Spring Security built-ins)
+- `POST /api/v1/media` — multipart media upload (image/video)
+- `GET /api/v1/media/{id}/bytes` — authorized byte streaming for media
+- `GET /actuator/health`, `/actuator/info` — ops probes
+- `/error` — servlet error dispatch
+
+Public workspace branding is a **GraphQL** operation, not REST: `query { workspace { name slug } }`
+(anonymous, `@PreAuthorize("permitAll()")`).
 
 ### 4.2 Cross-cutting
 

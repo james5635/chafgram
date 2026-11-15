@@ -1,0 +1,8 @@
+type Invite {
+  id: ID!
+  email: String
+  role: String!
+  createdAt: String!
+  expiresAt: String!
+  acceptedAt: String
+}

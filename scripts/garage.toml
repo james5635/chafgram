@@ -1,0 +1,20 @@
+# Garage — S3-compatible object storage. LOCAL DEV ONLY.
+# Secrets (rpc_secret, admin_token, metrics_token) are provided via the
+# GARAGE_* environment variables — see compose.yaml / .env.example.
+# Dev-only throwaway values; rotate for any shared or production deployment.
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "garage:3901"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+public_endpoint = "http://localhost:3900"
+
+[admin]
+api_bind_addr = "[::]:3903"

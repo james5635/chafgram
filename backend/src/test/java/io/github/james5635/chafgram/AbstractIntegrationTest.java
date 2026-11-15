@@ -1,6 +1,8 @@
 package io.github.james5635.chafgram;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -20,6 +22,22 @@ import java.sql.SQLException;
  */
 @SpringBootTest
 public abstract class AbstractIntegrationTest {
+
+	@Autowired
+	protected JdbcTemplate jdbc;
+
+	/** Wipes every domain table (FK-safe order). Tests run against a dedicated, disposable schema. */
+	protected void wipeSocial() {
+		String[] tables = {
+				"audit_log", "reports", "notifications", "notification_preferences",
+				"message_media", "messages", "conversation_members", "conversations",
+				"saved_posts", "post_reactions", "comment_reactions", "comments", "post_media", "posts",
+				"media_assets", "user_blocks", "follows", "invites", "users",
+		};
+		for (String table : tables) {
+			jdbc.update("DELETE FROM " + table);
+		}
+	}
 
 	static {
 		// Fail fast at class-load time with a clear message, before Spring's

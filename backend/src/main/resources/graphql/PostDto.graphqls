@@ -1,0 +1,12 @@
+type Post {
+  id: ID!
+  author: Member!
+  type: PostType!
+  body: String
+  editedAt: String
+  createdAt: String!
+  commentCount: Int!
+  reactionCount: Int!
+  myReaction: ReactionType
+  isSaved: Boolean!
+}

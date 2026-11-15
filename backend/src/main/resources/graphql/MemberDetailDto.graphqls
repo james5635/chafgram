@@ -1,0 +1,9 @@
+type MemberDetail {
+  id: ID!
+  username: String!
+  displayName: String!
+  email: String!
+  role: String!
+  status: String!
+  createdAt: String!
+}

@@ -1,0 +1,11 @@
+type Report {
+  id: ID!
+  reporterId: ID!
+  targetType: String!
+  targetId: ID!
+  reason: String!
+  status: String!
+  resolvedBy: ID
+  resolvedAt: String
+  createdAt: String!
+}

@@ -1,0 +1,9 @@
+type Notification {
+  id: ID!
+  actor: Member
+  type: NotificationType!
+  entityType: String
+  entityId: ID
+  readAt: String
+  createdAt: String!
+}

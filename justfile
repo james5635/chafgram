@@ -2,6 +2,7 @@
 # https://just.systems — run `just` or `just --list` to see everything.
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
+set dotenv-load := true
 
 backend_dir := "backend"
 frontend_dir := "frontend"
