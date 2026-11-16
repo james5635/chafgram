@@ -9,7 +9,7 @@ import java.util.Optional;
 /**
  * Shared security-context helpers: resolving the current member and enforcing
  * that suspended/deactivated accounts cannot perform write operations
- * (plans.md: FR-1.4 — suspended members can read but not write).
+ * (functional-requirements.md: FR-1.4 — suspended members can read but not write).
  */
 @Service
 public class MemberAccess {

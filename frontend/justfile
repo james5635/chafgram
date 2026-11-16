@@ -16,6 +16,9 @@ build:
 test:
     npm run test --if-present
 
+# Verify the frontend is healthy: run tests and build the production bundle
+verify: test build
+
 # Remove build artifacts (.output, dist)
 clean:
     rm -rf .output dist

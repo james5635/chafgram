@@ -3,7 +3,7 @@
 > How Chafgram is put together: system topology, module boundaries, API surface, media and
 > messaging pipelines, deployment, and operations. This is the architectural map of the
 > codebase — not a product doc ([`product.md`](../product.md)), not the visual system
-> ([`design.md`](../design.md)), not the data model ([`db-schema.md`](db-schema.md)).
+> ([`design.md`](../design.md)).
 > Proposals are marked **(proposal)**; decided items are stated as fact.
 
 ## 1. Architectural stance
@@ -57,8 +57,7 @@
 - The **backend** owns all domain logic, auth, and data. The frontend holds no
   authoritative state.
 - The **media worker** is a separate process (or sidecar container) consuming
-  `media_assets` rows with `status='processing'`. *(proposal — see Phase 3 in
-  [`roadmap.md`](roadmap.md))*
+  `media_assets` rows with `status='processing'`. *(proposal — media worker phase)*
 - **Reverse proxy / TLS** (nginx, Traefik, company LB) terminates HTTPS; not part of
   this repo. Configuration documented here later.
 
@@ -111,7 +110,7 @@ io.github.james5635.chafgram
 | **GraphQL** (Spring GraphQL) | **Every API operation** — social data, identity, invites, workspace, messaging, moderation, media metadata | Single endpoint `POST /graphql`. Class-level `@PreAuthorize("isFullyAuthenticated()")` on every resolver class; `permitAll()` only on the public `workspace` branding query. Authorization failures return HTTP 200 with `errors[]` and `extensions.classification` (`UNAUTHENTICATED`/`UNAUTHORIZED`); assert on `$.errors`, never the HTTP status. |
 | **REST** | Session ceremonies, WebAuthn, media upload/bytes, Actuator | The keep-list below — mandated by the fact that a GraphQL operation cannot set the session cookie a login needs, cannot receive multipart bodies, and cannot stream bytes. |
 | **Actuator** | `/actuator/health`, `/actuator/info` for ops | Exposed; network-boundary or proxy auth expected in production |
-| **WebSocket/SSE** *(proposal)* | Messaging delivery (see §6) | Transport decision pending (roadmap Phase 0) |
+| **WebSocket/SSE** *(proposal)* | Messaging delivery (see §6) | Transport decision pending |
 
 **REST keep-list (all other APIs are GraphQL):**
 
@@ -197,7 +196,7 @@ upload (REST multipart)            worker (sidecar)
 | Concern | Approach |
 |---------|----------|
 | Artifact | OCI image for backend + static assets via frontend build; `compose.yaml` for the full self-hosted stack (app + MySQL + volume) — dev compose exists today and doubles as the reference |
-| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline (see `docs/db-schema.md`) |
+| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline (migrations in `backend/src/main/resources/db/migration/`) |
 | Backups | `mysqldump`/volume snapshot, admin-facing docs; restore tested per release |
 | TLS | Terminated at company reverse proxy; app serves plain HTTP internally |
 | Observability | Actuator health/metrics; logs to stdout; **no** mandatory external telemetry |
@@ -227,12 +226,12 @@ path; read replicas and sharding; mobile native apps (responsive web/PWA only).
 | Built-in passkeys vs. LDAP/OIDC/SAML SSO vs. both | identity module | product.md §Open |
 | WebSocket/STOMP vs. WebFlux/SSE for messaging | messaging module | product.md §Open |
 | Local disk vs. S3-compatible media storage | media module | product.md §Open |
-| Group chat semantics (simple groups vs. channels) | conversation model | db-schema.md §Open |
-| FULLTEXT scope: `posts.body` only vs. also comments | search | db-schema.md §Open |
+| Group chat semantics (simple groups vs. channels) | conversation model | business-rules.md §12 |
+| FULLTEXT scope: `posts.body` only vs. also comments | search | functional-requirements.md FR-3.6 / FR-8.1 |
 | Retention/legal-hold policies | moderation | product.md §Open |
 
 ## 13. Relationship to other docs
 
 - [`product.md`](../product.md) — what/who/why; [`design.md`](../design.md) — how it
-  looks; [`db-schema.md`](db-schema.md) — data model & migrations;
-  [`roadmap.md`](roadmap.md) — build order and milestones.
+  looks; [`functional-requirements.md`](functional-requirements.md) — what must be
+  built (FR); [`business-rules.md`](business-rules.md) — the rules it must obey (BR).

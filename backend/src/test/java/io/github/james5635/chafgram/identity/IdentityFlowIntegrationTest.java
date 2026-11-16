@@ -162,7 +162,7 @@ class IdentityFlowIntegrationTest extends AbstractIntegrationTest {
 
 		memberService.setStatus("alice", bob.getId(), UserStatus.SUSPENDED);
 
-		// suspended: login is still possible (read-only per plans.md FR-1.4)
+		// suspended: login is still possible (read-only per functional-requirements.md FR-1.4)
 		assertThat(userDetailsService.loadUserByUsername("bob").isEnabled()).isTrue();
 
 		// writes are rejected

@@ -170,7 +170,7 @@ public class MessagingService {
 	}
 
 	private void requireWriteable(User actor) {
-		// suspended members can read but not write (plans.md FR-1.4)
+		// suspended members can read but not write (functional-requirements.md FR-1.4)
 		if (actor.getStatus() != io.github.james5635.chafgram.identity.UserStatus.ACTIVE) {
 			throw new ApiException(HttpStatus.FORBIDDEN, "Account is " + actor.getStatus().name().toLowerCase() + "; sending messages is not allowed");
 		}

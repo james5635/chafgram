@@ -44,10 +44,10 @@ open source under MIT. See **[product.md](product.md)** for the full product def
 backend/      Spring Boot service (Maven wrapper)
 frontend/     TanStack Start web app
 compose.yaml  Local dev MySQL 8.0
-docs/plans.md    Functional requirements & business rules
+docs/functional-requirements.md  Functional requirements (FR, MoSCoW-prioritized)
+docs/business-rules.md  Business rules (BR, incl. compliance & trust)
 docs/architecture.md  Architecture (system design)
-docs/roadmap.md    Build order (phases, milestones)
-docs/db-schema.md  Database schema (design rationale + V1 baseline)
+docs/development-workflow.md  Setup, dev loop, DB, testing, verification
 product.md    Product definition
 design.md     Design system
 AGENTS.md     Guide for AI agents and contributors
@@ -126,13 +126,14 @@ npm run preview    # serve the production build
 
 - **[product.md](product.md)** — what Chafgram is, who it's for, goals/non-goals, open
   questions
-- **[docs/plans.md](docs/plans.md)** — functional requirements & business rules (FR/BR,
-  MoSCoW-prioritized, roles: member/moderator/admin)
+- **[docs/functional-requirements.md](docs/functional-requirements.md)** — what Chafgram
+  must do (FR, MoSCoW-prioritized)
+- **[docs/business-rules.md](docs/business-rules.md)** — the rules it must obey (BR, incl.
+  compliance & trust and open owner decisions)
 - **[docs/architecture.md](docs/architecture.md)** — architecture: system topology, module
   map, API surface, media/messaging pipelines, deployment and operations
-- **[docs/roadmap.md](docs/roadmap.md)** — build order: phases, milestones, exit criteria
-- **[docs/db-schema.md](docs/db-schema.md)** — database schema: design rationale, tables,
-  indexes, migrations
+- **[docs/development-workflow.md](docs/development-workflow.md)** — how to work on the
+  repo: first-time setup, the dev loop, database/migrations, testing, pre-push checks
 - **[design.md](design.md)** — design system: tokens, theming, components, motion,
   accessibility
 - **[AGENTS.md](AGENTS.md)** — repo conventions, commands, and guardrails for contributors

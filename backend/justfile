@@ -16,6 +16,9 @@ build:
 test:
     ./mvnw test
 
+# Verify the backend is healthy: run tests and build the jar
+verify: test build
+
 # Remove build artifacts (target/)
 clean:
     ./mvnw clean

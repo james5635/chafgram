@@ -16,10 +16,10 @@ assume public-social-network semantics anywhere in the codebase.
 backend/    Spring Boot 4 (Java 21) service — Maven wrapper, package io.github.james5635.chafgram
 frontend/   TanStack Start (React 19, Vite, Tailwind v4) app — file-based routing
 compose.yaml  Local dev MySQL 8.0 (dev-only throwaway credentials)
-docs/plans.md    Functional requirements & business rules (FR/BR)
+docs/functional-requirements.md  Functional requirements (FR)
+docs/business-rules.md  Business rules (BR)
 docs/architecture.md  Architecture (system design)
-docs/roadmap.md    Build order (phases, milestones)
-docs/db-schema.md  Database schema — rationale, tables, indexes, migrations
+docs/development-workflow.md  Setup, dev loop, DB, testing, verification
 product.md  Product definition (what/who/why, goals, non-goals)
 design.md   Design system (tokens, components, motion, a11y)
 README.md   Human-facing overview and quick start
@@ -64,7 +64,8 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 - Identity Backend modules implemented: `identity` (users/invites/workspace, REST
   `/api/v1`), `social` (posts/comments/reactions/follows/feed/search + GraphQL at
   `/graphql`), `messaging` (1:1 + groups, REST), `notifications`, `moderation`
-  (reports + audit log), `media` (local-disk upload). See `docs/roadmap.md` Phases 1–2.
+  (reports + audit log), `media` (local-disk upload). See `docs/architecture.md` for the
+  system design.
 - Passkeys are handled by Spring Security WebAuthn; the `user_entities` and
   `user_credentials` tables are framework-managed — do not add JPA entities on top of
   them or alter their DDL. Configure via env `CHAFGRAM_WEBAUTHN_RP_ID` (default
@@ -84,8 +85,7 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
   `src/main/resources/graphql-client/` → `target/generated-sources`, package
   `io.github.james5635.chafgram.codegen`. Generated code is not committed source you hand-edit.
 - Migrations go in `src/main/resources/db/migration/` as `V<n>__snake_case.sql` (Flyway).
-  `V1__init.sql` is the baseline; design rationale, table semantics, and FK rules are
-  documented in `docs/db-schema.md` — update both together. `spring.jpa.hibernate.ddl-auto`
+  The migration files are the schema of record. `spring.jpa.hibernate.ddl-auto`
   is `validate` — Hibernate never creates or updates; Flyway owns the schema.
 - Both `spring-boot-starter-webmvc` and `-webflux` are present; prefer the MVC/servlet path
   unless a reactive endpoint is explicitly needed.
@@ -126,7 +126,12 @@ npm run preview            # serve the production build
 - **Frontend:** TypeScript strict; function components; colocate components in
   `src/components/`; routes thin, components dumb; server logic via TanStack Start server
   functions, not ad-hoc fetch wrappers.
-- **Commits/PRs:** small, imperative subjects; describe *why*, not just *what*.
+- **Commits:** `<type>(<scope>): <subject>` — e.g. `feat(backend): add passkey
+  registration`, `fix(db): align media position columns with entity mappings`,
+  `docs(docs): split plans into FR/BR`. Types: `feat`, `fix`, `docs`, `refactor`,
+  `test`, `chore`, `build`, `ci`. Scope: the area touched (`backend`, `frontend`, `db`,
+  `docs`, `justfile`, …). Subject is imperative with no trailing period; describe
+  *why*, not just *what*. PR titles follow the same format.
 - **Docs-first for direction:** if a change contradicts `product.md`/`design.md`, update
   the doc in the same change or flag it — don't fork the truth in code.
 
