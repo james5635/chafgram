@@ -97,4 +97,37 @@ class GraphqlApiTest extends AbstractIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.discoverFeed.posts").isArray());
 	}
+
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void updateProfileViaGraphQlIsReflectedInMe() throws Exception {
+		mockMvc.perform(post("/graphql")
+						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"mutation { updateProfile(displayName: \\\"Alice B\\\", bio: \\\"bio!\\\") { username bio } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.updateProfile.bio", is("bio!")));
+
+		mockMvc.perform(post("/graphql")
+						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ me { bio } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.me.bio", is("bio!")));
+	}
+
+	@Test
+	@WithMockUser(username = "bob", roles = "MEMBER")
+	void nonAdminCannotUpdateWorkspace() throws Exception {
+		jdbc.update("INSERT INTO users (username, display_name, email, role, status) "
+				+ "VALUES ('bob', 'Bob', 'bob@example.com', 'member', 'active')");
+
+		mockMvc.perform(post("/graphql")
+						.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"mutation { updateWorkspace(name: \\\"Nope\\\") { name } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.errors[0].extensions.classification", is("FORBIDDEN")))
+				.andExpect(jsonPath("$.data").doesNotExist());
+	}
 }

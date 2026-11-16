@@ -7,6 +7,7 @@ import io.github.james5635.chafgram.identity.dto.MemberResponse;
 import io.github.james5635.chafgram.identity.dto.UpdateWorkspaceRequest;
 import io.github.james5635.chafgram.identity.dto.WorkspaceDto;
 import io.github.james5635.chafgram.identity.dto.WorkspaceResponse;
+import io.github.james5635.chafgram.social.dto.MemberDto;
 import io.github.james5635.chafgram.social.CurrentMember;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -38,11 +39,19 @@ public class IdentityMutationResolver {
 	@MutationMapping
 	@PreAuthorize("hasRole('ADMIN')")
 	public WorkspaceDto updateWorkspace(@Argument String name, @Argument String slug,
-			@Argument String primaryColor, @Argument String signupMode) {
+			@Argument String primaryColor, @Argument String signupMode, @Argument Long logoMediaId) {
 		String username = current.require().getUsername();
 		WorkspaceResponse updated = workspaceService.update(
-				username, new UpdateWorkspaceRequest(name, slug, primaryColor, signupMode));
-		return new WorkspaceDto(updated.name(), updated.slug(), updated.primaryColor(), updated.signupMode());
+				username, new UpdateWorkspaceRequest(name, slug, primaryColor, signupMode, logoMediaId));
+		return new WorkspaceDto(updated.name(), updated.slug(), updated.primaryColor(),
+				updated.signupMode(), updated.logoMediaId());
+	}
+
+	@MutationMapping
+	public MemberDto updateProfile(@Argument String displayName, @Argument String bio,
+			@Argument Long avatarMediaId) {
+		String username = current.require().getUsername();
+		return memberService.updateProfile(username, displayName, bio, avatarMediaId);
 	}
 
 	@MutationMapping

@@ -66,7 +66,8 @@ type Mutation {
   unmuteNotificationType(type: NotificationType!): Boolean!
 
   # workspace & members ------------------------------------------------------
-  updateWorkspace(name: String, slug: String, primaryColor: String, signupMode: String): Workspace!
+  updateWorkspace(name: String, slug: String, primaryColor: String, signupMode: String, logoMediaId: ID): Workspace!
+  updateProfile(displayName: String, bio: String, avatarMediaId: ID): Member!
   setMemberRole(id: ID!, role: String!): MemberDetail!
   suspendMember(id: ID!): MemberDetail!
   deactivateMember(id: ID!): MemberDetail!
