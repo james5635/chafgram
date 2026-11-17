@@ -80,8 +80,8 @@ type Mutation {
   revokeInvite(id: ID!): Boolean!
 
   # messaging -----------------------------------------------------------------
-  sendDirectMessage(userId: ID!, body: String!): Message!
-  sendMessage(conversationId: ID!, body: String!): Message!
+  sendDirectMessage(userId: ID!, body: String, mediaIds: [ID!]): Message!
+  sendMessage(conversationId: ID!, body: String, mediaIds: [ID!]): Message!
   createGroupConversation(title: String!, memberIds: [ID!]): Conversation!
   addGroupMember(id: ID!, userId: ID!, role: String): Conversation!
   removeGroupMember(id: ID!, userId: ID!): Conversation!

@@ -5,6 +5,9 @@ import io.github.james5635.chafgram.messaging.dto.ConversationDto;
 import io.github.james5635.chafgram.messaging.dto.MessageDto;
 import io.github.james5635.chafgram.social.CurrentMember;
 import io.github.james5635.chafgram.identity.MemberAccess;
+import io.github.james5635.chafgram.media.dto.MediaAssetDto;
+import io.github.james5635.chafgram.media.MediaAssetRepository;
+import io.github.james5635.chafgram.messaging.MessageMediaRepository;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.http.HttpStatus;
@@ -15,6 +18,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Controller
 @PreAuthorize("isFullyAuthenticated()")
@@ -23,23 +27,28 @@ public class MessagingMutationResolver {
 	private final MessagingService messaging;
 	private final MemberAccess access;
 	private final CurrentMember current;
+	private final MediaAssetRepository mediaAssets;
+	private final MessageMediaRepository messageMedia;
 
-	public MessagingMutationResolver(MessagingService messaging, MemberAccess access, CurrentMember current) {
+	public MessagingMutationResolver(MessagingService messaging, MemberAccess access, CurrentMember current,
+			MediaAssetRepository mediaAssets, MessageMediaRepository messageMedia) {
 		this.messaging = messaging;
 		this.access = access;
 		this.current = current;
+		this.mediaAssets = mediaAssets;
+		this.messageMedia = messageMedia;
 	}
 
 	@MutationMapping
-	public MessageDto sendDirectMessage(@Argument Long userId, @Argument String body) {
+	public MessageDto sendDirectMessage(@Argument Long userId, @Argument String body, @Argument List<Long> mediaIds) {
 		var actor = access.requireWriteable(current.require().getUsername());
-		return toDto(messaging.send(actor, userId, body));
+		return toDto(messaging.send(actor, userId, body, mediaIds), mediaAssets, messageMedia);
 	}
 
 	@MutationMapping
-	public MessageDto sendMessage(@Argument Long conversationId, @Argument String body) {
+	public MessageDto sendMessage(@Argument Long conversationId, @Argument String body, @Argument List<Long> mediaIds) {
 		var actor = access.requireWriteable(current.require().getUsername());
-		return toDto(messaging.sendToConversation(actor, conversationId, body));
+		return toDto(messaging.sendToConversation(actor, conversationId, body, mediaIds), mediaAssets, messageMedia);
 	}
 
 	@MutationMapping
@@ -100,8 +109,16 @@ public class MessagingMutationResolver {
 		return new ConversationDto(c.getId(), c.getType().name().toLowerCase(), c.getTitle(), c.getUpdatedAt());
 	}
 
-	private static MessageDto toDto(Message m) {
+	private static MessageDto toDto(Message m, MediaAssetRepository mediaAssets, MessageMediaRepository messageMedia) {
 		Long senderId = m.getSenderId() == null ? -1L : m.getSenderId();
-		return new MessageDto(m.getId(), m.getConversationId(), senderId, m.getType().name().toLowerCase(), m.getBody(), m.getCreatedAt());
+		List<MediaAssetDto> media = messageMedia.findByMessageId(m.getId()).stream()
+				.map(mm -> mediaAssets.findById(mm.getMediaId()).orElse(null))
+				.filter(java.util.Objects::nonNull)
+				.map(ma -> new MediaAssetDto(ma.getId(), ma.getKind().name().toLowerCase(), ma.getStatus().name().toLowerCase(),
+						ma.getOwnerUserId(), ma.getMimeType(), ma.getWidth(), ma.getHeight(),
+						ma.getDurationMs(), ma.getBlurhash(), ma.getSizeBytes() == null ? null : ma.getSizeBytes().toString(),
+						ma.getCreatedAt()))
+				.collect(Collectors.toList());
+		return new MessageDto(m.getId(), m.getConversationId(), senderId, m.getType().name().toLowerCase(), m.getBody(), media, m.getCreatedAt());
 	}
 }

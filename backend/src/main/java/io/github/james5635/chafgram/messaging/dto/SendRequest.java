@@ -1,4 +1,6 @@
 package io.github.james5635.chafgram.messaging.dto;
 
-public record SendRequest(String body) {
+import java.util.List;
+
+public record SendRequest(String body, List<Long> mediaIds) {
 }

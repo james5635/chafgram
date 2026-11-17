@@ -3,6 +3,7 @@ type Message {
   conversationId: ID!
   senderId: ID!
   type: String!
-  body: String!
+  body: String
+  media: [MediaAsset!]!
   createdAt: String!
 }
