@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 
@@ -50,6 +51,9 @@ class IdentityFlowIntegrationTest extends AbstractIntegrationTest {
 
 	@Autowired
 	private MediaAssetRepository mediaAssets;
+
+	@Autowired
+	private MemberAccess memberAccess;
 
 	/** Each test gets a clean slate (same Spring context and database within the class). */
 	@BeforeEach
@@ -211,6 +215,27 @@ class IdentityFlowIntegrationTest extends AbstractIntegrationTest {
 				"MIXED-CASE", "Other", "other@example.com", null))
 				.isInstanceOf(ApiException.class)
 				.satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+	}
+
+	@Test
+	void lastSeenIsUpdatedThrottledToOneWritePerFiveMinutes() {
+		User alice = memberService.bootstrap(
+				"alice", "Alice", "alice@example.com", "a-very-strong-password");
+		jdbc.update("UPDATE users SET last_seen_at = ? WHERE id = ?",
+				Timestamp.from(Instant.now().minusSeconds(600)), alice.getId());
+
+		memberAccess.currentMember("alice");
+		Instant afterFirst = lastSeenOf(alice.getId());
+		assertThat(afterFirst).isAfter(Instant.now().minusSeconds(60));
+
+		memberAccess.currentMember("alice");
+		assertThat(lastSeenOf(alice.getId())).isEqualTo(afterFirst);
+	}
+
+	private Instant lastSeenOf(Long userId) {
+		Timestamp ts = jdbc.queryForObject(
+				"SELECT last_seen_at FROM users WHERE id = ?", Timestamp.class, userId);
+		return ts == null ? null : ts.toInstant();
 	}
 
 	@Test

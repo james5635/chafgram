@@ -14,15 +14,27 @@ import java.util.Optional;
 @Service
 public class MemberAccess {
 
-	private final UserRepository users;
+	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MemberAccess.class);
 
-	public MemberAccess(UserRepository users) {
+	private final UserRepository users;
+	private final LastSeenService lastSeen;
+
+	public MemberAccess(UserRepository users, LastSeenService lastSeen) {
 		this.users = users;
+		this.lastSeen = lastSeen;
 	}
 
 	public User currentMember(String username) {
-		return users.findByUsername(username)
+		User user = users.findByUsername(username)
 				.orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Not authenticated"));
+		// FR-2.5: throttled presence; a last-seen failure must never break the request
+		try {
+			lastSeen.touch(user.getId());
+		}
+		catch (RuntimeException e) {
+			log.debug("last-seen update failed for user {}: {}", user.getId(), e.getMessage());
+		}
+		return user;
 	}
 
 	public Optional<User> find(String username) {
