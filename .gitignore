@@ -5,6 +5,9 @@ docs/superpowers/
 # Local environment overrides (dev credentials live here, never in git)
 .env
 
+# Test artifacts
+backend/media-data/
+
 # OS junk
 .DS_Store
 Thumbs.db

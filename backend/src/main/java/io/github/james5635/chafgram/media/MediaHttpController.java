@@ -28,10 +28,13 @@ public class MediaHttpController {
 
 	private final MediaService media;
 	private final MemberAccess access;
+	private final MediaAccessService mediaAccess;
 
-	public MediaHttpController(MediaService media, MemberAccess access) {
+	public MediaHttpController(MediaService media, MemberAccess access,
+			MediaAccessService mediaAccess) {
 		this.media = media;
 		this.access = access;
+		this.mediaAccess = mediaAccess;
 	}
 
 	@PostMapping(value = "/api/v1/media", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -48,8 +51,9 @@ public class MediaHttpController {
 
 	@GetMapping("/api/v1/media/{id}/bytes")
 	public ResponseEntity<byte[]> bytes(@PathVariable Long id) {
-		access.currentMember(currentUsername()); // members only, never anonymous (BR-5.2)
+		User actor = access.requireWriteable(currentUsername()); // members only, never anonymous (BR-5.2)
 		MediaAsset asset = media.get(id);
+		mediaAccess.assertCanView(actor, asset); // authorization: blocks/tombstones → 404
 		try (InputStream in = media.read(asset).stream()) {
 			return ResponseEntity.ok()
 					.contentType(MediaType.parseMediaType(asset.getMimeType()))
