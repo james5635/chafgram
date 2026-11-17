@@ -46,8 +46,8 @@
 │                                           └───▲──────────────────┘    │
 │                                               │ transcode/thumbs        │
 │                                       ┌───────┴────────────────┐       │
-│                                       │ media worker           │       │
-│                                       │ (ffmpeg, sidecar)      │       │
+│                                       │ in-app async pipeline   │       │
+│                                       │ (ffmpeg, bounded pool)  │       │
 │                                       └────────────────────────┘       │
 └───────────────────────────────────────────────────────────────────────┘
 ```
@@ -56,8 +56,10 @@
   backend (BFF pattern) so no internal URLs or secrets leak to the browser.
 - The **backend** owns all domain logic, auth, and data. The frontend holds no
   authoritative state.
-- The **media worker** is a separate process (or sidecar container) consuming
-  `media_assets` rows with `status='processing'`. *(proposal — media worker phase)*
+- The **media pipeline runs in-app**: a bounded `@Async` executor inside the backend
+  picks up `media_assets` rows with `status='processing'` after the upload transaction
+  commits. A separate worker process/sidecar remains possible later, but it is not
+  required for v1.
 - **Reverse proxy / TLS** (nginx, Traefik, company LB) terminates HTTPS; not part of
   this repo. Configuration documented here later.
 
@@ -100,6 +102,7 @@ io.github.james5635.chafgram
 ├── messaging        conversations, conversation_members, messages, realtime transport  ← implemented
 ├── notifications    emit/consume, unread badges, (no push in v1)  ← implemented
 ├── moderation       reports workflow, audit_log, content tombstones  ← implemented
+├── mail             account mail only: logging fallback (default) or SMTP  ← implemented
 └── common           errors (RFC-7807), paging cursors, mappers, constants  ← implemented
 ```
 
@@ -146,18 +149,29 @@ Public workspace branding is a **GraphQL** operation, not REST: `query { workspa
 ## 5. Media pipeline
 
 ```
-upload (REST multipart)            worker (sidecar)
+upload (REST multipart)            in-app async pipeline
   │  media_assets row: status=processing, kind=image|video
   ▼
- local disk / S3-compatible  ◀── ffmpeg: transcode, thumbnail, blurhash
+ local disk / S3-compatible  ◀── ffmpeg/ffprobe: transcode, thumbnail, blurhash
   │                                        │
   └── feed/watch query: WHERE status='ready'
 ```
 
+- The pipeline is an `@Async` task inside the backend (`AsyncConfig`: 2 threads, queue
+  64, `media-pipeline-*` threads), started after the upload transaction commits. It runs
+  `ffprobe` (duration, dimensions) → `ffmpeg` (H.264/AAC transcode, metadata stripped)
+  → thumbnail → blurhash, then flips the row to `status='ready'`. Any error or a
+  10-minute timeout lands it in `status='failed'`.
 - Short vs. long video: same `media_assets` table; short feed =
   `kind='video' AND duration_ms <= 60000 AND status='ready'` — a query, not a table.
 - Storage behind `MediaStorage` interface (`store`, `read`, `delete`, `presign`);
   default local disk under a configurable root; S3-compatible via SDK later.
+- Bytes are never served anonymously: `GET /api/v1/media/{id}/bytes` runs the
+  authorization tree in `MediaAccessService` (owner, message participants, visible
+  posts, avatars/logos; staff see everything) and answers `404` for every denial.
+- Moderation delete (admin, BR-5.3): `deleteMedia(id)` tombstones the asset
+  (`status='deleted'`), writes an `audit_log` row, and the bytes stop being served
+  everywhere. The file itself stays on disk until a retention sweep exists.
 - Failures land in `status='failed'` with last error in `blurhash`-adjacent column or
   a proper `error_message` if added — **(proposal)** if retried 3×, require manual
   re-upload rather than infinite retry.
@@ -197,7 +211,7 @@ upload (REST multipart)            worker (sidecar)
 | Concern | Approach |
 |---------|----------|
 | Artifact | OCI image for backend + static assets via frontend build; `compose.yaml` for the full self-hosted stack (app + MySQL + volume) — dev compose exists today and doubles as the reference |
-| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline (migrations in `backend/src/main/resources/db/migration/`) |
+| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline, `V2` media column alignment, `V3` `users.email_verified_at` (migrations in `backend/src/main/resources/db/migration/`) |
 | Backups | `mysqldump`/volume snapshot, admin-facing docs; restore tested per release |
 | TLS | Terminated at company reverse proxy; app serves plain HTTP internally |
 | Observability | Actuator health/metrics; logs to stdout; **no** mandatory external telemetry |

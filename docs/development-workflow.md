@@ -12,6 +12,7 @@
 | Node.js + npm | any current LTS | `just doctor` |
 | Docker + Docker Compose | — | `docker compose version` |
 | just | latest | `just --version` |
+| ffmpeg + ffprobe | any recent | `ffmpeg -version` (video pipeline; images work without it) |
 
 `just` is the entry point for everything below; raw commands are in each section.
 Package-specific recipes live in `backend/justfile` (`just backend::<recipe>`) and
@@ -39,6 +40,8 @@ just dev               # backend :8080 + frontend :3000 (parallel; Ctrl-C stops 
 - Optional, for media uploads: `docker compose up -d garage garage-init` — one-shot,
   idempotent S3 setup (bucket `chafgram-media`, endpoint `http://localhost:3900`,
   region `garage`). Re-running is safe.
+- Optional, for video: `ffmpeg` + `ffprobe` on `PATH`. The in-app pipeline shells out
+  to them; without them video uploads end in `status='failed'` (images are unaffected).
 
 ## 3. The daily loop
 
@@ -111,6 +114,13 @@ Frontend has no test runner yet (`just frontend::test` is a `--if-present` no-op
   Anonymous POSTs without a valid pair get 403 — by design, not a bug.
 - GraphiQL executes queries but needs the same CSRF pair; the masked token is exposed
   as the hidden `_csrf` field on the `/login` page.
+- The operation surface lives in `backend/src/main/resources/graphql/schema.graphqls`
+  (Query/Mutation roots) with one `.graphqls` file per DTO. Notable groups:
+  profile (`updateProfile`), passkeys (`myPasskeys`/`renamePasskey`/`revokePasskey`),
+  account flows (`requestEmailVerification`, `requestPasswordReset`, `resetPassword`,
+  `verifyEmail`), watch feed (`watchFeed`), message media + editing (`mediaIds`,
+  `editMessage`, `deleteMessage`), admin (`members(query:)`, `auditLog(...)`,
+  `deleteMedia(id:)`).
 
 ## 7. Verification & pushing
 

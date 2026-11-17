@@ -27,6 +27,11 @@ open source under MIT. See **[product.md](product.md)** for the full product def
 - Direct messages
 - Admin workspace: member management, moderation, configuration
 
+The backend API surface behind these is complete against the decided requirements —
+see [`docs/functional-requirements.md`](docs/functional-requirements.md) and
+[`docs/business-rules.md`](docs/business-rules.md) for what is implemented, and
+[`docs/architecture.md`](docs/architecture.md) for how it is put together.
+
 (Feature scope and open questions: [product.md](product.md).)
 
 ## Tech stack
@@ -88,18 +93,21 @@ audit-log entries and an email-verification token row. Media rows reference fake
 `demo/...` keys — no blobs exist until real uploads happen. Dev fixtures only.
 
 The API is GraphQL-first (see `docs/architecture.md`): all operations go through
-`POST /graphql` — social data (feed, posts, comments, reactions, follows), identity
-(members, workspace), invites, messaging, reports, audit log. Explore it with
-GraphiQL at `http://localhost:8080/graphiql` (dev). Authorization failures return
-HTTP 200 with a GraphQL `errors[]` (classification `UNAUTHENTICATED`/`UNAUTHORIZED`),
-and every resolver class enforces `isFullyAuthenticated()` except explicitly-public
-operations. CSRF is enforced for browser clients.
+`POST /graphql` — social data (feed, watch feed, posts, comments, reactions, follows),
+identity (members, workspace, profile, passkeys), invites, account flows (email
+verification, password reset), messaging, reports, audit log, and media metadata.
+Explore it with GraphiQL at `http://localhost:8080/graphiql` (dev). Authorization
+failures return HTTP 200 with a GraphQL `errors[]` (classification `UNAUTHORIZED` for
+anonymous, `FORBIDDEN` for an authenticated member without the role), and every resolver
+class enforces `isFullyAuthenticated()` except explicitly-public operations. CSRF is
+enforced for browser clients.
 
 REST exists only for what GraphQL cannot express — the keep-list lives in
 `docs/architecture.md`: session ceremonies (`/api/v1/bootstrap`, `/api/v1/register`,
 `/api/v1/invites/accept`), Spring Security's WebAuthn endpoints, media upload
 (`POST /api/v1/media`) and byte serving (`GET /api/v1/media/{id}/bytes`), and
-Actuator. Public branding is a public GraphQL query: `{ workspace { name slug } }`.
+Actuator (`/actuator/health` public; `/actuator/info` and `/actuator/metrics`
+admin-only). Public branding is a public GraphQL query: `{ workspace { name slug } }`.
 
 Requires JDK 21. The datasource defaults in `application.properties` match the
 `compose.yaml` dev credentials (`chafgram` / `chafgram`, database `chafgram`); override
@@ -122,6 +130,14 @@ To send real mail, set `CHAFGRAM_MAIL_SMTP_ENABLED=true` plus `SPRING_MAIL_HOST`
 `CHAFGRAM_APP_URL` at the frontend so the links resolve (`http://localhost:3000` by
 default). See `.env.example` for the full list. Both flows use single-use tokens that
 expire after 30 minutes; only their SHA-256 hash is stored.
+
+#### Video processing
+
+Video uploads are processed in the backend by a bounded async pipeline
+(`ffprobe` → `ffmpeg` transcode → thumbnail → blurhash), so `ffmpeg` and `ffprobe` must
+be on `PATH` for videos to finish (`status='ready'`). Without them a video upload ends
+in `status='failed'`; images are unaffected. Short videos (≤ 60 s) surface in the watch
+feed, longer ones in the regular feed.
 
 ### Frontend
 

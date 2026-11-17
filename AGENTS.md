@@ -61,11 +61,19 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
   touched — no `just seed` afterwards. Test-only config lives in
   `backend/src/test/resources/application-test.properties` (profile `test`); never add a
   test-scoped `application.properties`, it shadows the main one on the classpath.
-- Identity Backend modules implemented: `identity` (users/invites/workspace, REST
-  `/api/v1`), `social` (posts/comments/reactions/follows/feed/search + GraphQL at
+- Identity Backend modules implemented: `identity` (users/invites/workspace/passkeys/account
+  flows, REST `/api/v1`), `social` (posts/comments/reactions/follows/feed/search + GraphQL at
   `/graphql`), `messaging` (1:1 + groups, REST), `notifications`, `moderation`
-  (reports + audit log), `media` (local-disk upload). See `docs/architecture.md` for the
-  system design.
+  (reports + audit log), `media` (upload/bytes + in-app async video pipeline), `mail`
+  (account mail: logging fallback by default, SMTP opt-in). See `docs/architecture.md`
+  for the system design.
+- Account mail (email verification, password reset — FR-1.7) is opt-in: unless
+  `CHAFGRAM_MAIL_SMTP_ENABLED=true`, mail is written to the app log (no outbound call,
+  BR-10.1). `CHAFGRAM_APP_URL` builds the links in those mails.
+- Video processing runs in-app: `ffmpeg`/`ffprobe` must be on `PATH` for videos to
+  reach `status='ready'`; images are unaffected.
+- Actuator has its own security chain: `/actuator/health` is public, `/actuator/info`
+  and `/actuator/metrics` are admin-only with HTTP Basic (anonymous → 401).
 - Passkeys are handled by Spring Security WebAuthn; the `user_entities` and
   `user_credentials` tables are framework-managed — do not add JPA entities on top of
   them or alter their DDL. Configure via env `CHAFGRAM_WEBAUTHN_RP_ID` (default
@@ -87,6 +95,8 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 - Migrations go in `src/main/resources/db/migration/` as `V<n>__snake_case.sql` (Flyway).
   The migration files are the schema of record. `spring.jpa.hibernate.ddl-auto`
   is `validate` — Hibernate never creates or updates; Flyway owns the schema.
+  Baseline: `V1__init.sql`; `V2` aligns media position columns; `V3` adds
+  `users.email_verified_at` (FR-1.7).
 - Both `spring-boot-starter-webmvc` and `-webflux` are present; prefer the MVC/servlet path
   unless a reactive endpoint is explicitly needed.
 
