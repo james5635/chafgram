@@ -10,6 +10,7 @@ import io.github.james5635.chafgram.identity.UserRepository;
 import io.github.james5635.chafgram.notifications.NotificationEntityType;
 import io.github.james5635.chafgram.notifications.NotificationService;
 import io.github.james5635.chafgram.notifications.NotificationType;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -130,7 +131,7 @@ public class CommentService {
 
 	@Transactional(readOnly = true)
 	public List<Comment> listByPost(Long postId, int limit) {
-		return comments.findByPost(postId, org.springframework.data.domain.PageRequest.of(0, Math.min(Math.max(limit, 1), 200)));
+		return comments.findByPost(postId, PageRequest.of(0, Math.min(Math.max(limit, 1), 200)));
 	}
 
 	@Transactional(readOnly = true)

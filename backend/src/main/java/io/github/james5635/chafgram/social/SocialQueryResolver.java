@@ -20,8 +20,11 @@ import io.github.james5635.chafgram.notifications.NotificationService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+
+import io.github.james5635.chafgram.common.ApiException;
 
 import java.util.List;
 
@@ -152,7 +155,6 @@ public class SocialQueryResolver {
 
 	private User findByUsername(String username) {
 		return users.findByUsername(username)
-				.orElseThrow(() -> new io.github.james5635.chafgram.common.ApiException(
-						org.springframework.http.HttpStatus.NOT_FOUND, "Member not found"));
+				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Member not found"));
 	}
 }

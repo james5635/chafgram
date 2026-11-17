@@ -2,7 +2,6 @@ package io.github.james5635.chafgram.social;
 
 import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.common.AuditService;
-import java.util.Map;
 import io.github.james5635.chafgram.identity.MemberAccess;
 import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
@@ -10,12 +9,14 @@ import io.github.james5635.chafgram.identity.UserRepository;
 import io.github.james5635.chafgram.media.MediaAsset;
 import io.github.james5635.chafgram.media.MediaAssetRepository;
 import io.github.james5635.chafgram.media.MediaKind;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /** Posts: create/update/tombstone delete, listings, and media checks (BR-3.x, BR-5.x). */
 @Service
@@ -97,7 +98,7 @@ public class PostService {
 
 	@Transactional(readOnly = true)
 	public List<Post> listByAuthor(Long authorId, int limit) {
-		return posts.findByAuthor(authorId, org.springframework.data.domain.PageRequest.of(0, limit));
+		return posts.findByAuthor(authorId, PageRequest.of(0, limit));
 	}
 
 	@Transactional(readOnly = true)

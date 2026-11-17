@@ -4,6 +4,7 @@ import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.UserRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +21,7 @@ public class CurrentMember {
 	public User require() {
 		var auth = SecurityContextHolder.getContext().getAuthentication();
 		if (auth == null
-				|| auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken
+				|| auth instanceof AnonymousAuthenticationToken
 				|| "anonymousUser".equals(auth.getPrincipal())) {
 			throw new ApiException(HttpStatus.UNAUTHORIZED, "Not authenticated");
 		}

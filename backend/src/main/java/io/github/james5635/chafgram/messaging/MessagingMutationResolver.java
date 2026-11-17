@@ -7,6 +7,7 @@ import io.github.james5635.chafgram.social.CurrentMember;
 import io.github.james5635.chafgram.identity.MemberAccess;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 
@@ -91,7 +92,7 @@ public class MessagingMutationResolver {
 			return Instant.parse(raw);
 		}
 		catch (DateTimeParseException e) {
-			throw new ApiException(org.springframework.http.HttpStatus.BAD_REQUEST, "until must be an ISO-8601 instant");
+			throw new ApiException(HttpStatus.BAD_REQUEST, "until must be an ISO-8601 instant");
 		}
 	}
 

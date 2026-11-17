@@ -8,6 +8,7 @@ import io.github.james5635.chafgram.common.AuditService;
 import io.github.james5635.chafgram.social.PostService;
 import io.github.james5635.chafgram.social.CommentService;
 import io.github.james5635.chafgram.messaging.MessagingService;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,7 +56,7 @@ public class ReportService {
 	@Transactional(readOnly = true)
 	public List<Report> openQueue(User actor) {
 		requireStaff(actor);
-		return reports.findOpenQueue(org.springframework.data.domain.PageRequest.of(0, 100));
+		return reports.findOpenQueue(PageRequest.of(0, 100));
 	}
 
 	@Transactional

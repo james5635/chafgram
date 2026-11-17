@@ -1,5 +1,6 @@
 package io.github.james5635.chafgram.social;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,8 +23,8 @@ public interface FollowRepository extends JpaRepository<Follow, FollowId> {
 	boolean isFollowing(@Param("followerId") Long followerId, @Param("followeeId") Long followeeId);
 
 	@Query("select u from User u join Follow f on f.followeeId = u.id where f.followerId = :id order by f.createdAt desc")
-	List<User> findFollowees(@Param("id") Long id, org.springframework.data.domain.Pageable pageable);
+	List<User> findFollowees(@Param("id") Long id, Pageable pageable);
 
 	@Query("select u from User u join Follow f on f.followerId = u.id where f.followeeId = :id order by f.createdAt desc")
-	List<User> findFollowers(@Param("id") Long id, org.springframework.data.domain.Pageable pageable);
+	List<User> findFollowers(@Param("id") Long id, Pageable pageable);
 }
