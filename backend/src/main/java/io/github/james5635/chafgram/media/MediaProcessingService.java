@@ -33,12 +33,12 @@ public class MediaProcessingService {
 	}
 
 	/** Entry point — called after commit via event listener. */
+	@Async("mediaPipelineExecutor")
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void processAsync(Long mediaAssetId) {
 		process(mediaAssetId);
 	}
 
-	@Async("mediaPipelineExecutor")
 	public void process(Long mediaAssetId) {
 		MediaAsset asset = mediaAssets.findById(mediaAssetId).orElse(null);
 		if (asset == null || asset.getKind() != MediaKind.VIDEO) {
@@ -108,7 +108,7 @@ public class MediaProcessingService {
 
 	// — ffmpeg / ffprobe helpers —
 
-	private record ProbeResult(int width, int height, int durationMs) {}
+	record ProbeResult(int width, int height, int durationMs) {}
 
 	private ProbeResult ffprobe(Path input) {
 		try {
@@ -128,7 +128,7 @@ public class MediaProcessingService {
 		}
 	}
 
-	private ProbeResult parseProbe(String json) {
+	static ProbeResult parseProbe(String json) {
 		// Minimal JSON parsing for the fields we need
 		int width = extractInt(json, "\"width\":");
 		int height = extractInt(json, "\"height\":");
@@ -137,29 +137,42 @@ public class MediaProcessingService {
 	}
 
 	private static int extractInt(String json, String key) {
-		int i = json.indexOf(key);
-		if (i < 0) {
+		int start = valueStart(json, key);
+		if (start < 0) {
 			return 0;
 		}
-		i += key.length();
-		int end = i;
+		int end = start;
 		while (end < json.length() && Character.isDigit(json.charAt(end))) {
 			end++;
 		}
-		return Integer.parseInt(json.substring(i, end));
+		return Integer.parseInt(json.substring(start, end));
 	}
 
 	private static double extractDouble(String json, String key) {
-		int i = json.indexOf(key);
-		if (i < 0) {
+		int start = valueStart(json, key);
+		if (start < 0) {
 			return 0.0;
 		}
-		i += key.length();
-		int end = i;
-		while (end < json.length() && (Character.isDigit(json.charAt(end)) || json.charAt(end) == '.')) {
+		int end = start;
+		while (end < json.length() && (Character.isDigit(json.charAt(end)) || json.charAt(end) == '.' || json.charAt(end) == '-')) {
 			end++;
 		}
-		return Double.parseDouble(json.substring(i, end));
+		return Double.parseDouble(json.substring(start, end));
+	}
+
+	private static int valueStart(String json, String key) {
+		int index = json.indexOf(key);
+		if (index < 0) {
+			return -1;
+		}
+		index += key.length();
+		while (index < json.length() && Character.isWhitespace(json.charAt(index))) {
+			index++;
+		}
+		if (index < json.length() && json.charAt(index) == '"') {
+			index++;
+		}
+		return index;
 	}
 
 	private void transcode(Path input, Path output) {

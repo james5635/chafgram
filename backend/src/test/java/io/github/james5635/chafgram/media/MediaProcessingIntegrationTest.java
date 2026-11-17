@@ -84,7 +84,8 @@ class MediaProcessingIntegrationTest extends AbstractIntegrationTest {
 				.andExpect(jsonPath("$.id", notNullValue()))
 				.andReturn();
 
-		String mediaId = com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+		Object mediaIdValue = com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+		String mediaId = mediaIdValue.toString();
 
 		// Poll for READY (up to 60s)
 		boolean ready = false;
@@ -118,7 +119,8 @@ class MediaProcessingIntegrationTest extends AbstractIntegrationTest {
 				.andExpect(jsonPath("$.status").value("processing"))
 				.andReturn();
 
-		String mediaId = com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+		Object mediaIdValue = com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+		String mediaId = mediaIdValue.toString();
 
 		// Poll for FAILED (up to 30s)
 		boolean failed = false;

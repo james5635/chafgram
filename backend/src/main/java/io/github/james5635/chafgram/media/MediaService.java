@@ -2,10 +2,10 @@ package io.github.james5635.chafgram.media;
 
 import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.identity.User;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.multipart.MultipartFile;
 
 /** Media asset lifecycle. Images complete instantly; videos queue for async transcode. */
@@ -17,12 +17,12 @@ public class MediaService {
 
 	private final MediaStorage storage;
 	private final MediaAssetRepository mediaAssets;
-	private final MediaProcessingService processor;
+	private final ApplicationEventPublisher eventPublisher;
 
-	public MediaService(MediaStorage storage, MediaAssetRepository mediaAssets, MediaProcessingService processor) {
+	public MediaService(MediaStorage storage, MediaAssetRepository mediaAssets, ApplicationEventPublisher eventPublisher) {
 		this.storage = storage;
 		this.mediaAssets = mediaAssets;
-		this.processor = processor;
+		this.eventPublisher = eventPublisher;
 	}
 
 	@Transactional
@@ -52,9 +52,9 @@ public class MediaService {
 		asset.setSizeBytes(size);
 		MediaAsset saved = mediaAssets.save(asset);
 
-		// Video pipeline runs after commit (AFTER_COMMIT phase)
+		// The listener starts the video pipeline after this transaction commits.
 		if (kind == MediaKind.VIDEO) {
-			processor.processAsync(saved.getId());
+			eventPublisher.publishEvent(saved.getId());
 		}
 		return saved;
 	}
