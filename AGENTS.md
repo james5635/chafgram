@@ -16,6 +16,7 @@ assume public-social-network semantics anywhere in the codebase.
 backend/    Spring Boot 4 (Java 21) service — Maven wrapper, package io.github.james5635.chafgram
 frontend/   TanStack Start (React 19, Vite, Tailwind v4) app — file-based routing
 compose.yaml  Local dev MySQL 8.0 (dev-only throwaway credentials)
+config/     Dev service config (Garage object-storage config)
 docs/functional-requirements.md  Functional requirements (FR)
 docs/business-rules.md  Business rules (BR)
 docs/architecture.md  Architecture (system design)
