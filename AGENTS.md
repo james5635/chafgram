@@ -132,6 +132,10 @@ npm run preview            # serve the production build
   `test`, `chore`, `build`, `ci`. Scope: the area touched (`backend`, `frontend`, `db`,
   `docs`, `justfile`, …). Subject is imperative with no trailing period; describe
   *why*, not just *what*. PR titles follow the same format.
+- **Test imports:** Use imports for Spring test utilities — never fully-qualified class names.
+  - `import org.springframework.mock.web.MockMultipartFile;` → `new MockMultipartFile(...)`
+  - `import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;` → `.with(csrf())`
+  - Avoid `org.springframework.mock.web.MockMultipartFile` or `org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()` inline.
 - **Docs-first for direction:** if a change contradicts `product.md`/`design.md`, update
   the doc in the same change or flag it — don't fork the truth in code.
 
