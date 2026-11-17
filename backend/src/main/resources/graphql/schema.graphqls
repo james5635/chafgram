@@ -103,6 +103,9 @@ type Mutation {
   # passkeys ------------------------------------------------------------------
   renamePasskey(credentialId: ID!, label: String!): Passkey!
   revokePasskey(credentialId: ID!): Boolean!
+
+  # media (admin moderation, BR-5.3) -------------------------------------------
+  deleteMedia(id: ID!): Boolean!
 }
 
 enum PostType { NOTE PHOTO VIDEO }

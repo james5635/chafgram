@@ -1,12 +1,15 @@
 package io.github.james5635.chafgram.media;
 
 import io.github.james5635.chafgram.common.ApiException;
+import io.github.james5635.chafgram.common.AuditService;
 import io.github.james5635.chafgram.identity.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 /** Media asset lifecycle. Images complete instantly; videos queue for async transcode. */
 @Service
@@ -18,11 +21,14 @@ public class MediaService {
 	private final MediaStorage storage;
 	private final MediaAssetRepository mediaAssets;
 	private final ApplicationEventPublisher eventPublisher;
+	private final AuditService audit;
 
-	public MediaService(MediaStorage storage, MediaAssetRepository mediaAssets, ApplicationEventPublisher eventPublisher) {
+	public MediaService(MediaStorage storage, MediaAssetRepository mediaAssets,
+			ApplicationEventPublisher eventPublisher, AuditService audit) {
 		this.storage = storage;
 		this.mediaAssets = mediaAssets;
 		this.eventPublisher = eventPublisher;
+		this.audit = audit;
 	}
 
 	@Transactional
@@ -63,6 +69,29 @@ public class MediaService {
 	public MediaAsset get(Long id) {
 		return mediaAssets.findById(id)
 				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Media not found"));
+	}
+
+	/**
+	 * Admin moderation delete (BR-5.3): tombstones the asset so it is no
+	 * longer served anywhere, and records the action in the audit log
+	 * (BR-9.2).
+	 *
+	 * <p>The bytes stay on disk — physical purge is a retention job
+	 * (BR-5.4, still a proposal). Re-deleting an already deleted asset is a
+	 * no-op.</p>
+	 */
+	@Transactional
+	public void deleteForModeration(User actor, Long mediaId) {
+		MediaAsset asset = mediaAssets.findById(mediaId)
+				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Media not found"));
+		if (asset.getStatus() == MediaStatus.DELETED) {
+			return;
+		}
+		asset.setStatus(MediaStatus.DELETED);
+		mediaAssets.save(asset);
+		audit.log(actor.getId(), "media.delete", "media", asset.getId(),
+				Map.of("ownerUserId", asset.getOwnerUserId(),
+						"kind", asset.getKind().name().toLowerCase()));
 	}
 
 	public MediaStorage.MediaStream read(MediaAsset asset) {

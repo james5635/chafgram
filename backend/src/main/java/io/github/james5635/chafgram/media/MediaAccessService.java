@@ -1,6 +1,7 @@
 package io.github.james5635.chafgram.media;
 
 import io.github.james5635.chafgram.common.ApiException;
+import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.UserRepository;
 import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
@@ -9,6 +10,7 @@ import io.github.james5635.chafgram.messaging.Message;
 import io.github.james5635.chafgram.messaging.MessageMedia;
 import io.github.james5635.chafgram.messaging.MessageMediaRepository;
 import io.github.james5635.chafgram.messaging.MessageRepository;
+import io.github.james5635.chafgram.social.Post;
 import io.github.james5635.chafgram.social.PostMedia;
 import io.github.james5635.chafgram.social.PostMediaRepository;
 import io.github.james5635.chafgram.social.PostRepository;
@@ -23,6 +25,7 @@ import java.util.List;
  * <p>
  * Decision tree (first match wins):
  * <ol>
+ *   <li>Asset is deleted (admin moderation, BR-5.3) → deny (404) for everyone.</li>
  *   <li>Viewer is admin/moderator → allow.</li>
  *   <li>Viewer owns the asset → allow.</li>
  *   <li>Asset attached to a message → viewer is sender or conversation member → allow.</li>
@@ -67,9 +70,14 @@ public class MediaAccessService {
 	 * — identical for all deny branches (no information leakage).
 	 */
 	public void assertCanView(User viewer, MediaAsset asset) {
+		// 0. Deleted by an admin (BR-5.3) → gone for everyone, staff included
+		if (asset.getStatus() == MediaStatus.DELETED) {
+			throw new ApiException(HttpStatus.NOT_FOUND, "Media not found");
+		}
+
 		// 1. Staff → allow
-		if (viewer.getRole() == io.github.james5635.chafgram.identity.Role.ADMIN
-				|| viewer.getRole() == io.github.james5635.chafgram.identity.Role.MODERATOR) {
+		if (viewer.getRole() == Role.ADMIN
+				|| viewer.getRole() == Role.MODERATOR) {
 			return;
 		}
 
@@ -82,7 +90,7 @@ public class MediaAccessService {
 		List<MessageMedia> mmList = messageMedia.findByMessageId(asset.getId());
 		if (!mmList.isEmpty()) {
 			for (MessageMedia mm : mmList) {
-				io.github.james5635.chafgram.messaging.Message msg =
+				Message msg =
 						messages.findById(mm.getMessageId())
 								.orElse(null);
 				if (msg != null) {
@@ -101,7 +109,7 @@ public class MediaAccessService {
 		List<PostMedia> pmList = postMedia.findByMediaId(asset.getId());
 		if (!pmList.isEmpty()) {
 			for (PostMedia pm : pmList) {
-				io.github.james5635.chafgram.social.Post post =
+				Post post =
 						posts.findVisibleById(pm.getPostId()).orElse(null);
 				if (post != null) {
 					boolean blocked = blocks.isBlockedBy(post.getAuthorId(), viewer.getId())

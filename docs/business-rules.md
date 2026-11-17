@@ -64,8 +64,9 @@ tombstoned parents' children stay attached.
 or table for shorts.
 **BR-5.2** Media is always served through Chafgram (authz-checked), never as anonymous
 static files. *(proposal)*
-**BR-5.3** Members can attach only media they uploaded; admins can reassign/delete any
-media for moderation.
+**BR-5.3** Members can attach only media they uploaded; admins can delete any media for
+moderation (tombstone + audit-log entry; the bytes stay on disk until a retention sweep).
+Reassigning media to another member is not part of v1.
 **BR-5.4** When a post is tombstoned and no other reference exists, its media is purged
 from storage (scheduled job). *(proposal)*
 **BR-5.5** Image EXIF/GPS metadata is stripped on upload. *(proposal)*
