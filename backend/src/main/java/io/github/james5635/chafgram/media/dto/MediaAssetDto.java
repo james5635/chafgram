@@ -10,6 +10,8 @@ public record MediaAssetDto(
 		String mimeType,
 		Integer width,
 		Integer height,
+		Integer durationMs,
+		String blurhash,
 		String sizeBytes,
 		Instant createdAt) {
 }

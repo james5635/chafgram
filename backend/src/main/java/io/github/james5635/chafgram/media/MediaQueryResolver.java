@@ -32,6 +32,8 @@ public class MediaQueryResolver {
 				asset.getMimeType(),
 				asset.getWidth(),
 				asset.getHeight(),
+				asset.getDurationMs(),
+				asset.getBlurhash(),
 				asset.getSizeBytes() == null ? null : String.valueOf(asset.getSizeBytes()),
 				asset.getCreatedAt());
 	}

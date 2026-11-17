@@ -5,11 +5,10 @@ import io.github.james5635.chafgram.identity.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
-
-/** Media asset lifecycle. Images complete instantly; videos wait for transcoding (future). */
+/** Media asset lifecycle. Images complete instantly; videos queue for async transcode. */
 @Service
 public class MediaService {
 
@@ -18,10 +17,12 @@ public class MediaService {
 
 	private final MediaStorage storage;
 	private final MediaAssetRepository mediaAssets;
+	private final MediaProcessingService processor;
 
-	public MediaService(MediaStorage storage, MediaAssetRepository mediaAssets) {
+	public MediaService(MediaStorage storage, MediaAssetRepository mediaAssets, MediaProcessingService processor) {
 		this.storage = storage;
 		this.mediaAssets = mediaAssets;
+		this.processor = processor;
 	}
 
 	@Transactional
@@ -49,7 +50,13 @@ public class MediaService {
 		asset.setStorageKey(key);
 		asset.setMimeType(mime.isEmpty() ? "application/octet-stream" : mime);
 		asset.setSizeBytes(size);
-		return mediaAssets.save(asset);
+		MediaAsset saved = mediaAssets.save(asset);
+
+		// Video pipeline runs after commit (AFTER_COMMIT phase)
+		if (kind == MediaKind.VIDEO) {
+			processor.processAsync(saved.getId());
+		}
+		return saved;
 	}
 
 	@Transactional(readOnly = true)

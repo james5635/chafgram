@@ -6,6 +6,8 @@ type MediaAsset {
   mimeType: String!
   width: Int
   height: Int
+  durationMs: Int
+  blurhash: String
   sizeBytes: String!
   createdAt: String!
 }
