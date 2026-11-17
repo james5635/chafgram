@@ -122,6 +122,52 @@ npm run build      # production build
 npm run preview    # serve the production build
 ```
 
+### Using the app (dev)
+
+The frontend is still the TanStack Start template (two placeholder routes) — no
+Chafgram screens yet. The backend is fully built, so the app is usable today over
+HTTP. Every step below was verified against a fresh `just seed` on a local MySQL.
+
+1. **Sign in.** Make sure the dev fixtures are loaded (`just seed`), start the backend,
+   and open the default login page at http://localhost:8080/login. Form sign-in:
+   `admin` (admin role) or `maya` / `tao` / `lena` (members), password
+   `chafgram-dev-password` — a successful sign-in redirects to `/`. If you land on
+   `/login?error`, the dev database was wiped (the test suite wipes it) — run
+   `just seed` and try again.
+2. **Query the API after sign-in.** GraphiQL is served at
+   http://localhost:8080/graphiql (dev only). The page loads, but its requests need
+   the CSRF double-submit pair: Spring renders a hidden `_csrf` input on the
+   `/login` page — the masked token that decrypts to the `XSRF-TOKEN` cookie. Copy
+   that value into GraphiQL's **Headers** tab:
+
+   ```json
+   { "X-XSRF-TOKEN": "<hidden _csrf value from the /login page>" }
+   ```
+
+   The session cookie is sent automatically. If requests start returning `403` after
+   you sign in, the token rotated — reload `/login` and copy a fresh `_csrf`.
+
+   Examples (verified against the seeded fixtures):
+
+   ```graphql
+   query { me { username role } }                      # → admin / admin
+   query { unreadNotifications }                       # → 4 for the seeded admin
+   query { followingFeed(first: 2) { posts { body } } }  # seeded fixture posts
+   ```
+
+3. **Public, no sign-in:** `{ workspace { name slug } }` returns the workspace
+   branding. Everything else is `isFullyAuthenticated()` — anonymous callers get
+   `HTTP 200` with `errors[]` (`classification: UNAUTHENTICATED`/`UNAUTHORIZED`),
+   or `403` if the CSRF pair is missing entirely (by design).
+4. **Fixture content** to explore once signed in: posts/comments/reactions, a follows
+   graph, direct + group conversations, notifications, moderation reports and the
+   audit log. Seeded media rows reference fake `demo/…` keys (no blobs) — real
+   uploads require Garage (`docker compose up -d garage garage-init`).
+5. **Passkeys** are wired at the WebAuthn endpoints (`/webauthn/register/*`,
+   `/login/webauthn`) but have no UI yet; the seeded accounts use the password path.
+6. **Invite flow:** accept the seeded reusable demo invite via
+   `POST /api/v1/invites/accept` (REST keep-list) — `demo-invite-token`.
+
 ## Documentation
 
 - **[product.md](product.md)** — what Chafgram is, who it's for, goals/non-goals, open
