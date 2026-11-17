@@ -165,6 +165,106 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void watchFeedReturnsOnlyShortReadyVideos() {
+		// Create test media assets directly
+		MediaAsset shortVideo = new MediaAsset();
+		shortVideo.setOwnerUserId(member.getId());
+		shortVideo.setKind(MediaKind.VIDEO);
+		shortVideo.setStatus(MediaStatus.READY);
+		shortVideo.setStorageKey("test/short.mp4");
+		shortVideo.setMimeType("video/mp4");
+		shortVideo.setDurationMs(10000); // 10s <= 60s
+		shortVideo.setWidth(320);
+		shortVideo.setHeight(240);
+		shortVideo.setSizeBytes(1000L);
+		mediaAssets.save(shortVideo);
+
+		MediaAsset longVideo = new MediaAsset();
+		longVideo.setOwnerUserId(member.getId());
+		longVideo.setKind(MediaKind.VIDEO);
+		longVideo.setStatus(MediaStatus.READY);
+		longVideo.setStorageKey("test/long.mp4");
+		longVideo.setMimeType("video/mp4");
+		longVideo.setDurationMs(90000); // 90s > 60s
+		longVideo.setWidth(1920);
+		longVideo.setHeight(1080);
+		longVideo.setSizeBytes(10000L);
+		mediaAssets.save(longVideo);
+
+		MediaAsset processingVideo = new MediaAsset();
+		processingVideo.setOwnerUserId(member.getId());
+		processingVideo.setKind(MediaKind.VIDEO);
+		processingVideo.setStatus(MediaStatus.PROCESSING);
+		processingVideo.setStorageKey("test/processing.mp4");
+		processingVideo.setMimeType("video/mp4");
+		processingVideo.setDurationMs(30000);
+		processingVideo.setWidth(640);
+		processingVideo.setHeight(480);
+		processingVideo.setSizeBytes(5000L);
+		mediaAssets.save(processingVideo);
+
+		// Create posts with each media
+		Post shortPost = posts.create(member, PostType.VIDEO, "Short video", List.of(shortVideo.getId()));
+		Post longPost = posts.create(member, PostType.VIDEO, "Long video", List.of(longVideo.getId()));
+		Post procPost = posts.create(member, PostType.VIDEO, "Processing video", List.of(processingVideo.getId()));
+		Post notePost = posts.create(member, PostType.NOTE, "Just a note", List.of());
+
+		// watchFeed should only return the short ready video (<= 60s)
+		var watch = feed.watchFeed(admin, 10, Long.MAX_VALUE);
+		assertThat(watch).hasSize(1);
+		assertThat(watch.get(0).getId()).isEqualTo(shortPost.getId());
+	}
+
+	@Test
+	void searchPostsWithKindFilter() {
+		MediaAsset shortVideo = new MediaAsset();
+		shortVideo.setOwnerUserId(member.getId());
+		shortVideo.setKind(MediaKind.VIDEO);
+		shortVideo.setStatus(MediaStatus.READY);
+		shortVideo.setStorageKey("test/short.mp4");
+		shortVideo.setMimeType("video/mp4");
+		shortVideo.setDurationMs(10000);
+		shortVideo.setWidth(320);
+		shortVideo.setHeight(240);
+		shortVideo.setSizeBytes(1000L);
+		mediaAssets.save(shortVideo);
+
+		MediaAsset photoAsset = new MediaAsset();
+		photoAsset.setOwnerUserId(member.getId());
+		photoAsset.setKind(MediaKind.IMAGE);
+		photoAsset.setStatus(MediaStatus.READY);
+		photoAsset.setStorageKey("test/photo.png");
+		photoAsset.setMimeType("image/png");
+		photoAsset.setWidth(640);
+		photoAsset.setHeight(480);
+		photoAsset.setSizeBytes(2000L);
+		mediaAssets.save(photoAsset);
+
+		Post videoPost = posts.create(member, PostType.VIDEO, "Video post", List.of(shortVideo.getId()));
+		Post photoPost = posts.create(member, PostType.PHOTO, "Photo post", List.of(photoAsset.getId()));
+		Post notePost = posts.create(member, PostType.NOTE, "Note post", List.of());
+
+		// Search with kind VIDEO
+		var videoResults = feed.search(admin, "post", 20, PostType.VIDEO);
+		assertThat(videoResults).hasSize(1);
+		assertThat(videoResults.get(0).getId()).isEqualTo(videoPost.getId());
+
+		// Search with kind PHOTO
+		var photoResults = feed.search(admin, "post", 20, PostType.PHOTO);
+		assertThat(photoResults).hasSize(1);
+		assertThat(photoResults.get(0).getId()).isEqualTo(photoPost.getId());
+
+		// Search with kind NOTE
+		var noteResults = feed.search(admin, "post", 20, PostType.NOTE);
+		assertThat(noteResults).hasSize(1);
+		assertThat(noteResults.get(0).getId()).isEqualTo(notePost.getId());
+
+		// Search without kind filter returns all
+		var allResults = feed.search(admin, "post", 20, null);
+		assertThat(allResults).hasSize(3);
+	}
+
+	@Test
 	void messagingFlowBetweenMembers() {
 		Message message = messaging.send(admin, member.getId(), "Welcome to Chafgram, Bob!");
 		assertThat(message.getType().name()).isEqualTo("TEXT");

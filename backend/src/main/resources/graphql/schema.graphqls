@@ -18,9 +18,10 @@ type Query {
   following(username: String!, first: Int = 50): [Member!]!
   followingFeed(first: Int = 20, cursor: String): FeedPage!
   discoverFeed(first: Int = 20, cursor: String): FeedPage!
+  watchFeed(first: Int = 20, cursor: String): FeedPage!
   post(id: ID!): Post
   postComments(postId: ID!, first: Int = 50): [Comment!]!
-  searchPosts(query: String!, first: Int = 20): [Post!]!
+  searchPosts(query: String!, first: Int = 20, kind: PostType): [Post!]!
   savedPosts(first: Int = 20): [Post!]!
   myNotifications(first: Int = 30): [Notification!]!
   unreadNotifications: Int!

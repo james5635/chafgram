@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Pull-based feeds, no fan-out materialization: following feed = posts from
  * followed authors ∪ own posts, sorted by id (monotonic with created_at);
- * discover = everything visible; both exclude blocked authors.
+ * discover = everything visible; watch = short videos only; both exclude blocked authors.
  */
 @Service
 public class FeedService {
@@ -44,12 +44,34 @@ public class FeedService {
 	}
 
 	@Transactional(readOnly = true)
+	public List<Post> watchFeed(User actor, int first, long cursor) {
+		List<Long> blocked = blockedPlus(actor.getId());
+		return posts.findWatch(cursor, page(first)).stream()
+				.filter(p -> !blocked.contains(p.getAuthorId()))
+				.limit(Math.max(first, 1))
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
 	public List<Post> search(User actor, String rawQuery, int first) {
 		String booleanQuery = toBooleanQuery(rawQuery);
 		if (booleanQuery.isEmpty()) {
 			return List.of();
 		}
 		return posts.searchIds(booleanQuery, PageRequest.of(0, Math.min(Math.max(first, 1), 100)))
+				.stream()
+				.map(id -> posts.findVisibleById(id).orElse(null))
+				.filter(p -> p != null && !isBlockedAuthor(actor.getId(), p.getAuthorId()))
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public List<Post> search(User actor, String rawQuery, int first, PostType kind) {
+		String booleanQuery = toBooleanQuery(rawQuery);
+		if (booleanQuery.isEmpty()) {
+			return List.of();
+		}
+		return posts.searchIdsWithKind(booleanQuery, kind == null ? null : kind.name(), PageRequest.of(0, Math.min(Math.max(first, 1), 100)))
 				.stream()
 				.map(id -> posts.findVisibleById(id).orElse(null))
 				.filter(p -> p != null && !isBlockedAuthor(actor.getId(), p.getAuthorId()))

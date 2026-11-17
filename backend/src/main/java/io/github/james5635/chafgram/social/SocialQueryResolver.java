@@ -106,6 +106,15 @@ public class SocialQueryResolver {
 	}
 
 	@QueryMapping
+	public FeedPageDto watchFeed(@Argument Integer first, @Argument String cursor) {
+		User actor = current.require();
+		int limit = first == null ? 20 : Math.min(Math.max(first, 1), 100);
+		long afterId = views.decodeCursor(cursor);
+		List<Post> page = feed.watchFeed(actor, limit, afterId);
+		return new FeedPageDto(views.posts(page, actor), views.nextCursor(page, cursor));
+	}
+
+	@QueryMapping
 	public PostDto post(@Argument Long id) {
 		User actor = current.require();
 		Post post = posts.get(id);
@@ -120,10 +129,10 @@ public class SocialQueryResolver {
 	}
 
 	@QueryMapping
-	public List<PostDto> searchPosts(@Argument String query, @Argument Integer first) {
+	public List<PostDto> searchPosts(@Argument String query, @Argument Integer first, @Argument PostType kind) {
 		User actor = current.require();
 		int limit = first == null ? 20 : Math.min(Math.max(first, 1), 100);
-		return views.posts(feed.search(actor, query, limit), actor);
+		return views.posts(feed.search(actor, query, limit, kind), actor);
 	}
 
 	@QueryMapping
