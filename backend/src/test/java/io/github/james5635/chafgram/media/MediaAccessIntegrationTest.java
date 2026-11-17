@@ -6,8 +6,11 @@ import io.github.james5635.chafgram.identity.InviteService;
 import io.github.james5635.chafgram.identity.MemberService;
 import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
+import io.github.james5635.chafgram.identity.UserRepository;
 import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
+import io.github.james5635.chafgram.social.PostMedia;
+import io.github.james5635.chafgram.social.PostMediaRepository;
 import io.github.james5635.chafgram.social.PostService;
 import io.github.james5635.chafgram.social.Post;
 import io.github.james5635.chafgram.social.PostRepository;
@@ -58,13 +61,13 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 	private UserBlockRepository userBlocks;
 
 	@Autowired
-	private io.github.james5635.chafgram.media.MediaAssetRepository mediaAssets;
+	private MediaAssetRepository mediaAssets;
 
 	@Autowired
-	private io.github.james5635.chafgram.social.PostMediaRepository postMedia;
+	private PostMediaRepository postMedia;
 
 	@Autowired
-	private io.github.james5635.chafgram.identity.UserRepository users;
+	private UserRepository users;
 
 	User admin;
 	User alice;
@@ -83,11 +86,11 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 				invite2.token(), "bob", "Bob", "bob@example.com", "bob-very-strong-password");
 	}
 
-	private io.github.james5635.chafgram.media.MediaAsset createAndSaveMedia(User owner) {
-		io.github.james5635.chafgram.media.MediaAsset asset = new io.github.james5635.chafgram.media.MediaAsset();
+	private MediaAsset createAndSaveMedia(User owner) {
+		MediaAsset asset = new MediaAsset();
 		asset.setOwnerUserId(owner.getId());
-		asset.setKind(io.github.james5635.chafgram.media.MediaKind.IMAGE);
-		asset.setStatus(io.github.james5635.chafgram.media.MediaStatus.READY);
+		asset.setKind(MediaKind.IMAGE);
+		asset.setStatus(MediaStatus.READY);
 		String storageKey = "test-media/" + System.nanoTime() + ".png";
 		asset.setStorageKey(storageKey);
 		asset.setMimeType("image/png");
@@ -108,7 +111,7 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 	@Test
 	@WithMockUser(username = "alice", roles = "ADMIN")
 	void staffFetchesAnyMedia() throws Exception {
-		io.github.james5635.chafgram.media.MediaAsset asset = createAndSaveMedia(bob);
+		MediaAsset asset = createAndSaveMedia(bob);
 
 		mockMvc.perform(get("/api/v1/media/{id}/bytes", asset.getId())
 						.with(csrf()))
@@ -118,7 +121,7 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 	@Test
 	@WithMockUser(username = "alice2", roles = "MEMBER")
 	void ownerFetchesOwnMedia() throws Exception {
-		io.github.james5635.chafgram.media.MediaAsset asset = createAndSaveMedia(alice);
+		MediaAsset asset = createAndSaveMedia(alice);
 
 		mockMvc.perform(get("/api/v1/media/{id}/bytes", asset.getId())
 						.with(csrf()))
@@ -128,7 +131,7 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 	@Test
 	@WithMockUser(username = "alice2", roles = "MEMBER")
 	void nonMemberCannotFetchMedia() throws Exception {
-		io.github.james5635.chafgram.media.MediaAsset asset = createAndSaveMedia(bob);
+		MediaAsset asset = createAndSaveMedia(bob);
 
 		mockMvc.perform(get("/api/v1/media/{id}/bytes", asset.getId())
 						.with(csrf()))
@@ -139,9 +142,9 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 	@WithMockUser(username = "alice2", roles = "MEMBER")
 	void tombstonedPostMediaIs404ForNonStaffMember() throws Exception {
 		Post post = posts.create(bob, PostType.NOTE, "to be tombstoned", List.of());
-		io.github.james5635.chafgram.media.MediaAsset asset = createAndSaveMedia(bob);
+		MediaAsset asset = createAndSaveMedia(bob);
 
-		io.github.james5635.chafgram.social.PostMedia pm = new io.github.james5635.chafgram.social.PostMedia();
+		PostMedia pm = new PostMedia();
 		pm.setPostId(post.getId());
 		pm.setMediaId(asset.getId());
 		pm.setPosition((short) 0);
@@ -163,9 +166,9 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 		block.setBlockedId(alice.getId());
 		userBlocks.save(block);
 
-		io.github.james5635.chafgram.media.MediaAsset asset = createAndSaveMedia(bob);
+		MediaAsset asset = createAndSaveMedia(bob);
 
-		io.github.james5635.chafgram.social.PostMedia pm = new io.github.james5635.chafgram.social.PostMedia();
+		PostMedia pm = new PostMedia();
 		pm.setPostId(posts.create(bob, PostType.NOTE, "blocked post", List.of()).getId());
 		pm.setMediaId(asset.getId());
 		pm.setPosition((short) 0);
@@ -179,7 +182,7 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 	@Test
 	@WithMockUser(username = "alice2", roles = "MEMBER")
 	void avatarMediaIsVisibleToAnyMember() throws Exception {
-		io.github.james5635.chafgram.media.MediaAsset asset = createAndSaveMedia(bob);
+		MediaAsset asset = createAndSaveMedia(bob);
 		bob.setAvatarMediaId(asset.getId());
 		users.save(bob);
 

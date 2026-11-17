@@ -40,11 +40,11 @@ public class SocialQueryResolver {
 	private final FollowService follows;
 	private final UserBlockRepository blocks;
 	private final NotificationService notifications;
-	private final io.github.james5635.chafgram.identity.UserRepository users;
+	private final UserRepository users;
 
 	public SocialQueryResolver(CurrentMember current, Views views, PostService posts, FeedService feed,
 			CommentService comments, FollowService follows, UserBlockRepository blocks,
-			NotificationService notifications, io.github.james5635.chafgram.identity.UserRepository users) {
+			NotificationService notifications, UserRepository users) {
 		this.current = current;
 		this.views = views;
 		this.posts = posts;

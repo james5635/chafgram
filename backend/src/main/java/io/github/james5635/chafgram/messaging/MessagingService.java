@@ -3,6 +3,7 @@ package io.github.james5635.chafgram.messaging;
 import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.UserRepository;
+import io.github.james5635.chafgram.identity.UserStatus;
 import io.github.james5635.chafgram.media.MediaAsset;
 import io.github.james5635.chafgram.media.MediaAssetRepository;
 import io.github.james5635.chafgram.media.MediaKind;
@@ -214,7 +215,7 @@ public class MessagingService {
 
 	private void requireWriteable(User actor) {
 		// suspended members can read but not write (functional-requirements.md FR-1.4)
-		if (actor.getStatus() != io.github.james5635.chafgram.identity.UserStatus.ACTIVE) {
+		if (actor.getStatus() != UserStatus.ACTIVE) {
 			throw new ApiException(HttpStatus.FORBIDDEN, "Account is " + actor.getStatus().name().toLowerCase() + "; sending messages is not allowed");
 		}
 	}
