@@ -1,5 +1,4 @@
 # Local agent tooling and skills — not part of the product
-.agents/
 docs/superpowers/
 
 # Local environment overrides (dev credentials live here, never in git)

@@ -23,8 +23,13 @@ docs/development-workflow.md  Setup, dev loop, DB, testing, verification
 product.md  Product definition (what/who/why, goals, non-goals)
 design.md   Design system (tokens, components, motion, a11y)
 README.md   Human-facing overview and quick start
-.agents/    Local agent tooling/skills — not part of the product, don't ship it
+.agents/    Agent tooling/skills — tracked in the repo, dev-only, never shipped
 ```
+
+`.agents/` holds local agent skills. It is versioned so every contributor gets the
+same toolkit, but it is **not** part of the product: no backend or frontend code
+may depend on it, and it must not be bundled into deployable artifacts (jar,
+`.output/`, container images).
 
 ## Commands
 
@@ -165,6 +170,8 @@ npm run preview            # serve the production build
   extend it.
 - Ask before deleting or rewriting anything you didn't create; the repo is young but
   every file is someone's decision.
+- `.agents/` is dev-only tooling: tracked, but never a dependency of the product and
+  never bundled into a deployable artifact.
 
 ## Definition of done for a change
 
@@ -174,4 +181,4 @@ npm run preview            # serve the production build
    visible; tokens used, not magic values.
 3. Docs updated (`README.md`, `product.md`, `design.md`, this file) if behavior, scope, or
    decisions changed.
-4. No secrets, no generated files, no `.agents/` content in the diff.
+4. No secrets, no generated files in the diff.
