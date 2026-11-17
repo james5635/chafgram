@@ -18,4 +18,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
 	@Query("select count(m) from Message m where m.conversationId = :conversationId and m.deletedAt is null and m.id > :afterId")
 	long countUnread(@Param("conversationId") Long conversationId, @Param("afterId") long afterId);
+
+	@Query("select count(m) from Message m where m.id = :id and m.deletedAt is null")
+	long countVisibleMessage(@Param("id") Long id);
 }

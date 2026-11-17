@@ -146,12 +146,12 @@ public class SocialQueryResolver {
 	public List<NotificationDto> myNotifications(@Argument Integer first) {
 		User actor = current.require();
 		int limit = first == null ? 30 : Math.min(Math.max(first, 1), 100);
-		return views.notifications(notifications.list(actor.getId(), limit), actor);
+		return views.notifications(notifications.listVisible(actor, limit), actor);
 	}
 
 	@QueryMapping
 	public long unreadNotifications() {
-		return notifications.unreadCount(current.require().getId());
+		return notifications.countUnreadVisible(current.require());
 	}
 
 	@QueryMapping

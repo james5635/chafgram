@@ -64,6 +64,7 @@ type Mutation {
   savePost(id: ID!): Boolean!
   unsavePost(id: ID!): Boolean!
   markNotificationsRead: Boolean!
+  markNotificationRead(id: ID!): Boolean!
   muteNotificationType(type: NotificationType!): Boolean!
   unmuteNotificationType(type: NotificationType!): Boolean!
 

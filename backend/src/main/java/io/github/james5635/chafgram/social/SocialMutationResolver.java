@@ -167,6 +167,12 @@ public class SocialMutationResolver {
 	}
 
 	@MutationMapping
+	public boolean markNotificationRead(@Argument Long id) {
+		notifications.markRead(current.require(), id);
+		return true;
+	}
+
+	@MutationMapping
 	public boolean muteNotificationType(@Argument NotificationType type) {
 		notifications.mute(current.require().getId(), type);
 		return true;

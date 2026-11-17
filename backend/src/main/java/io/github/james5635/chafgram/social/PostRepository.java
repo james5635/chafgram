@@ -47,4 +47,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		order by id desc
 		""", nativeQuery = true)
 	List<Long> searchIdsWithKind(@Param("q") String q, @Param("kind") String kind, Pageable pageable);
+
+	@Query("select count(p) from Post p where p.id = :id and p.deletedAt is null")
+	long countVisiblePost(@Param("id") Long id);
 }
