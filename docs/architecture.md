@@ -107,7 +107,7 @@ io.github.james5635.chafgram
 
 | Surface | Used for | Notes |
 |---------|----------|-------|
-| **GraphQL** (Spring GraphQL) | **Every API operation** — social data, identity, invites, workspace, messaging, moderation, media metadata | Single endpoint `POST /graphql`. Class-level `@PreAuthorize("isFullyAuthenticated()")` on every resolver class; `permitAll()` only on the public `workspace` branding query. Authorization failures return HTTP 200 with `errors[]` and `extensions.classification` (`UNAUTHENTICATED`/`UNAUTHORIZED`); assert on `$.errors`, never the HTTP status. |
+| **GraphQL** (Spring GraphQL) | **Every API operation** — social data, identity, invites, workspace, messaging, moderation, media metadata | Single endpoint `POST /graphql`. Class-level `@PreAuthorize("isFullyAuthenticated()")` on every resolver class; `permitAll()` only on the public `workspace` branding query and the account-flow mutations (`requestPasswordReset`, `resetPassword`, `verifyEmail`). Authorization failures return HTTP 200 with `errors[]` and `extensions.classification` (`UNAUTHORIZED` for anonymous, `FORBIDDEN` for an authenticated member without the role, `BAD_REQUEST`/`NOT_FOUND` for validation and lookup failures); assert on `$.errors`, never the HTTP status. |
 | **REST** | Session ceremonies, WebAuthn, media upload/bytes, Actuator | The keep-list below — mandated by the fact that a GraphQL operation cannot set the session cookie a login needs, cannot receive multipart bodies, and cannot stream bytes. |
 | **Actuator** | `/actuator/health`, `/actuator/info` for ops | Exposed; network-boundary or proxy auth expected in production |
 | **WebSocket/SSE** *(proposal)* | Messaging delivery (see §6) | Transport decision pending |

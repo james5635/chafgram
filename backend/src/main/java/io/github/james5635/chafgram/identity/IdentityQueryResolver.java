@@ -69,6 +69,7 @@ public class IdentityQueryResolver {
 	}
 
 	static MemberDetailDto toDetail(MemberResponse r) {
-		return new MemberDetailDto(r.id(), r.username(), r.displayName(), r.email(), r.role(), r.status(), r.createdAt());
+		return new MemberDetailDto(r.id(), r.username(), r.displayName(), r.email(), r.role(), r.status(),
+				r.emailVerifiedAt(), r.createdAt());
 	}
 }

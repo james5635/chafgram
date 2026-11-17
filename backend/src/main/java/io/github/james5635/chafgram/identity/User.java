@@ -50,6 +50,10 @@ public class User {
 	@Column(name = "last_seen_at")
 	private Instant lastSeenAt;
 
+	/** FR-1.7: set when the member confirms their address; null while unverified. */
+	@Column(name = "email_verified_at")
+	private Instant emailVerifiedAt;
+
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
@@ -132,6 +136,14 @@ public class User {
 
 	public void setLastSeenAt(Instant lastSeenAt) {
 		this.lastSeenAt = lastSeenAt;
+	}
+
+	public Instant getEmailVerifiedAt() {
+		return emailVerifiedAt;
+	}
+
+	public void setEmailVerifiedAt(Instant emailVerifiedAt) {
+		this.emailVerifiedAt = emailVerifiedAt;
 	}
 
 	public Instant getCreatedAt() {

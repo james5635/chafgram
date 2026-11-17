@@ -109,6 +109,20 @@ beyond local dev — never commit credentials. Migrations are applied by Flyway 
 `CHAFGRAM_WEBAUTHN_RP_ID` and `CHAFGRAM_WEBAUTHN_ALLOWED_ORIGINS` configure the WebAuthn
 relying party (defaults: `localhost`, `http://localhost:3000`).
 
+#### Email (optional)
+
+Email verification and password reset are opt-in and never required to use the
+instance. With no mail server configured, Chafgram writes the message (including the
+one-time link) to the application log — so the flows stay exercisable on a fresh clone
+and air-gapped installs make no outbound calls.
+
+To send real mail, set `CHAFGRAM_MAIL_SMTP_ENABLED=true` plus `SPRING_MAIL_HOST`,
+`SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME` and `SPRING_MAIL_PASSWORD`
+(`SPRING_MAIL_SMTP_AUTH` / `SPRING_MAIL_SMTP_STARTTLS` as needed), and point
+`CHAFGRAM_APP_URL` at the frontend so the links resolve (`http://localhost:3000` by
+default). See `.env.example` for the full list. Both flows use single-use tokens that
+expire after 30 minutes; only their SHA-256 hash is stored.
+
 ### Frontend
 
 ```bash

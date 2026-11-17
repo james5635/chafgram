@@ -83,8 +83,10 @@ Suites: application context boot, workspace/identity flows, GraphQL surface
 (`SchemaDtoSyncTest`). Conventions to respect:
 
 - Authorization failures from GraphQL come back as HTTP 200 + `errors[]` with
-  `extensions.classification` (`UNAUTHENTICATED` / `UNAUTHORIZED`) — tests assert on
-  `$.errors`, never on the HTTP status.
+  `extensions.classification` (`UNAUTHORIZED` for anonymous, `FORBIDDEN` for an
+  authenticated member without the role, `BAD_REQUEST`/`NOT_FOUND` for validation and
+  lookup failures) — tests assert on `$.errors`, never on the HTTP status. Service-layer
+  `ApiException`s are mapped by `common/GraphQlApiExceptionHandler`.
 - Resolver classes carry class-level `@PreAuthorize("isFullyAuthenticated()")`; only the
   `permitAll()` operations are public.
 - Keep `*.graphqls` files in sync with the DTOs — `SchemaDtoSyncTest` fails otherwise.

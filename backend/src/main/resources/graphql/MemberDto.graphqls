@@ -6,6 +6,7 @@ type Member {
   avatarMediaId: ID
   role: String!
   status: String!
+  emailVerifiedAt: String
   createdAt: String!
   followerCount: Int!
   followingCount: Int!

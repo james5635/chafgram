@@ -26,15 +26,18 @@ public class IdentityMutationResolver {
 	private final WorkspaceService workspaceService;
 	private final InviteService invites;
 	private final PasskeyService passkeyService;
+	private final AccountFlowService accountFlows;
 	private final MemberAccess access;
 	private final CurrentMember current;
 
 	public IdentityMutationResolver(MemberService memberService, WorkspaceService workspaceService,
-			InviteService invites, PasskeyService passkeyService, MemberAccess access, CurrentMember current) {
+			InviteService invites, PasskeyService passkeyService, AccountFlowService accountFlows,
+			MemberAccess access, CurrentMember current) {
 		this.memberService = memberService;
 		this.workspaceService = workspaceService;
 		this.invites = invites;
 		this.passkeyService = passkeyService;
+		this.accountFlows = accountFlows;
 		this.access = access;
 		this.current = current;
 	}
@@ -98,10 +101,19 @@ public class IdentityMutationResolver {
 		return toDetail(memberService.setStatus(username, id, UserStatus.ACTIVE));
 	}
 
+	/**
+	 * Mails a verification link to the signed-in member's own address (FR-1.7).
+	 * A no-op once the address is verified.
+	 */
+	@MutationMapping
+	public boolean requestEmailVerification() {
+		accountFlows.requestEmailVerification(current.require());
+		return true;
+	}
+
 	@MutationMapping
 	@PreAuthorize("hasRole('ADMIN')")
-	public CreateInviteDto createInvite(@Argument String email, @Argument String role) {
-		String username = current.require().getUsername();
+	public CreateInviteDto createInvite(@Argument String email, @Argument String role) {		String username = current.require().getUsername();
 		User actor = access.requireWriteable(username);
 		Role parsedRole = role == null || role.isBlank() ? Role.MEMBER : Validation.parseRole(role);
 		return CreateInviteDto.from(invites.create(email, parsedRole, actor));

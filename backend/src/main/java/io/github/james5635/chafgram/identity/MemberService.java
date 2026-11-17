@@ -199,6 +199,7 @@ public class MemberService {
 				user.getEmail(),
 				user.getRole().name().toLowerCase(),
 				user.getStatus().name().toLowerCase(),
+				user.getEmailVerifiedAt(),
 				user.getCreatedAt());
 	}
 }
