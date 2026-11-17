@@ -5,7 +5,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.web.webauthn.api.Bytes;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,7 +26,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * FR-1.6: members can list, rename and revoke their own passkeys. Framework
  * tables ({@code user_entities}, {@code user_credentials}) are seeded directly.
  */
-@AutoConfigureMockMvc
 class PasskeyManagementIntegrationTest extends AbstractIntegrationTest {
 
 	@Autowired

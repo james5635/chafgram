@@ -6,7 +6,6 @@ import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
@@ -21,7 +20,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
  * Smoke-tests the GraphQL surface end to end: schema loading, argument
  * binding, enum resolution, result mapping, and security/CSRF enforcement.
  */
-@AutoConfigureMockMvc
 class GraphqlApiTest extends AbstractIntegrationTest {
 
 	@Autowired

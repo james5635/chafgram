@@ -10,7 +10,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
@@ -28,7 +27,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * End-to-end video pipeline test: upload → PROCESSING → READY with duration/blurhash.
  * Requires ffmpeg/ffprobe on PATH (available in dev/CI).
  */
-@AutoConfigureMockMvc
 class MediaProcessingIntegrationTest extends AbstractIntegrationTest {
 
 	@Autowired
