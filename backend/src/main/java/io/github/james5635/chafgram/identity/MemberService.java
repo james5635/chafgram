@@ -45,9 +45,19 @@ public class MemberService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<MemberResponse> listMembers() {
-		return users.findAll().stream()
+	public List<MemberResponse> listMembers(String query, int first) {
+		List<User> all = users.findAll().stream()
 				.sorted(Comparator.comparing(User::getUsername))
+				.toList();
+		String q = (query == null || query.isBlank()) ? null : query.trim().toLowerCase();
+		if (q != null) {
+			all = all.stream()
+					.filter(u -> u.getUsername().toLowerCase().startsWith(q)
+							|| (u.getDisplayName() != null && u.getDisplayName().toLowerCase().startsWith(q)))
+					.toList();
+		}
+		return all.stream()
+				.limit(Math.max(first, 1))
 				.map(MemberService::toResponse)
 				.toList();
 	}

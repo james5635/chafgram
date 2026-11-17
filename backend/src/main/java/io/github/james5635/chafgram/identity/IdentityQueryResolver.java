@@ -33,12 +33,16 @@ public class IdentityQueryResolver {
 		this.views = views;
 	}
 
+	/**
+	 * Staff-only member directory (FR-10.1). {@code query} is a case-insensitive
+	 * prefix match against username or display name.
+	 */
 	@QueryMapping
-	public List<MemberDetailDto> members(@Argument Integer first) {
+	@PreAuthorize("hasAnyRole('ADMIN','MODERATOR')")
+	public List<MemberDetailDto> members(@Argument Integer first, @Argument String query) {
 		current.require();
 		int limit = first == null ? 50 : Math.min(Math.max(first, 1), 200);
-		return memberService.listMembers().stream()
-				.limit(limit)
+		return memberService.listMembers(query, limit).stream()
 				.map(IdentityQueryResolver::toDetail)
 				.toList();
 	}

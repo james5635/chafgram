@@ -13,7 +13,7 @@ type Query {
   me: Member!
   member(username: String!): Member
   memberById(id: ID!): Member
-  members(first: Int = 50): [MemberDetail!]!
+  members(first: Int = 50, query: String): [MemberDetail!]!
   followers(username: String!, first: Int = 50): [Member!]!
   following(username: String!, first: Int = 50): [Member!]!
   followingFeed(first: Int = 20, cursor: String): FeedPage!
@@ -39,7 +39,7 @@ type Query {
 
   # moderation (see ReportDto.graphqls, AuditLogDto.graphqls) — staff only
   reportQueue(first: Int = 100): [Report!]!
-  auditLog(first: Int = 100): [AuditLogEntry!]!
+  auditLog(first: Int = 100, actorId: ID, action: String, targetType: String, from: String, to: String): [AuditLogEntry!]!
 
   # media metadata (see MediaAssetDto.graphqls) — bytes stay on REST
   mediaAsset(id: ID!): MediaAsset!

@@ -23,6 +23,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -168,6 +169,6 @@ class NotificationFlowIntegrationTest extends AbstractIntegrationTest {
 						.contentType("application/json")
 						.content("{\"query\":\"mutation { markNotificationRead(id: " + notificationId + ") }\"}"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.errors[0]").exists());
+				.andExpect(jsonPath("$.errors[0].extensions.classification", is("FORBIDDEN")));
 	}
 }
