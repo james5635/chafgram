@@ -34,7 +34,8 @@ doctor:
     fi
     command -v node >/dev/null && echo "node: $(node -v)" || echo "node: MISSING"
     command -v npm >/dev/null && echo "npm: $(npm -v)" || echo "npm: MISSING"
-    echo "backend needs local MySQL for dev and tests — run it with: just mysql (reset with: just seed)"
+    echo "backend needs local MySQL for dev — run it with: just mysql (reset with: just seed)"
+    echo "  (backend tests are hermetic — Testcontainers starts its own MySQL 8)"
     echo "  (compose.yaml dev defaults; override via git-ignored .env)"
 
 # Start local MySQL 8.0 and wait until it reports healthy
@@ -76,7 +77,7 @@ dev: backend::dev frontend::dev
 # Build backend jar (target/) and frontend production bundle
 build: backend::build frontend::build
 
-# Run backend and frontend tests (backend wipes the dev chafgram schema; restore afterwards with: just seed)
+# Run backend and frontend tests (backend tests are hermetic — Testcontainers MySQL)
 test: backend::test frontend::test
 
 # Verify the repo is healthy: run just test and just build

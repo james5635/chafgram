@@ -12,7 +12,7 @@ dev:
 build:
     ./mvnw package
 
-# Run backend tests (WIPES the dev chafgram schema; restore afterwards with: just seed)
+# Run backend tests (hermetic — Testcontainers starts a throwaway MySQL 8; Docker must be running)
 test:
     ./mvnw test
 

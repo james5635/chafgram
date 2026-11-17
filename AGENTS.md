@@ -41,7 +41,7 @@ just seed                  # RESET dev DB: wipe, Flyway-migrate, insert full dem
 docker compose up -d       # start MySQL AND Garage (S3-compatible dev object storage, bucket chafgram-media)
 docker compose up garage-init   # one-shot: layout assign, dev key import, bucket create, permissions — idempotent
 ./mvnw spring-boot:run     # run dev server (default port 8080)
-./mvnw test                # run tests (wipes the dev chafgram schema)
+./mvnw test                # run tests (hermetic — Testcontainers MySQL)
 just migrate               # apply Flyway migrations only, no data wiped
 just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 ./mvnw package             # build jar (target/)
@@ -56,11 +56,11 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 - Dev object storage: Garage (S3-compatible API on `http://localhost:3900`, region
   `garage`, bucket `chafgram-media`, dev key + secret in `scripts/garage-init.sh`).
   Bucket/layout/key are created by `garage-init` on first run — re-running is safe.
-- `./mvnw test` uses the dev MySQL from `compose.yaml` (`just mysql` must be running)
-  and **wipes the dev `chafgram` schema on every run**. Afterwards run `just seed` to
-  restore the dev fixtures. Override the connection with
-  `CHAFGRAM_TEST_DATASOURCE_URL|_USERNAME|_PASSWORD` (it wipes whatever it points at —
-  not for shared databases).
+- `./mvnw test` is hermetic: it starts a throwaway MySQL 8 container via
+  Testcontainers (one per test JVM, Docker must be running). The dev database is never
+  touched — no `just seed` afterwards. Test-only config lives in
+  `backend/src/test/resources/application-test.properties` (profile `test`); never add a
+  test-scoped `application.properties`, it shadows the main one on the classpath.
 - Identity Backend modules implemented: `identity` (users/invites/workspace, REST
   `/api/v1`), `social` (posts/comments/reactions/follows/feed/search + GraphQL at
   `/graphql`), `messaging` (1:1 + groups, REST), `notifications`, `moderation`

@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.mysql.MySQLContainer;
 
 /**
@@ -15,9 +16,15 @@ import org.testcontainers.mysql.MySQLContainer;
  * <p>Requires Docker. The {@code mysql:8.0} image is pulled once and cached
  * locally. {@code wipeSocial()} clears the container's tables between test
  * classes/methods.</p>
+ *
+ * <p>The {@code test} profile activates {@code application-test.properties}
+ * (test-only overrides). The main {@code application.properties} is loaded
+ * as usual — a test-scoped file with that exact name would shadow it on the
+ * classpath and silently drop the real configuration.</p>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
 	protected static final MySQLContainer MYSQL =

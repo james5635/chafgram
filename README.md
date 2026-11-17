@@ -72,7 +72,7 @@ cd backend
 Run `just mysql` first if the backend needs the database (it is not auto-started).
 
 ```bash
-./mvnw test        # requires `just mysql` — WIPES the dev `chafgram` schema; restore with `just seed`
+./mvnw test        # hermetic — Testcontainers starts a throwaway MySQL 8; the dev DB is untouched
 just seed           # reset dev DB: wipe, Flyway-migrate, insert full fixtures
 just migrate        # apply Flyway migrations only (data untouched)
 just unseed         # empty dev DB: wipe, Flyway-migrate, no fixtures

@@ -109,7 +109,7 @@ io.github.james5635.chafgram
 |---------|----------|-------|
 | **GraphQL** (Spring GraphQL) | **Every API operation** — social data, identity, invites, workspace, messaging, moderation, media metadata | Single endpoint `POST /graphql`. Class-level `@PreAuthorize("isFullyAuthenticated()")` on every resolver class; `permitAll()` only on the public `workspace` branding query and the account-flow mutations (`requestPasswordReset`, `resetPassword`, `verifyEmail`). Authorization failures return HTTP 200 with `errors[]` and `extensions.classification` (`UNAUTHORIZED` for anonymous, `FORBIDDEN` for an authenticated member without the role, `BAD_REQUEST`/`NOT_FOUND` for validation and lookup failures); assert on `$.errors`, never the HTTP status. |
 | **REST** | Session ceremonies, WebAuthn, media upload/bytes, Actuator | The keep-list below — mandated by the fact that a GraphQL operation cannot set the session cookie a login needs, cannot receive multipart bodies, and cannot stream bytes. |
-| **Actuator** | `/actuator/health`, `/actuator/info` for ops | Exposed; network-boundary or proxy auth expected in production |
+| **Actuator** | `/actuator/health` for probes; `/actuator/info` + `/actuator/metrics` for ops | Own security chain (`SecurityConfiguration.actuatorFilterChain`): health is public, info and metrics are admin-only. HTTP Basic is the only entry point, so anonymous requests get `401` + `WWW-Authenticate` instead of the member-facing login redirect. |
 | **WebSocket/SSE** *(proposal)* | Messaging delivery (see §6) | Transport decision pending |
 
 **REST keep-list (all other APIs are GraphQL):**
@@ -121,7 +121,8 @@ io.github.james5635.chafgram
 - `POST /webauthn/register/options`, `POST /webauthn/register` — passkey registration (Spring Security built-ins)
 - `POST /api/v1/media` — multipart media upload (image/video)
 - `GET /api/v1/media/{id}/bytes` — authorized byte streaming for media
-- `GET /actuator/health`, `/actuator/info` — ops probes
+- `GET /actuator/health` — public liveness/readiness probe (status only, no details)
+- `GET /actuator/info`, `/actuator/metrics` — admin-only ops endpoints (HTTP Basic)
 - `/error` — servlet error dispatch
 
 Public workspace branding is a **GraphQL** operation, not REST: `query { workspace { name slug } }`
