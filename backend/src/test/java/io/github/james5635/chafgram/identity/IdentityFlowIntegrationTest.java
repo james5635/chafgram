@@ -199,6 +199,21 @@ class IdentityFlowIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void usernamesAreStoredLowercasedAndCompareCaseInsensitively() {
+		User mixed = memberService.bootstrap(
+				"MiXeD-Case", "Mixed", "mixed@example.com", "a-very-strong-password");
+		assertThat(mixed.getUsername()).isEqualTo("mixed-case");
+		assertThat(users.findByUsername("mixed-case")).isPresent();
+
+		// same name in different case is a conflict (BR-1.2)
+		workspaceService.update("mixed-case", new UpdateWorkspaceRequest(null, null, null, "open", null));
+		assertThatThrownBy(() -> memberService.registerOpen(
+				"MIXED-CASE", "Other", "other@example.com", null))
+				.isInstanceOf(ApiException.class)
+				.satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+	}
+
+	@Test
 	void updateProfileChangesDisplayNameAndBio() {
 		User alice = memberService.bootstrap(
 				"alice", "Alice", "alice@example.com", "a-very-strong-password");
