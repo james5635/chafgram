@@ -157,8 +157,8 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 		Post mine = posts.create(member, PostType.NOTE, "Blocked viewer cannot see this", List.of());
 		blocks.block(member, admin.getId()); // Bob blocks Alice
 		assertThat(feed.discoverFeed(admin, 20, Long.MAX_VALUE)).isEmpty(); // Alice can't see his post
-		assertThatThrownBy(() -> messaging.send(member, admin.getId(), "hi")).isInstanceOf(ApiException.class);
-		assertThatThrownBy(() -> messaging.send(admin, member.getId(), "hi")).isInstanceOf(ApiException.class);
+		assertThatThrownBy(() -> messaging.send(member, admin.getId(), "hi", List.of())).isInstanceOf(ApiException.class);
+		assertThatThrownBy(() -> messaging.send(admin, member.getId(), "hi", List.of())).isInstanceOf(ApiException.class);
 
 		blocks.unblock(member, admin.getId());
 		assertThat(feed.discoverFeed(admin, 20, Long.MAX_VALUE)).hasSize(1);
@@ -266,7 +266,7 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 
 	@Test
 	void messagingFlowBetweenMembers() {
-		Message message = messaging.send(admin, member.getId(), "Welcome to Chafgram, Bob!");
+		Message message = messaging.send(admin, member.getId(), "Welcome to Chafgram, Bob!", List.of());
 		assertThat(message.getType().name()).isEqualTo("TEXT");
 
 		List<Conversation> convs = messaging.list(member, 20);
@@ -278,7 +278,7 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 		assertThat(messaging.unreadCount(member, conversationId)).isEqualTo(0);
 
 		// bob muted the conversation → unread is 0 even with new messages
-		messaging.send(admin, member.getId(), "ping");
+		messaging.send(admin, member.getId(), "ping", List.of());
 		messaging.mute(member, conversationId, java.time.Instant.now().plusSeconds(3600));
 		assertThat(messaging.unreadCount(member, conversationId)).isEqualTo(0);
 	}
