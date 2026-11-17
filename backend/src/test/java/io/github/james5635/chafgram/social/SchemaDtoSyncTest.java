@@ -92,6 +92,7 @@ class SchemaDtoSyncTest {
 			Map.entry("Invite", "io.github.james5635.chafgram.identity.dto"),
 			Map.entry("CreateInvite", "io.github.james5635.chafgram.identity.dto"),
 			Map.entry("MemberDetail", "io.github.james5635.chafgram.identity.dto"),
+			Map.entry("Passkey", "io.github.james5635.chafgram.identity.dto"),
 			Map.entry("MediaAsset", "io.github.james5635.chafgram.media.dto"),
 			Map.entry("Conversation", "io.github.james5635.chafgram.messaging.dto"),
 			Map.entry("Message", "io.github.james5635.chafgram.messaging.dto"),
