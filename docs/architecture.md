@@ -56,7 +56,7 @@
   backend (BFF pattern) so no internal URLs or secrets leak to the browser.
 - The **backend** owns all domain logic, auth, and data. The frontend holds no
   authoritative state.
-- The **media pipeline runs in-app**: a bounded `@Async` executor inside the backend
+- The **media pipeline runs in-app**: a bounded executor inside the backend
   picks up `media_assets` rows with `status='processing'` after the upload transaction
   commits. A separate worker process/sidecar remains possible later, but it is not
   required for v1.
@@ -144,6 +144,15 @@ Public workspace branding is a **GraphQL** operation, not REST: `query { workspa
   mirror the same codes (`code`, `detail`, `status`).
 - **Transactions** — service layer owns `@Transactional`; no lazy loading across
   GraphQL boundary (fetch joins / projections).
+- **Social graph filtering** — blocking is mutual-effect (BR-2.2): every feed
+  (discover, following, watch) drops an author when *either* side blocked the other.
+  A one-directional filter is not enough — the blocker must disappear from the
+  blockee's feeds too.
+- **Presence** — last-seen (FR-2.5) is refreshed on every authenticated read
+  (`CurrentMember.require()`), not only on login. The write is throttled to one
+  update per member per five minutes and never breaks the request that triggered
+  it — the caller guards the whole transactional call, so a write that fails at
+  commit is swallowed too. `Member.lastSeenAt` exposes the timestamp to clients.
 - **Logging** — structured logs to stdout; never log credential material; correlation
   ids propagated frontend→backend.
 
@@ -158,11 +167,18 @@ upload (REST multipart)            in-app async pipeline
   └── feed/watch query: WHERE status='ready'
 ```
 
-- The pipeline is an `@Async` task inside the backend (`AsyncConfig`: 2 threads, queue
+- The pipeline is an in-app task inside the backend (`AsyncConfig`: 2 threads, queue
   64, `media-pipeline-*` threads), started after the upload transaction commits. It runs
   `ffprobe` (duration, dimensions) → `ffmpeg` (H.264/AAC transcode, metadata stripped)
   → thumbnail → blurhash, then flips the row to `status='ready'`. Any error or a
   10-minute timeout lands it in `status='failed'`.
+- The work is handed to the bounded executor explicitly (not via an `@Async` proxy), so
+  a full queue is visible: a rejected asset is marked `status='failed'` instead of
+  staying stuck in `status='processing'`.
+- The external tools run with their output drained while the process runs. ffmpeg writes
+  progress to stdout/stderr; a pipe nobody reads fills up and blocks the tool, which
+  would look like a transcode timeout. The process is killed when it overruns its
+  timeout, and the captured tail is kept for the error message.
 - The transcode always produces MP4, so the pipeline moves the asset to a `.mp4`
   storage key and updates `mime_type` to `video/mp4` — the stored bytes and the
   served content type always agree. The pre-transcode source blob is dropped.
@@ -174,6 +190,9 @@ upload (REST multipart)            in-app async pipeline
   authorization tree in `MediaAccessService` (owner, message participants, visible
   posts, avatars/logos; staff see everything) and answers `404` for every denial.
   Suspended members keep read access (FR-1.4) — only writes are blocked for them.
+  Message attachments require **active** participation: a member who left or was
+  removed from a conversation keeps the membership row for history, but `left_at` is
+  set and the row no longer grants access to the conversation's attachments.
 - Message attachments: `POST /api/v1/messages` (multipart) takes **image** files
   inline. Videos cannot be ready in the same request (FR-5.2), so the flow is
   upload → poll `mediaAsset(id)` until `status='ready'` → send the message with
@@ -195,7 +214,11 @@ upload (REST multipart)            in-app async pipeline
   `last_read_message_id` for unread badges) → `messages` + `message_media`.
 - Ordering: messages are totally ordered by `id` per conversation; cursor pagination
   by `(conversation_id, id)`; unread count = messages with `id >` member's
-  `last_read_message_id`.
+  `last_read_message_id`. The per-conversation badge is exposed as
+  `query { unreadMessageCount(conversationId: ID!): Int! }`.
+- Membership is soft: leaving a conversation keeps the row (history), but `left_at`
+  is set — the former member loses access to the conversation, its messages and its
+  attachments.
 - No server-side read receipts (per-message "seen") in v1 — privacy and simplicity.
 
 ## 7. Notifications
