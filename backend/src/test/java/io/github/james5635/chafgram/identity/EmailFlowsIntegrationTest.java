@@ -16,9 +16,16 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -166,6 +173,45 @@ class EmailFlowsIntegrationTest extends AbstractIntegrationTest {
 	void unknownResetTokenIsRejected() {
 		assertThatThrownBy(() -> accountFlows.resetPassword("no-such-token", "a-brand-new-strong-password"))
 				.isInstanceOf(ApiException.class);
+	}
+
+	@Test
+	void concurrentRedemptionsOfTheSameTokenOnlySucceedOnce() throws Exception {
+		accountFlows.requestPasswordReset("bob@example.com");
+		String raw = extractTokenFromMail();
+
+		int threads = 4;
+		ExecutorService pool = Executors.newFixedThreadPool(threads);
+		try {
+			CountDownLatch start = new CountDownLatch(1);
+			List<Future<Boolean>> results = new ArrayList<>();
+			for (int i = 0; i < threads; i++) {
+				results.add(pool.submit(() -> {
+					start.await();
+					try {
+						accountFlows.resetPassword(raw, "a-brand-new-strong-password");
+						return true;
+					}
+					catch (ApiException e) {
+						return false;
+					}
+				}));
+			}
+			start.countDown();
+
+			int winners = 0;
+			for (Future<Boolean> result : results) {
+				if (result.get(30, TimeUnit.SECONDS)) {
+					winners++;
+				}
+			}
+
+			assertThat(winners).as("a single-use token must be redeemable once").isEqualTo(1);
+			assertThat(usedAtCount()).isEqualTo(1);
+		}
+		finally {
+			pool.shutdownNow();
+		}
 	}
 
 	// ── email verification ───────────────────────────────────────────────────
@@ -363,7 +409,7 @@ class EmailFlowsIntegrationTest extends AbstractIntegrationTest {
 			}
 			return sb.toString();
 		}
-		catch (java.security.NoSuchAlgorithmException e) {
+		catch (NoSuchAlgorithmException e) {
 			throw new IllegalStateException(e);
 		}
 	}

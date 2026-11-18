@@ -45,6 +45,10 @@ public class AccountTokenService {
 	/**
 	 * Redeems a token and returns the owning member's id.
 	 *
+	 * <p>The consumption is atomic: the {@code usedAt} stamp is written by a
+	 * single conditional UPDATE, so two concurrent redemptions of the same
+	 * token cannot both succeed.
+	 *
 	 * @throws ApiException 400 when the token is unknown, already used,
 	 *         expired, or of the wrong type. Every branch reports the same
 	 *         message so the endpoint cannot be used to probe for valid
@@ -59,11 +63,12 @@ public class AccountTokenService {
 				.orElseThrow(AccountTokenService::invalidToken);
 
 		Instant now = Instant.now();
-		if (token.getType() != expectedType || !token.isUsableAt(now)) {
+		if (token.getType() != expectedType) {
 			throw invalidToken();
 		}
-		token.setUsedAt(now);
-		tokens.save(token);
+		if (tokens.consumeIfUsable(token.getId(), now) == 0) {
+			throw invalidToken(); // already used, expired, or lost the race
+		}
 		return token.getUserId();
 	}
 
