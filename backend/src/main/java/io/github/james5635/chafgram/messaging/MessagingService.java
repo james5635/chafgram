@@ -60,18 +60,28 @@ public class MessagingService {
 		this.mediaStorage = mediaStorage;
 	}
 
+	/**
+	 * Uploads an image for immediate attachment to a message.
+	 * <p>
+	 * Videos are rejected: they go through the async transcode pipeline
+	 * (FR-5.2), so they cannot be {@code ready} in the same request. The
+	 * supported flow is upload → poll {@code mediaAsset(id)} until
+	 * {@code status == "ready"} → send the message with {@code mediaIds}.
+	 */
 	public MediaAsset uploadMediaForMessage(User actor, MultipartFile file) {
 		if (file == null || file.isEmpty()) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "A file is required");
 		}
 		String mime = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
 		MediaKind kind = kindOf(mime, file);
+		if (kind == MediaKind.VIDEO) {
+			throw new ApiException(HttpStatus.BAD_REQUEST,
+					"Videos are processed asynchronously — upload the file to POST /api/v1/media, "
+							+ "wait until its status is 'ready', then send the message with mediaIds");
+		}
 		long size = file.getSize();
 		if (kind == MediaKind.IMAGE && size > 20L * 1024 * 1024) {
 			throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "Images are limited to 20 MB");
-		}
-		if (kind == MediaKind.VIDEO && size > 4L * 1024 * 1024 * 1024) {
-			throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "Videos are limited to 4 GB");
 		}
 
 		String extension = extensionOf(file.getOriginalFilename());
@@ -80,10 +90,7 @@ public class MessagingService {
 		MediaAsset asset = new MediaAsset();
 		asset.setOwnerUserId(actor.getId());
 		asset.setKind(kind);
-		// For test videos (small files < 100KB), treat as ready to avoid async processing in tests
-		MediaStatus status = (kind == MediaKind.VIDEO && size < 100_000) ? MediaStatus.READY
-				: (kind == MediaKind.IMAGE ? MediaStatus.READY : MediaStatus.PROCESSING);
-		asset.setStatus(status);
+		asset.setStatus(MediaStatus.READY);
 		asset.setStorageKey(key);
 		asset.setMimeType(mime.isEmpty() ? "application/octet-stream" : mime);
 		asset.setSizeBytes(size);

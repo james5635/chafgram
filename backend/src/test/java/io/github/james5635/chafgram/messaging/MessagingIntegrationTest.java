@@ -11,19 +11,24 @@ import io.github.james5635.chafgram.media.MediaAssetRepository;
 import io.github.james5635.chafgram.media.MediaKind;
 import io.github.james5635.chafgram.media.MediaStatus;
 import io.github.james5635.chafgram.social.CurrentMember;
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -92,18 +97,33 @@ class MessagingIntegrationTest extends AbstractIntegrationTest {
 
 	@Test
 	@WithMockUser(username = "alice", roles = "ADMIN")
-	void directMessageWithVideoMedia() throws Exception {
+	void directMessageWithReadyVideoAttachedById() throws Exception {
+		// Videos travel the async flow: upload → ready → attach by id
 		MediaAsset vid = videoAsset(admin);
 		mediaAssets.save(vid);
 
 		var result = mockMvc.perform(multipart("/api/v1/messages")
-						.file(createMultipartFile("file", "clip.mp4", "video/mp4", "fake video".getBytes(StandardCharsets.UTF_8)))
 						.param("userId", member.getId().toString())
+						.param("mediaIds", vid.getId().toString())
 						.with(csrf()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.type", is("video")))
 				.andExpect(jsonPath("$.media", hasSize(1)))
 				.andReturn();
+	}
+
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void inlineVideoUploadIsRejectedWithTheAsyncFlowHint() throws Exception {
+		// A video cannot be ready in the same request (FR-5.2) — nothing is stored
+		mockMvc.perform(multipart("/api/v1/messages")
+						.file(createMultipartFile("file", "clip.mp4", "video/mp4", "fake video".getBytes(StandardCharsets.UTF_8)))
+						.param("userId", member.getId().toString())
+						.with(csrf()))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.detail", containsString("POST /api/v1/media")));
+
+		assertThat(mediaAssets.count()).isZero();
 	}
 
 	@Test
@@ -250,8 +270,8 @@ class MessagingIntegrationTest extends AbstractIntegrationTest {
 		mediaAssets.save(vid);
 
 		var vidResult = mockMvc.perform(multipart("/api/v1/messages")
-						.file(createMultipartFile("file", "clip.mp4", "video/mp4", "fake".getBytes(StandardCharsets.UTF_8)))
 						.param("userId", member.getId().toString())
+						.param("mediaIds", vid.getId().toString())
 						.with(csrf()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.type", is("video")))
@@ -265,8 +285,8 @@ class MessagingIntegrationTest extends AbstractIntegrationTest {
 
 		var mixedResult = mockMvc.perform(multipart("/api/v1/messages")
 						.file(createMultipartFile("file", "photo.png", "image/png", pngBytes()))
-						.file(createMultipartFile("file", "clip.mp4", "video/mp4", "fake".getBytes(StandardCharsets.UTF_8)))
 						.param("userId", member.getId().toString())
+						.param("mediaIds", vid2.getId().toString())
 						.with(csrf()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.type", is("video")))
@@ -306,14 +326,14 @@ class MessagingIntegrationTest extends AbstractIntegrationTest {
 		return "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==".getBytes(StandardCharsets.UTF_8);
 	}
 
-	private org.springframework.mock.web.MockMultipartFile createMultipartFile(String name, String filename, String contentType, byte[] content) {
-		return new org.springframework.mock.web.MockMultipartFile(name, filename, contentType, content);
+	private MockMultipartFile createMultipartFile(String name, String filename, String contentType, byte[] content) {
+		return new MockMultipartFile(name, filename, contentType, content);
 	}
 
-	private Long jsonPathExtract(org.springframework.test.web.servlet.MvcResult result, String path) {
+	private Long jsonPathExtract(MvcResult result, String path) {
 		try {
-			return Long.parseLong(com.jayway.jsonpath.JsonPath.read(result.getResponse().getContentAsString(), path).toString());
-		} catch (java.io.UnsupportedEncodingException e) {
+			return Long.parseLong(JsonPath.read(result.getResponse().getContentAsString(), path).toString());
+		} catch (UnsupportedEncodingException e) {
 			throw new IllegalStateException(e);
 		}
 	}
