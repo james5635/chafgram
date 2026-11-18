@@ -223,6 +223,21 @@ class MessagingIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	@Test
+	@WithMockUser(username = "bob", roles = "MEMBER")
+	void unreadMessageCountIsExposedForAConversation() throws Exception {
+		var conversation = messaging.send(admin, member.getId(), "ping", List.of());
+
+		var result = mockMvc.perform(post("/graphql")
+						.with(csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ unreadMessageCount(conversationId: \\\""
+								+ conversation.getConversationId() + "\\\") }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.unreadMessageCount", is(1)))
+				.andReturn();
+	}
+
+	@Test
 	@WithMockUser(username = "alice", roles = "ADMIN")
 	void messageWithMoreThan10AttachmentsFails() throws Exception {
 		// Create 11 images

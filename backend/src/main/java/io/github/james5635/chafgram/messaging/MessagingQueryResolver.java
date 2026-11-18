@@ -65,6 +65,11 @@ public class MessagingQueryResolver {
 				.toList();
 	}
 
+	@QueryMapping
+	public long unreadMessageCount(@Argument Long conversationId) {
+		return messaging.unreadCount(current.require(), conversationId);
+	}
+
 	private static ConversationDto toDto(Conversation c) {
 		return new ConversationDto(c.getId(), c.getType().name().toLowerCase(), c.getTitle(), c.getUpdatedAt());
 	}
