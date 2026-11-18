@@ -271,6 +271,22 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 
 	@Test
 	@WithMockUser(username = "alice2", roles = "MEMBER")
+	void messageAttachmentIs404AfterTheMemberLeftTheConversation() throws Exception {
+		var group = messaging.createGroup(admin, "Team", List.of(alice.getId()));
+		// the sender must own the asset — attaching someone else's media is rejected
+		MediaAsset asset = createMediaWithExplicitId(admin, FAR_ASSET_ID + 2);
+		messaging.sendToConversation(admin, group.getId(), "look at this", List.of(asset.getId()));
+
+		// alice2 leaves the group — the retained membership row must not grant access
+		messaging.leave(alice, group.getId());
+
+		mockMvc.perform(get("/api/v1/media/{id}/bytes", asset.getId())
+						.with(csrf()))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@WithMockUser(username = "alice2", roles = "MEMBER")
 	void suspendedMemberCanStillReadMediaTheyMaySee() throws Exception {
 		MediaAsset asset = createAndSaveMedia(alice);
 		alice.setStatus(UserStatus.SUSPENDED);

@@ -92,8 +92,9 @@ public class MediaAccessService {
 			Message msg = messages.findById(mm.getMessageId()).orElse(null);
 			if (msg != null) {
 				boolean isSender = msg.getSenderId().equals(viewer.getId());
+				// active membership only — a member who left keeps the row
 				boolean isMember = conversationMembers
-						.findByConversationAndUser(msg.getConversationId(), viewer.getId())
+						.findActiveByConversationAndUser(msg.getConversationId(), viewer.getId())
 						.isPresent();
 				if (isSender || isMember) {
 					return;
