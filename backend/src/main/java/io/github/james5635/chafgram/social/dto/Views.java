@@ -56,7 +56,7 @@ public class Views {
 		return new MemberDto(
 				u.getId(), u.getUsername(), u.getDisplayName(), u.getBio(), u.getAvatarMediaId(),
 				u.getRole().name().toLowerCase(), u.getStatus().name().toLowerCase(),
-				u.getEmailVerifiedAt(), u.getCreatedAt(),
+				u.getEmailVerifiedAt(), u.getLastSeenAt(), u.getCreatedAt(),
 				follows.followerCount(u.getId()), follows.followingCount(u.getId()),
 				viewer != null && follows.isFollowing(viewer.getId(), u.getId()));
 	}

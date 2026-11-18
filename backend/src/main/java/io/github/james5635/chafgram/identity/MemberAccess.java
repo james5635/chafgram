@@ -30,13 +30,22 @@ public class MemberAccess {
 		User user = users.findByUsername(username)
 				.orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Not authenticated"));
 		// FR-2.5: throttled presence; a last-seen failure must never break the request
+		touchPresence(user);
+		return user;
+	}
+
+	/**
+	 * Records the activity of the given member. The guard covers the whole
+	 * transactional call — a presence write that only fails at commit must not
+	 * take the request down with it.
+	 */
+	private void touchPresence(User user) {
 		try {
 			lastSeen.touch(user.getId());
 		}
 		catch (RuntimeException e) {
 			log.debug("last-seen update failed for user {}: {}", user.getId(), e.getMessage());
 		}
-		return user;
 	}
 
 	public Optional<User> find(String username) {

@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -21,6 +23,12 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * End-to-end identity flow against a real MySQL: bootstrap, invite lifecycle,
@@ -54,6 +62,9 @@ class IdentityFlowIntegrationTest extends AbstractIntegrationTest {
 
 	@Autowired
 	private MemberAccess memberAccess;
+
+	@Autowired
+	private MockMvc mockMvc;
 
 	/** Each test gets a clean slate (same Spring context and database within the class). */
 	@BeforeEach
@@ -230,6 +241,42 @@ class IdentityFlowIntegrationTest extends AbstractIntegrationTest {
 
 		memberAccess.currentMember("alice");
 		assertThat(lastSeenOf(alice.getId())).isEqualTo(afterFirst);
+	}
+
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void authenticatedGraphQlReadRefreshesLastSeen() throws Exception {
+		User alice = memberService.bootstrap(
+				"alice", "Alice", "alice@example.com", "a-very-strong-password");
+		jdbc.update("UPDATE users SET last_seen_at = ? WHERE id = ?",
+				Timestamp.from(Instant.now().minusSeconds(600)), alice.getId());
+
+		// FR-2.5: reading the API is activity — the presence must move
+		mockMvc.perform(post("/graphql")
+						.with(csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ me { username } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.me.username", is("alice")));
+
+		assertThat(lastSeenOf(alice.getId())).isAfter(Instant.now().minusSeconds(60));
+	}
+
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void lastSeenIsExposedOnTheMemberDto() throws Exception {
+		User alice = memberService.bootstrap(
+				"alice", "Alice", "alice@example.com", "a-very-strong-password");
+		jdbc.update("UPDATE users SET last_seen_at = ? WHERE id = ?",
+				Timestamp.from(Instant.now().minusSeconds(600)), alice.getId());
+
+		mockMvc.perform(post("/graphql")
+						.with(csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ me { username lastSeenAt } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.me.username", is("alice")))
+				.andExpect(jsonPath("$.data.me.lastSeenAt", notNullValue()));
 	}
 
 	private Instant lastSeenOf(Long userId) {

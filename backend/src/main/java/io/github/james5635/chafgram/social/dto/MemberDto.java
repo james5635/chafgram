@@ -11,6 +11,7 @@ public record MemberDto(
 		String role,
 		String status,
 		Instant emailVerifiedAt,
+		Instant lastSeenAt,
 		Instant createdAt,
 		long followerCount,
 		long followingCount,

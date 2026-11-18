@@ -23,6 +23,15 @@ public class LastSeenService {
 		this.users = users;
 	}
 
+	/**
+	 * Records the member's activity.
+	 * <p>
+	 * The write runs in its own transaction, so it never joins a read-only
+	 * request transaction. Presence is best-effort: callers must tolerate a
+	 * failure and must not let it break the request that triggered it. The
+	 * failure can surface at commit time (a rollback-only transaction), so the
+	 * caller has to guard the whole call, not just the update.
+	 */
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void touch(Long userId) {
 		Instant now = Instant.now();

@@ -7,6 +7,7 @@ type Member {
   role: String!
   status: String!
   emailVerifiedAt: String
+  lastSeenAt: String
   createdAt: String!
   followerCount: Int!
   followingCount: Int!
