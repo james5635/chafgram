@@ -12,6 +12,9 @@ public interface MediaStorage {
 
 	void storeProcessed(Path source, String storageKey);
 
+	/** Removes a blob — used to drop a source file the pipeline replaced. */
+	void delete(String storageKey);
+
 	Path resolvePath(String storageKey);
 
 	MediaStream read(String storageKey);

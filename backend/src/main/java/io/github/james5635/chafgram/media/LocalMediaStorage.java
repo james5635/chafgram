@@ -66,6 +66,17 @@ public class LocalMediaStorage implements MediaStorage {
 	}
 
 	@Override
+	public void delete(String storageKey) {
+		Path path = resolvePath(storageKey);
+		try {
+			Files.deleteIfExists(path);
+		}
+		catch (IOException e) {
+			// A leftover blob is not worth failing the pipeline over.
+		}
+	}
+
+	@Override
 	public MediaStream read(String storageKey) {
 		Path path = root.resolve(storageKey).normalize();
 		if (!path.startsWith(root) || !Files.exists(path)) {

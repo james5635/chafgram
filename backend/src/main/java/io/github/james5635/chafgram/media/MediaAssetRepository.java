@@ -21,6 +21,16 @@ public interface MediaAssetRepository extends JpaRepository<MediaAsset, Long> {
 	@Query("UPDATE MediaAsset a SET a.sizeBytes = :size WHERE a.id = :id")
 	void updateSize(@Param("id") Long id, @Param("size") Long size);
 
+	/**
+	 * Records the pipeline output: the transcode writes MP4 bytes, so the
+	 * storage key and MIME type must follow the new container format.
+	 */
+	@Modifying
+	@Transactional
+	@Query("UPDATE MediaAsset a SET a.storageKey = :storageKey, a.mimeType = :mimeType, a.sizeBytes = :size WHERE a.id = :id")
+	void updateOutput(@Param("id") Long id, @Param("storageKey") String storageKey,
+			@Param("mimeType") String mimeType, @Param("size") Long size);
+
 	@Modifying
 	@Transactional
 	@Query("UPDATE MediaAsset a SET a.status = 'ready', a.blurhash = :blurhash WHERE a.id = :id")

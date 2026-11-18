@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Async video pipeline: ffprobe → transcode (h264/aac/faststart) → thumbnail → blurhash → READY/FAILED.
@@ -24,6 +25,9 @@ public class MediaProcessingService {
 	private static final Logger log = LoggerFactory.getLogger(MediaProcessingService.class);
 
 	private static final Duration TRANSCODE_TIMEOUT = Duration.ofMinutes(10);
+
+	/** The transcode always produces MP4 (h264/aac/faststart). */
+	static final String OUTPUT_MIME_TYPE = "video/mp4";
 	private final MediaStorage storage;
 	private final MediaAssetRepository mediaAssets;
 
@@ -59,36 +63,33 @@ public class MediaProcessingService {
 		ProbeResult probe = ffprobe(source);
 		mediaAssets.updateMeta(asset.getId(), probe.width(), probe.height(), probe.durationMs());
 
-		// 2) transcode to h264/aac/faststart, overwrite same storage key
-		Path temp;
+		// 2) transcode to h264/aac/faststart — the output is always MP4, so the
+		//    stored key and MIME type must follow the new container format
+		String outputKey = outputStorageKey(asset.getStorageKey());
+		Path output;
 		try {
-			temp = Files.createTempFile("transcode-", ".mp4");
-		}
-		catch (IOException e) {
-			throw new IllegalStateException("Failed to create temp file", e);
-		}
-		try {
-			transcode(source, temp);
-			storage.storeProcessed(temp, asset.getStorageKey());
-			long newSize = Files.size(storage.resolvePath(asset.getStorageKey()));
-			mediaAssets.updateSize(asset.getId(), newSize);
-		}
-		catch (IOException e) {
-			throw new IllegalStateException("Failed to read processed file size", e);
-		}
-		finally {
+			Path temp = Files.createTempFile("transcode-", ".mp4");
 			try {
+				transcode(source, temp);
+				storage.storeProcessed(temp, outputKey);
+			}
+			finally {
 				Files.deleteIfExists(temp);
 			}
-			catch (IOException ignored) {}
+			output = storage.resolvePath(outputKey);
+			long newSize = Files.size(output);
+			mediaAssets.updateOutput(asset.getId(), outputKey, OUTPUT_MIME_TYPE, newSize);
+		}
+		catch (IOException e) {
+			throw new IllegalStateException("Failed to store the processed video", e);
 		}
 
-		// 3) thumbnail at 10% or 1s → blurhash
-		Path thumb = extractThumbnail(source, probe.durationMs());
+		// 3) thumbnail at 10% or 1s → blurhash (taken from the processed video)
+		Path thumb = extractThumbnail(output, probe.durationMs());
 		String blurhash = null;
 		if (thumb != null) {
 			try {
-				blurhash = BlurhashEncoder.encode(javax.imageio.ImageIO.read(thumb.toFile()), 4, 3);
+				blurhash = BlurhashEncoder.encode(ImageIO.read(thumb.toFile()), 4, 3);
 			}
 			catch (Exception e) {
 				log.warn("Blurhash failed for media {}: {}", asset.getId(), e.getMessage());
@@ -101,9 +102,27 @@ public class MediaProcessingService {
 			}
 		}
 
-		// 4) mark ready
+		// 4) the source file is superseded by the transcode — drop it
+		if (!outputKey.equals(asset.getStorageKey())) {
+			storage.delete(asset.getStorageKey());
+		}
+
+		// 5) mark ready
 		mediaAssets.markReady(asset.getId(), blurhash);
 		log.info("Pipeline completed for media {} (blurhash={})", asset.getId(), blurhash);
+	}
+
+	/**
+	 * The transcode always produces MP4, so a source stored under another
+	 * extension (e.g. {@code .webm}) moves to a sibling {@code .mp4} key.
+	 */
+	static String outputStorageKey(String sourceKey) {
+		int dot = sourceKey.lastIndexOf('.');
+		int slash = sourceKey.lastIndexOf('/');
+		if (dot > slash && dot >= 0) {
+			return sourceKey.substring(0, dot) + ".mp4";
+		}
+		return sourceKey + ".mp4";
 	}
 
 	// — ffmpeg / ffprobe helpers —
@@ -118,7 +137,7 @@ public class MediaProcessingService {
 					.redirectErrorStream(true)
 					.start();
 			String json = new String(proc.getInputStream().readAllBytes());
-			if (proc.waitFor(30, java.util.concurrent.TimeUnit.SECONDS) && proc.exitValue() == 0) {
+			if (proc.waitFor(30, TimeUnit.SECONDS) && proc.exitValue() == 0) {
 				return parseProbe(json);
 			}
 			throw new IllegalStateException("ffprobe failed: " + json);
@@ -187,7 +206,7 @@ public class MediaProcessingService {
 					output.toString())
 					.redirectErrorStream(true)
 					.start();
-			if (!proc.waitFor(10, java.util.concurrent.TimeUnit.MINUTES) || proc.exitValue() != 0) {
+			if (!proc.waitFor(10, TimeUnit.MINUTES) || proc.exitValue() != 0) {
 				throw new IllegalStateException("ffmpeg transcode timeout or failed");
 			}
 		}
@@ -212,7 +231,7 @@ public class MediaProcessingService {
 					thumb.toString())
 					.redirectErrorStream(true)
 					.start();
-			if (proc.waitFor(30, java.util.concurrent.TimeUnit.SECONDS) && proc.exitValue() == 0) {
+			if (proc.waitFor(30, TimeUnit.SECONDS) && proc.exitValue() == 0) {
 				return thumb;
 			}
 			return null;
