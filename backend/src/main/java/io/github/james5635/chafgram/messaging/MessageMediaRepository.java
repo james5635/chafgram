@@ -7,4 +7,7 @@ import java.util.List;
 public interface MessageMediaRepository extends JpaRepository<MessageMedia, MessageMediaId> {
 
 	List<MessageMedia> findByMessageId(Long messageId);
+
+	/** Attachments of a media asset — the inverse of {@link #findByMessageId(Long)}. */
+	List<MessageMedia> findByMediaId(Long mediaId);
 }

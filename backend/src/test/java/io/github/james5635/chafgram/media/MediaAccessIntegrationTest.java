@@ -7,8 +7,10 @@ import io.github.james5635.chafgram.identity.MemberService;
 import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.UserRepository;
+import io.github.james5635.chafgram.identity.UserStatus;
 import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
+import io.github.james5635.chafgram.messaging.MessagingService;
 import io.github.james5635.chafgram.social.PostMedia;
 import io.github.james5635.chafgram.social.PostMediaRepository;
 import io.github.james5635.chafgram.social.PostService;
@@ -21,9 +23,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -41,6 +46,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @AutoConfigureMockMvc
 class MediaAccessIntegrationTest extends AbstractIntegrationTest {
+
+	/** Well above any message id — see {@link #createMediaWithExplicitId}. */
+	private static final long FAR_ASSET_ID = 900_001L;
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -68,6 +76,9 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 
 	@Autowired
 	private UserRepository users;
+
+	@Autowired
+	private MessagingService messaging;
 
 	User admin;
 	User alice;
@@ -106,6 +117,36 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 		}
 
 		return mediaAssets.save(asset);
+	}
+
+	/**
+	 * Creates a media asset with a caller-chosen id. The id sits far outside
+	 * the message-id range on purpose: the byte authorization must look
+	 * attachments up by media id, and a test must not pass just because an
+	 * asset id happens to equal a message id.
+	 */
+	private MediaAsset createMediaWithExplicitId(User owner, long id) {
+		String storageKey = "test-media/" + id + ".png";
+		writeBlob(storageKey);
+		jdbc.update("insert into media_assets "
+				+ "(id, owner_user_id, kind, status, storage_key, mime_type, size_bytes) "
+				+ "values (?, ?, 'image', 'ready', ?, 'image/png', 100)",
+				id, owner.getId(), storageKey);
+		return mediaAssets.findById(id).orElseThrow();
+	}
+
+	private void writeBlob(String storageKey) {
+		try {
+			Path filePath = Paths.get("media-data", storageKey);
+			Files.createDirectories(filePath.getParent());
+			Files.write(filePath, new byte[]{1, 2, 3, 4});
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private byte[] pngBytes() {
+		return "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==".getBytes(StandardCharsets.UTF_8);
 	}
 
 	@Test
@@ -197,5 +238,59 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 		mockMvc.perform(get("/api/v1/media/{id}/bytes", 999999L)
 						.with(csrf()))
 				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@WithMockUser(username = "alice2", roles = "MEMBER")
+	void messageAttachmentIsVisibleToTheConversationMember() throws Exception {
+		// The asset id deliberately lives outside the message-id range: a lookup
+		// that confuses asset ids with message ids must not pass by coincidence.
+		MediaAsset asset = createMediaWithExplicitId(bob, FAR_ASSET_ID);
+		messaging.send(bob, alice.getId(), "look at this", List.of(asset.getId()));
+
+		// alice2 is in the conversation but does not own the asset
+		mockMvc.perform(get("/api/v1/media/{id}/bytes", asset.getId())
+						.with(csrf()))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	@WithMockUser(username = "carol", roles = "MEMBER")
+	void messageAttachmentIs404ForMembersOutsideTheConversation() throws Exception {
+		CreateInviteResponse invite3 = inviteService.create(null, Role.MEMBER, admin);
+		User carol = inviteService.accept(
+				invite3.token(), "carol", "Carol", "carol@example.com", "carol-very-strong-password");
+
+		MediaAsset asset = createMediaWithExplicitId(bob, FAR_ASSET_ID + 1);
+		messaging.send(bob, alice.getId(), "look at this", List.of(asset.getId()));
+
+		mockMvc.perform(get("/api/v1/media/{id}/bytes", asset.getId())
+						.with(csrf()))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@WithMockUser(username = "alice2", roles = "MEMBER")
+	void suspendedMemberCanStillReadMediaTheyMaySee() throws Exception {
+		MediaAsset asset = createAndSaveMedia(alice);
+		alice.setStatus(UserStatus.SUSPENDED);
+		users.save(alice);
+
+		// FR-1.4: suspended members may read, only writes are blocked
+		mockMvc.perform(get("/api/v1/media/{id}/bytes", asset.getId())
+						.with(csrf()))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	@WithMockUser(username = "alice2", roles = "MEMBER")
+	void suspendedMemberCannotUploadMedia() throws Exception {
+		alice.setStatus(UserStatus.SUSPENDED);
+		users.save(alice);
+
+		mockMvc.perform(multipart("/api/v1/media")
+						.file(new MockMultipartFile("file", "dot.png", "image/png", pngBytes()))
+						.with(csrf()))
+				.andExpect(status().isForbidden());
 	}
 }

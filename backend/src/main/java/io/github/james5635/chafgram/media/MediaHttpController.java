@@ -51,7 +51,8 @@ public class MediaHttpController {
 
 	@GetMapping("/api/v1/media/{id}/bytes")
 	public ResponseEntity<byte[]> bytes(@PathVariable Long id) {
-		User actor = access.requireWriteable(currentUsername()); // members only, never anonymous (BR-5.2)
+		// Reads stay open for suspended members (FR-1.4: read but not write)
+		User actor = access.currentMember(currentUsername()); // members only, never anonymous (BR-5.2)
 		MediaAsset asset = media.get(id);
 		mediaAccess.assertCanView(actor, asset); // authorization: blocks/tombstones → 404
 		try (InputStream in = media.read(asset).stream()) {

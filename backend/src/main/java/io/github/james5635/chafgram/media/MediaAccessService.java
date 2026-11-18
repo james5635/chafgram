@@ -87,20 +87,16 @@ public class MediaAccessService {
 		}
 
 		// 3. Message media → viewer is sender or conversation member → allow
-		List<MessageMedia> mmList = messageMedia.findByMessageId(asset.getId());
-		if (!mmList.isEmpty()) {
-			for (MessageMedia mm : mmList) {
-				Message msg =
-						messages.findById(mm.getMessageId())
-								.orElse(null);
-				if (msg != null) {
-					boolean isSender = msg.getSenderId().equals(viewer.getId());
-					boolean isMember = conversationMembers
-							.findByConversationAndUser(msg.getConversationId(), viewer.getId())
-							.isPresent();
-					if (isSender || isMember) {
-						return;
-					}
+		List<MessageMedia> mmList = messageMedia.findByMediaId(asset.getId());
+		for (MessageMedia mm : mmList) {
+			Message msg = messages.findById(mm.getMessageId()).orElse(null);
+			if (msg != null) {
+				boolean isSender = msg.getSenderId().equals(viewer.getId());
+				boolean isMember = conversationMembers
+						.findByConversationAndUser(msg.getConversationId(), viewer.getId())
+						.isPresent();
+				if (isSender || isMember) {
+					return;
 				}
 			}
 		}
