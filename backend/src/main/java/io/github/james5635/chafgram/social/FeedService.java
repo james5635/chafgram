@@ -5,7 +5,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Pull-based feeds, no fan-out materialization: following feed = posts from
@@ -29,7 +32,7 @@ public class FeedService {
 	public List<Post> followingFeed(User actor, int first, long cursor) {
 		List<Long> followees = follows.followeeIds(actor.getId());
 		List<Long> blocked = blockedPlus(actor.getId());
-		List<Long> authors = followees.stream().filter(id -> !blocked.contains(id)).distinct().collect(java.util.stream.Collectors.toList());
+		List<Long> authors = followees.stream().filter(id -> !blocked.contains(id)).distinct().collect(Collectors.toList());
 		// the following feed shows your own posts too — otherwise nobody sees what they write
 		authors.add(actor.getId());
 		return posts.findFeed(authors, cursor, page(first));
@@ -85,7 +88,7 @@ public class FeedService {
 
 	private List<Long> blockedPlus(Long userId) {
 		// users who blocked ME or whom I blocked
-		List<Long> mine = new java.util.ArrayList<>(blocks.findBlockedIds(userId));
+		List<Long> mine = new ArrayList<>(blocks.findBlockedIds(userId));
 		// note: reverse direction is checked per-author in isBlockedAuthor; this covers my blocks only
 		return mine;
 	}
@@ -103,9 +106,9 @@ public class FeedService {
 		if (sanitized.isEmpty()) {
 			return "";
 		}
-		return java.util.Arrays.stream(sanitized.split("\s+"))
+		return Arrays.stream(sanitized.split("\s+"))
 				.filter(t -> !t.isEmpty())
 				.map(t -> "+" + t)
-				.collect(java.util.stream.Collectors.joining(" "));
+				.collect(Collectors.joining(" "));
 	}
 }

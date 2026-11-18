@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -145,7 +147,7 @@ public class CommentService {
 	}
 
 	private List<String> mentions(String text) {
-		java.util.Set<String> found = new java.util.LinkedHashSet<>();
+		Set<String> found = new LinkedHashSet<>();
 		Matcher matcher = MENTION.matcher(text);
 		while (matcher.find()) {
 			found.add(matcher.group(1));

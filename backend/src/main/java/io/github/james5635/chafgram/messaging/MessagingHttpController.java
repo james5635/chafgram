@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -83,7 +84,7 @@ public class MessagingHttpController {
 		Long senderId = m.getSenderId() == null ? -1L : m.getSenderId();
 		List<MediaAssetDto> media = messageMedia.findByMessageId(m.getId()).stream()
 				.map(mm -> mediaAssets.findById(mm.getMediaId()).orElse(null))
-				.filter(java.util.Objects::nonNull)
+				.filter(Objects::nonNull)
 				.map(ma -> new MediaAssetDto(ma.getId(), ma.getKind().name().toLowerCase(), ma.getStatus().name().toLowerCase(),
 						ma.getOwnerUserId(), ma.getMimeType(), ma.getWidth(), ma.getHeight(),
 						ma.getDurationMs(), ma.getBlurhash(), ma.getSizeBytes() == null ? null : ma.getSizeBytes().toString(),

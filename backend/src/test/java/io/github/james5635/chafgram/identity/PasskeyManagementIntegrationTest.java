@@ -1,6 +1,7 @@
 package io.github.james5635.chafgram.identity;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -134,7 +135,7 @@ class PasskeyManagementIntegrationTest extends AbstractIntegrationTest {
 	private void assertThatRowCount(String table, String credentialId, int expected) {
 		Integer count = jdbc.queryForObject(
 				"SELECT COUNT(*) FROM " + table + " WHERE credential_id = ?", Integer.class, credentialId);
-		org.assertj.core.api.Assertions.assertThat(count).isEqualTo(expected);
+		Assertions.assertThat(count).isEqualTo(expected);
 	}
 
 	private String entityId(String name) {

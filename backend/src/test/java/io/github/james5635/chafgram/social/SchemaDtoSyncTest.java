@@ -2,6 +2,7 @@ package io.github.james5635.chafgram.social;
 
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.RecordComponent;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -142,7 +143,7 @@ class SchemaDtoSyncTest {
 		try {
 			Class<?> dto = Class.forName(className);
 			assertThat(dto.isRecord()).as("%s must be a record", className).isTrue();
-			return Arrays.stream(dto.getRecordComponents()).map(java.lang.reflect.RecordComponent::getName)
+			return Arrays.stream(dto.getRecordComponents()).map(RecordComponent::getName)
 					.collect(Collectors.toCollection(LinkedHashSet::new));
 		}
 		catch (ClassNotFoundException e) {

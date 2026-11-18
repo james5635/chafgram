@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -279,7 +280,7 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 
 		// bob muted the conversation → unread is 0 even with new messages
 		messaging.send(admin, member.getId(), "ping", List.of());
-		messaging.mute(member, conversationId, java.time.Instant.now().plusSeconds(3600));
+		messaging.mute(member, conversationId, Instant.now().plusSeconds(3600));
 		assertThat(messaging.unreadCount(member, conversationId)).isEqualTo(0);
 	}
 }

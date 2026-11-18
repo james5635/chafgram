@@ -1,6 +1,8 @@
 package io.github.james5635.chafgram.identity;
 
 import io.github.james5635.chafgram.common.ApiException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +16,7 @@ import java.util.Optional;
 @Service
 public class MemberAccess {
 
-	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MemberAccess.class);
+	private static final Logger log = LoggerFactory.getLogger(MemberAccess.class);
 
 	private final UserRepository users;
 	private final LastSeenService lastSeen;
