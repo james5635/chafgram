@@ -166,6 +166,46 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void watchFeedHidesVideosOfMembersWhoBlockedTheViewer() {
+		// alice (admin) blocks bob (member) — bob must not see alice's videos
+		MediaAsset shortVideo = new MediaAsset();
+		shortVideo.setOwnerUserId(admin.getId());
+		shortVideo.setKind(MediaKind.VIDEO);
+		shortVideo.setStatus(MediaStatus.READY);
+		shortVideo.setStorageKey("test/blocked-short.mp4");
+		shortVideo.setMimeType("video/mp4");
+		shortVideo.setDurationMs(10000);
+		shortVideo.setWidth(320);
+		shortVideo.setHeight(240);
+		shortVideo.setSizeBytes(1000L);
+		mediaAssets.save(shortVideo);
+
+		Post blockedVideo = posts.create(admin, PostType.VIDEO, "Alice's short video", List.of(shortVideo.getId()));
+		// compare by id — the feed reloads the rows, so entity identity differs
+		assertThat(feed.watchFeed(member, 10, Long.MAX_VALUE))
+				.extracting(Post::getId)
+				.contains(blockedVideo.getId());
+
+		// BR-2.2: blocking is mutual-effect — the blocker also disappears
+		blocks.block(admin, member.getId());
+		assertThat(feed.watchFeed(member, 10, Long.MAX_VALUE)).isEmpty();
+	}
+
+	@Test
+	void followingFeedHidesPostsOfMembersWhoBlockedTheViewer() {
+		follows.follow(member, admin.getId());
+		Post mine = posts.create(admin, PostType.NOTE, "Alice's post", List.of());
+		// compare by id — the feed reloads the rows, so entity identity differs
+		assertThat(feed.followingFeed(member, 10, Long.MAX_VALUE))
+				.extracting(Post::getId)
+				.contains(mine.getId());
+
+		// BR-2.2: blocking is mutual-effect in both directions
+		blocks.block(admin, member.getId());
+		assertThat(feed.followingFeed(member, 10, Long.MAX_VALUE)).isEmpty();
+	}
+
+	@Test
 	void watchFeedReturnsOnlyShortReadyVideos() {
 		// Create test media assets directly
 		MediaAsset shortVideo = new MediaAsset();

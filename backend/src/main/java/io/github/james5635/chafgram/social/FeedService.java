@@ -5,7 +5,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,8 +30,11 @@ public class FeedService {
 	@Transactional(readOnly = true)
 	public List<Post> followingFeed(User actor, int first, long cursor) {
 		List<Long> followees = follows.followeeIds(actor.getId());
-		List<Long> blocked = blockedPlus(actor.getId());
-		List<Long> authors = followees.stream().filter(id -> !blocked.contains(id)).distinct().collect(Collectors.toList());
+		// BR-2.2: blocking is mutual-effect — neither side sees the other
+		List<Long> authors = followees.stream()
+				.filter(id -> !isBlockedAuthor(actor.getId(), id))
+				.distinct()
+				.collect(Collectors.toList());
 		// the following feed shows your own posts too — otherwise nobody sees what they write
 		authors.add(actor.getId());
 		return posts.findFeed(authors, cursor, page(first));
@@ -48,9 +50,8 @@ public class FeedService {
 
 	@Transactional(readOnly = true)
 	public List<Post> watchFeed(User actor, int first, long cursor) {
-		List<Long> blocked = blockedPlus(actor.getId());
 		return posts.findWatch(cursor, page(first)).stream()
-				.filter(p -> !blocked.contains(p.getAuthorId()))
+				.filter(p -> !isBlockedAuthor(actor.getId(), p.getAuthorId()))
 				.limit(Math.max(first, 1))
 				.toList();
 	}
@@ -84,13 +85,6 @@ public class FeedService {
 	@Transactional(readOnly = true)
 	public boolean isBlockedAuthor(Long viewerId, Long authorId) {
 		return blocks.isBlockedBy(viewerId, authorId) || blocks.isBlockedBy(authorId, viewerId);
-	}
-
-	private List<Long> blockedPlus(Long userId) {
-		// users who blocked ME or whom I blocked
-		List<Long> mine = new ArrayList<>(blocks.findBlockedIds(userId));
-		// note: reverse direction is checked per-author in isBlockedAuthor; this covers my blocks only
-		return mine;
 	}
 
 	private PageRequest page(int first) {
