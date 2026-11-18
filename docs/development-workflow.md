@@ -106,7 +106,8 @@ Frontend has no test runner yet (`just frontend::test` is a `--if-present` no-op
 
 - Everything is GraphQL at `/graphql`. REST exists only for what GraphQL cannot
   express — the keep-list (session ceremonies, WebAuthn endpoints, media
-  upload/`bytes`, Actuator) is documented in [`architecture.md`](architecture.md).
+  upload/`bytes`, multipart message sends, Actuator) is documented in
+  [`architecture.md`](architecture.md).
 - Adding an API: new/extended `.graphqls` (one file per DTO) + resolver + DTO, then
   re-sync `target/generated-sources` via `./mvnw generate` (DGS codegen).
 - CSRF: double-submit cookie (`XSRF-TOKEN`, readable JS) with an `X-XSRF-TOKEN` header

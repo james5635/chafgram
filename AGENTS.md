@@ -134,7 +134,8 @@ npm run preview            # serve the production build
   practical. Keep the base package `io.github.james5635.chafgram`.
 - **API surface:** GraphQL-first — everything goes through `/graphql` (social, identity,
   invites, workspace, messaging, moderation). REST only for the documented keep-list in
-  `docs/architecture.md` (session ceremonies, WebAuthn, media upload/bytes, Actuator).
+  `docs/architecture.md` (session ceremonies, WebAuthn, media upload/bytes, multipart
+  message sends, Actuator).
   Resolver classes carry class-level `@PreAuthorize("isFullyAuthenticated()")`; only
   explicitly public operations carry `permitAll()` (workspace branding query).
   Authorization failures return HTTP 200 + `errors[]` with `extensions.classification`,

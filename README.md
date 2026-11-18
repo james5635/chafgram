@@ -105,7 +105,9 @@ enforced for browser clients.
 REST exists only for what GraphQL cannot express — the keep-list lives in
 `docs/architecture.md`: session ceremonies (`/api/v1/bootstrap`, `/api/v1/register`,
 `/api/v1/invites/accept`), Spring Security's WebAuthn endpoints, media upload
-(`POST /api/v1/media`) and byte serving (`GET /api/v1/media/{id}/bytes`), and
+(`POST /api/v1/media`) and byte serving (`GET /api/v1/media/{id}/bytes`), multipart
+message sends (`POST /api/v1/messages`, image attachments inline — videos are
+uploaded first and attached by id once the pipeline marks them ready), and
 Actuator (`/actuator/health` public; `/actuator/info` and `/actuator/metrics`
 admin-only). Public branding is a public GraphQL query: `{ workspace { name slug } }`.
 

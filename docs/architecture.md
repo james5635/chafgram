@@ -123,6 +123,7 @@ io.github.james5635.chafgram
 - `POST /login/webauthn`, `/webauthn/authenticate/options` — passkey authentication (Spring Security built-ins)
 - `POST /webauthn/register/options`, `POST /webauthn/register` — passkey registration (Spring Security built-ins)
 - `POST /api/v1/media` — multipart media upload (image/video)
+- `POST /api/v1/messages` — multipart message send (image attachments inline)
 - `GET /api/v1/media/{id}/bytes` — authorized byte streaming for media
 - `GET /actuator/health` — public liveness/readiness probe (status only, no details)
 - `GET /actuator/info`, `/actuator/metrics` — admin-only ops endpoints (HTTP Basic)
@@ -162,13 +163,22 @@ upload (REST multipart)            in-app async pipeline
   `ffprobe` (duration, dimensions) → `ffmpeg` (H.264/AAC transcode, metadata stripped)
   → thumbnail → blurhash, then flips the row to `status='ready'`. Any error or a
   10-minute timeout lands it in `status='failed'`.
+- The transcode always produces MP4, so the pipeline moves the asset to a `.mp4`
+  storage key and updates `mime_type` to `video/mp4` — the stored bytes and the
+  served content type always agree. The pre-transcode source blob is dropped.
 - Short vs. long video: same `media_assets` table; short feed =
   `kind='video' AND duration_ms <= 60000 AND status='ready'` — a query, not a table.
-- Storage behind `MediaStorage` interface (`store`, `read`, `delete`, `presign`);
+- Storage behind `MediaStorage` interface (`store`, `storeProcessed`, `delete`, `read`);
   default local disk under a configurable root; S3-compatible via SDK later.
 - Bytes are never served anonymously: `GET /api/v1/media/{id}/bytes` runs the
   authorization tree in `MediaAccessService` (owner, message participants, visible
   posts, avatars/logos; staff see everything) and answers `404` for every denial.
+  Suspended members keep read access (FR-1.4) — only writes are blocked for them.
+- Message attachments: `POST /api/v1/messages` (multipart) takes **image** files
+  inline. Videos cannot be ready in the same request (FR-5.2), so the flow is
+  upload → poll `mediaAsset(id)` until `status='ready'` → send the message with
+  `mediaIds`. The multipart endpoint rejects inline video files with a 400 that
+  points at that flow.
 - Moderation delete (admin, BR-5.3): `deleteMedia(id)` tombstones the asset
   (`status='deleted'`), writes an `audit_log` row, and the bytes stop being served
   everywhere. The file itself stays on disk until a retention sweep exists.
