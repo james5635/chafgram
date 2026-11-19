@@ -50,4 +50,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
 	@Query("select count(p) from Post p where p.id = :id and p.deletedAt is null")
 	long countVisiblePost(@Param("id") Long id);
+
+	/** Bulk visibility check — one query for a whole page of notifications. */
+	@Query("select p.id from Post p where p.id in :ids and p.deletedAt is null")
+	List<Long> findVisibleIds(@Param("ids") List<Long> ids);
 }

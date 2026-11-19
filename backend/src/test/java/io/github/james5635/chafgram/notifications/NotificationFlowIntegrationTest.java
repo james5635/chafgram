@@ -171,4 +171,41 @@ class NotificationFlowIntegrationTest extends AbstractIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.errors[0].extensions.classification", is("FORBIDDEN")));
 	}
+
+	/**
+	 * The list has no cursor: a page full of hidden notifications must not
+	 * swallow the older visible ones — keep scanning until the requested
+	 * number of visible rows is collected.
+	 */
+	@Test
+	void listFillsThePagePastTombstonedNotifications() {
+		Post visible = posts.create(member, PostType.NOTE, "Visible", List.of());
+		notifications.notify(admin.getId(), member.getId(), NotificationType.LIKE,
+				NotificationEntityType.POST, visible.getId());
+
+		Post tombstoned = posts.create(member, PostType.NOTE, "Tombstoned", List.of());
+		tombstoned.setDeletedAt(java.time.Instant.now());
+		postRepository.save(tombstoned);
+		notifications.notify(admin.getId(), member.getId(), NotificationType.LIKE,
+				NotificationEntityType.POST, tombstoned.getId());
+
+		List<Notification> page = notifications.listVisible(admin, 1);
+
+		assertThat(page).extracting(Notification::getEntityId).containsExactly(visible.getId());
+	}
+
+	@Test
+	void unreadCountIgnoresTombstonedTargets() {
+		Post visible = posts.create(member, PostType.NOTE, "Visible", List.of());
+		notifications.notify(admin.getId(), member.getId(), NotificationType.LIKE,
+				NotificationEntityType.POST, visible.getId());
+
+		Post tombstoned = posts.create(member, PostType.NOTE, "Tombstoned", List.of());
+		tombstoned.setDeletedAt(java.time.Instant.now());
+		postRepository.save(tombstoned);
+		notifications.notify(admin.getId(), member.getId(), NotificationType.LIKE,
+				NotificationEntityType.POST, tombstoned.getId());
+
+		assertThat(notifications.countUnreadVisible(admin)).isEqualTo(1);
+	}
 }
