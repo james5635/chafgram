@@ -31,8 +31,27 @@ public interface MediaAssetRepository extends JpaRepository<MediaAsset, Long> {
 	void updateOutput(@Param("id") Long id, @Param("storageKey") String storageKey,
 			@Param("mimeType") String mimeType, @Param("size") Long size);
 
+	/**
+	 * Flips the asset to ready. Guarded on the current status: an admin
+	 * moderation delete while the transcode was running must survive — the
+	 * byte authorizer would otherwise serve the video again.
+	 *
+	 * @return the number of rows updated (0 when the asset is no longer
+	 * processing, e.g. it was deleted)
+	 */
 	@Modifying
 	@Transactional
-	@Query("UPDATE MediaAsset a SET a.status = 'ready', a.blurhash = :blurhash WHERE a.id = :id")
-	void markReady(@Param("id") Long id, @Param("blurhash") String blurhash);
+	@Query("UPDATE MediaAsset a SET a.status = 'ready', a.blurhash = :blurhash WHERE a.id = :id AND a.status = 'processing'")
+	int markReady(@Param("id") Long id, @Param("blurhash") String blurhash);
+
+	/**
+	 * Marks the asset failed. Guarded the same way: a tombstoned asset must
+	 * not be flipped back to a servable state by the pipeline.
+	 *
+	 * @return the number of rows updated (0 when the asset is no longer processing)
+	 */
+	@Modifying
+	@Transactional
+	@Query("UPDATE MediaAsset a SET a.status = 'failed' WHERE a.id = :id AND a.status = 'processing'")
+	int markFailed(@Param("id") Long id);
 }

@@ -60,7 +60,7 @@ public class MediaProcessingService {
 			executor.execute(() -> process(mediaAssetId));
 		}
 		catch (TaskRejectedException e) {
-			markFailed(mediaAssetId, "The media processing queue is full — try again later");
+			markFailed(mediaAssetId);
 		}
 	}
 
@@ -75,7 +75,7 @@ public class MediaProcessingService {
 		}
 		catch (Exception e) {
 			log.error("Pipeline failed for media {}", mediaAssetId, e);
-			markFailed(mediaAssetId, e.getMessage());
+			markFailed(mediaAssetId);
 		}
 	}
 
@@ -128,8 +128,12 @@ public class MediaProcessingService {
 			storage.delete(asset.getStorageKey());
 		}
 
-		// 5) mark ready
-		mediaAssets.markReady(asset.getId(), blurhash);
+		// 5) mark ready — only if the asset is still processing: an admin may
+		//    have deleted it while the transcode ran (BR-5.3 tombstone survives)
+		if (mediaAssets.markReady(asset.getId(), blurhash) == 0) {
+			log.info("Media {} is no longer processing — discarding the pipeline result", asset.getId());
+			return;
+		}
 		log.info("Pipeline completed for media {} (blurhash={})", asset.getId(), blurhash);
 	}
 
@@ -321,8 +325,7 @@ public class MediaProcessingService {
 	// — DB updates (minimal repo methods assumed) —
 
 	/** Marks the asset failed so it never stays stuck in {@code processing}. */
-	private void markFailed(Long id, String reason) {
-		log.warn("Media {} marked failed: {}", id, reason);
+	private void markFailed(Long id) {
 		mediaAssets.findById(id).ifPresent(a -> {
 			a.setStatus(MediaStatus.FAILED);
 			mediaAssets.save(a);
