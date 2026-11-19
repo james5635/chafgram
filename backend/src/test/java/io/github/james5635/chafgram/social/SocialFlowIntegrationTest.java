@@ -256,6 +256,41 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 		assertThat(watch.get(0).getId()).isEqualTo(shortPost.getId());
 	}
 
+	/**
+	 * BR-2.2 pagination: the newest video is blocked, so a page that fills
+	 * with it must still reach the older allowed videos — the next cursor
+	 * cannot stop on a hidden row, or they become unreachable.
+	 */
+	@Test
+	void watchFeedFillsThePagePastBlockedVideos() {
+		MediaAsset allowed = shortVideo(member, "watch-allowed.mp4");
+		Post allowedPost = posts.create(member, PostType.VIDEO, "Allowed video", List.of(allowed.getId()));
+		MediaAsset blocked = shortVideo(admin, "watch-blocked.mp4");
+		posts.create(admin, PostType.VIDEO, "Blocked video", List.of(blocked.getId()));
+
+		// member blocks admin — mutual-effect: admin's videos are hidden from member
+		blocks.block(member, admin.getId());
+
+		assertThat(feed.watchFeed(member, 1, Long.MAX_VALUE))
+				.extracting(Post::getId)
+				.containsExactly(allowedPost.getId());
+	}
+
+	private MediaAsset shortVideo(User owner, String key) {
+		MediaAsset video = new MediaAsset();
+		video.setOwnerUserId(owner.getId());
+		video.setKind(MediaKind.VIDEO);
+		video.setStatus(MediaStatus.READY);
+		video.setStorageKey("test/" + key);
+		video.setMimeType("video/mp4");
+		video.setDurationMs(10000);
+		video.setWidth(320);
+		video.setHeight(240);
+		video.setSizeBytes(1000L);
+		mediaAssets.save(video);
+		return video;
+	}
+
 	@Test
 	void searchPostsWithKindFilter() {
 		MediaAsset shortVideo = new MediaAsset();

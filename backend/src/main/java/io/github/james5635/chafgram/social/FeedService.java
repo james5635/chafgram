@@ -5,6 +5,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -48,12 +49,36 @@ public class FeedService {
 				.toList();
 	}
 
+	/**
+	 * Watch feed: short ready videos, newest first.
+	 * <p>
+	 * Rows the mutual-block filter hides are fetched past, not skipped: a
+	 * blocked video must not leave the page short, and the next cursor must
+	 * not stop on a hidden row — the older allowed videos behind it would
+	 * become unreachable. Each iteration advances the cursor to the last row
+	 * of the page fetched, so the loop ends when the query returns a page.
+	 */
 	@Transactional(readOnly = true)
 	public List<Post> watchFeed(User actor, int first, long cursor) {
-		return posts.findWatch(cursor, page(first)).stream()
-				.filter(p -> !isBlockedAuthor(actor.getId(), p.getAuthorId()))
-				.limit(Math.max(first, 1))
-				.toList();
+		int limit = Math.max(first, 1);
+		List<Post> allowed = new ArrayList<>();
+		long currentCursor = cursor;
+		while (allowed.size() < limit) {
+			List<Post> page = posts.findWatch(currentCursor, page(limit));
+			if (page.isEmpty()) {
+				break;
+			}
+			currentCursor = page.get(page.size() - 1).getId();
+			for (Post p : page) {
+				if (allowed.size() >= limit) {
+					break;
+				}
+				if (!isBlockedAuthor(actor.getId(), p.getAuthorId())) {
+					allowed.add(p);
+				}
+			}
+		}
+		return allowed;
 	}
 
 	@Transactional(readOnly = true)
