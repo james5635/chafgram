@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -93,6 +95,29 @@ class MessagingIntegrationTest extends AbstractIntegrationTest {
 
 		Long mediaId = jsonPathExtract(result, "$.media[0].id");
 		assertThat(mediaId).isNotNull();
+	}
+
+	/**
+	 * FR-5.2: the inline message upload path must carry the same image
+	 * metadata as POST /api/v1/media — dimensions and blurhash.
+	 */
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void inlineImageUploadPopulatesDimensionsAndBlurhash() throws Exception {
+		mockMvc.perform(multipart("/api/v1/messages")
+						.file(createMultipartFile("file", "photo.png", "image/png", realPngBytes()))
+						.param("userId", member.getId().toString())
+						.with(csrf()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.media[0].width", is(1)))
+				.andExpect(jsonPath("$.media[0].height", is(1)))
+				.andExpect(jsonPath("$.media[0].blurhash", notNullValue()));
+	}
+
+	/** A real 1×1 PNG (the other fixtures pass base64 text as bytes). */
+	private byte[] realPngBytes() {
+		return Base64.getDecoder()
+				.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==");
 	}
 
 	@Test

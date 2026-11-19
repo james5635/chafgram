@@ -78,14 +78,18 @@ public class MediaService {
 	 * from the stored file. Images complete instantly, so the upload itself
 	 * carries the required metadata — there is no async image processor.
 	 * Formats ImageIO cannot read (e.g. WebP) simply leave the fields null.
+	 * <p>
+	 * Shared by {@code POST /api/v1/media} and the inline message upload, so
+	 * both image paths expose the same metadata.
 	 */
-	private void populateImageMetadata(MediaAsset asset) {
+	public void populateImageMetadata(MediaAsset asset) {
 		try {
 			BufferedImage image = ImageIO.read(storage.resolvePath(asset.getStorageKey()).toFile());
 			if (image != null) {
 				asset.setWidth(image.getWidth());
 				asset.setHeight(image.getHeight());
 				asset.setBlurhash(BlurhashEncoder.encode(image, 4, 3));
+				mediaAssets.save(asset);
 			}
 		}
 		catch (Exception e) {
@@ -124,6 +128,11 @@ public class MediaService {
 
 	public MediaStorage.MediaStream read(MediaAsset asset) {
 		return storage.read(asset.getStorageKey());
+	}
+
+	/** Reads an arbitrary stored blob (the video thumbnail uses its own key). */
+	public MediaStorage.MediaStream read(String storageKey) {
+		return storage.read(storageKey);
 	}
 
 	private MediaKind kindOf(String mime, MultipartFile file) {

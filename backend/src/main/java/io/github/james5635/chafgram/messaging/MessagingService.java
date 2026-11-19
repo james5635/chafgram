@@ -7,6 +7,7 @@ import io.github.james5635.chafgram.identity.UserStatus;
 import io.github.james5635.chafgram.media.MediaAsset;
 import io.github.james5635.chafgram.media.MediaAssetRepository;
 import io.github.james5635.chafgram.media.MediaKind;
+import io.github.james5635.chafgram.media.MediaService;
 import io.github.james5635.chafgram.media.MediaStatus;
 import io.github.james5635.chafgram.media.MediaStorage;
 import io.github.james5635.chafgram.media.MediaValidation;
@@ -43,11 +44,12 @@ public class MessagingService {
 	private final MediaValidation mediaValidation;
 	private final MediaAssetRepository mediaAssets;
 	private final MediaStorage mediaStorage;
+	private final MediaService media;
 
 	public MessagingService(ConversationRepository conversations, ConversationMemberRepository members,
 			MessageRepository messages, MessageMediaRepository messageMedia, UserRepository users,
 			BlockService blocks, NotificationService notifications, MediaValidation mediaValidation,
-			MediaAssetRepository mediaAssets, MediaStorage mediaStorage) {
+			MediaAssetRepository mediaAssets, MediaStorage mediaStorage, MediaService media) {
 		this.conversations = conversations;
 		this.members = members;
 		this.messages = messages;
@@ -58,6 +60,7 @@ public class MessagingService {
 		this.mediaValidation = mediaValidation;
 		this.mediaAssets = mediaAssets;
 		this.mediaStorage = mediaStorage;
+		this.media = media;
 	}
 
 	/**
@@ -94,7 +97,10 @@ public class MessagingService {
 		asset.setStorageKey(key);
 		asset.setMimeType(mime.isEmpty() ? "application/octet-stream" : mime);
 		asset.setSizeBytes(size);
-		return mediaAssets.save(asset);
+		MediaAsset saved = mediaAssets.save(asset);
+		// same metadata as POST /api/v1/media (FR-5.2)
+		media.populateImageMetadata(saved);
+		return saved;
 	}
 
 	@Transactional
