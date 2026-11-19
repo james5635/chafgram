@@ -62,13 +62,15 @@ public class IdentityMutationResolver {
 
 	@MutationMapping
 	public PasskeyDto renamePasskey(@Argument String credentialId, @Argument String label) {
-		User actor = current.require();
+		// Writeable-member check (FR-1.4, BR-5.2): suspended/deactivated
+		// members cannot rename their passkeys either.
+		User actor = access.requireWriteable(current.require().getUsername());
 		return passkeyService.rename(actor, credentialId, label);
 	}
 
 	@MutationMapping
 	public Boolean revokePasskey(@Argument String credentialId) {
-		User actor = current.require();
+		User actor = access.requireWriteable(current.require().getUsername());
 		passkeyService.revoke(actor, credentialId);
 		return true;
 	}
