@@ -148,6 +148,10 @@ Public workspace branding is a **GraphQL** operation, not REST: `query { workspa
   (discover, following, watch) drops an author when *either* side blocked the other.
   A one-directional filter is not enough — the blocker must disappear from the
   blockee's feeds too.
+- **Watch-feed pagination** — the watch feed fetches past the rows the
+  mutual-block filter hides: a blocked video must not leave the page short, and
+  the next cursor must not stop on a hidden row — the older allowed videos
+  behind it would become unreachable.
 - **Presence** — last-seen (FR-2.5) is refreshed on every authenticated read
   (`CurrentMember.require()`), not only on login. The write is throttled to one
   update per member per five minutes and never breaks the request that triggered
@@ -182,6 +186,10 @@ upload (REST multipart)            in-app async pipeline
 - The transcode always produces MP4, so the pipeline moves the asset to a `.mp4`
   storage key and updates `mime_type` to `video/mp4` — the stored bytes and the
   served content type always agree. The pre-transcode source blob is dropped.
+- `markReady`/`markFailed` only transition a still-`processing` asset
+  (`WHERE status = 'processing'`): an admin moderation delete while a transcode
+  runs must survive — the byte authorizer would otherwise serve the video again.
+  When the guard matches nothing the pipeline discards the result.
 - Short vs. long video: same `media_assets` table; short feed =
   `kind='video' AND duration_ms <= 60000 AND status='ready'` — a query, not a table.
 - Storage behind `MediaStorage` interface (`store`, `storeProcessed`, `delete`, `read`);
@@ -193,6 +201,12 @@ upload (REST multipart)            in-app async pipeline
   Message attachments require **active** participation: a member who left or was
   removed from a conversation keeps the membership row for history, but `left_at` is
   set and the row no longer grants access to the conversation's attachments.
+- Passkey mutations (`renamePasskey`, `revokePasskey`) require a writeable member
+  (FR-1.4, BR-5.2), like every other write path.
+- Image uploads are ready immediately and carry the required metadata: the
+  upload reads the stored file back with ImageIO and records `width`/`height`
+  and the blurhash (FR-5.2). Formats ImageIO cannot read (e.g. WebP) leave the
+  fields null.
 - Message attachments: `POST /api/v1/messages` (multipart) takes **image** files
   inline. Videos cannot be ready in the same request (FR-5.2), so the flow is
   upload → poll `mediaAsset(id)` until `status='ready'` → send the message with
