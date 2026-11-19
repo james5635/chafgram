@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -171,6 +172,36 @@ class MediaProcessingIntegrationTest extends AbstractIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("ready"))
 				.andExpect(jsonPath("$.kind").value("image"));
+	}
+
+	/**
+	 * FR-5.2: images complete instantly, so the upload itself must carry the
+	 * required metadata — dimensions and blurhash — even though no async
+	 * pipeline runs for them.
+	 */
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void imageUploadPopulatesDimensionsAndBlurhash() throws Exception {
+		var result = mockMvc.perform(multipart("/api/v1/media")
+						.file(createMultipartFile("file", "dot.png", "image/png", realPngBytes()))
+						.with(csrf()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("ready"))
+				.andReturn();
+
+		long id = Long.parseLong(JsonPath.read(result.getResponse().getContentAsString(), "$.id").toString());
+		MediaAsset asset = mediaAssets.findById(id).orElseThrow();
+
+		assertThat(asset.getStatus()).isEqualTo(MediaStatus.READY);
+		assertThat(asset.getWidth()).isEqualTo(1);
+		assertThat(asset.getHeight()).isEqualTo(1);
+		assertThat(asset.getBlurhash()).isNotNull();
+	}
+
+	/** A real 1×1 PNG (the other fixtures pass base64 text as bytes). */
+	private byte[] realPngBytes() {
+		return Base64.getDecoder()
+				.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==");
 	}
 
 	private MockMultipartFile createMultipartFile(String name, String filename, String contentType, byte[] content) {

@@ -3,17 +3,23 @@ package io.github.james5635.chafgram.media;
 import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.common.AuditService;
 import io.github.james5635.chafgram.identity.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.util.Map;
 
 /** Media asset lifecycle. Images complete instantly; videos queue for async transcode. */
 @Service
 public class MediaService {
+
+	private static final Logger log = LoggerFactory.getLogger(MediaService.class);
 
 	private static final long MAX_IMAGE_BYTES = 20L * 1024 * 1024;
 	private static final long MAX_VIDEO_BYTES = 4L * 1024 * 1024 * 1024;
@@ -58,11 +64,33 @@ public class MediaService {
 		asset.setSizeBytes(size);
 		MediaAsset saved = mediaAssets.save(asset);
 
-		// The listener starts the video pipeline after this transaction commits.
 		if (kind == MediaKind.VIDEO) {
+			// The listener starts the video pipeline after this transaction commits.
 			eventPublisher.publishEvent(saved.getId());
+		} else {
+			populateImageMetadata(saved);
 		}
 		return saved;
+	}
+
+	/**
+	 * Best-effort image metadata (FR-5.2): dimensions and blurhash, read back
+	 * from the stored file. Images complete instantly, so the upload itself
+	 * carries the required metadata — there is no async image processor.
+	 * Formats ImageIO cannot read (e.g. WebP) simply leave the fields null.
+	 */
+	private void populateImageMetadata(MediaAsset asset) {
+		try {
+			BufferedImage image = ImageIO.read(storage.resolvePath(asset.getStorageKey()).toFile());
+			if (image != null) {
+				asset.setWidth(image.getWidth());
+				asset.setHeight(image.getHeight());
+				asset.setBlurhash(BlurhashEncoder.encode(image, 4, 3));
+			}
+		}
+		catch (Exception e) {
+			log.warn("Image metadata not populated for media {}: {}", asset.getId(), e.getMessage());
+		}
 	}
 
 	@Transactional(readOnly = true)
