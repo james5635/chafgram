@@ -140,7 +140,9 @@ Video uploads are processed in the backend by a bounded async pipeline
 be on `PATH` for videos to finish (`status='ready'`). Without them a video upload ends
 in `status='failed'`; images are unaffected. Short videos (≤ 60 s) surface in the watch
 feed, longer ones in the regular feed. If the pipeline queue is full, the upload ends
-in `status='failed'` as well — it never stays stuck in `status='processing'`.
+in `status='failed'` as well — it never stays stuck in `status='processing'`. The
+generated thumbnail is kept and served through the byte endpoint
+(`GET /api/v1/media/{id}/bytes?variant=thumbnail`).
 
 ### Frontend
 

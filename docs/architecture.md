@@ -158,7 +158,9 @@ Public workspace branding is a **GraphQL** operation, not REST: `query { workspa
   it — the caller guards the whole transactional call, so a write that fails at
   commit is swallowed too. `Member.lastSeenAt` exposes the timestamp to clients.
 - **Logging** — structured logs to stdout; never log credential material; correlation
-  ids propagated frontend→backend.
+  ids propagated frontend→backend. The dev mail fallback is no exception: the logged
+  body keeps everything except the account-flow token (`?token=…` is redacted), so a
+  reset/verification link in the log cannot be redeemed.
 
 ## 5. Media pipeline
 
@@ -206,12 +208,21 @@ upload (REST multipart)            in-app async pipeline
 - Image uploads are ready immediately and carry the required metadata: the
   upload reads the stored file back with ImageIO and records `width`/`height`
   and the blurhash (FR-5.2). Formats ImageIO cannot read (e.g. WebP) leave the
-  fields null.
+  fields null. Both image paths share one helper — `POST /api/v1/media` and the
+  inline `POST /api/v1/messages` upload expose the same metadata.
+- Video thumbnails are kept, not discarded: the pipeline stores the generated
+  JPG next to the transcoded video (`media_assets.thumbnail_key`) and the
+  bytes endpoint serves it with `GET /api/v1/media/{id}/bytes?variant=thumbnail`
+  (`image/jpeg`). The same authorization decision as the asset itself applies;
+  `MediaAsset.hasThumbnail` tells clients that one exists.
 - Message attachments: `POST /api/v1/messages` (multipart) takes **image** files
   inline. Videos cannot be ready in the same request (FR-5.2), so the flow is
   upload → poll `mediaAsset(id)` until `status='ready'` → send the message with
   `mediaIds`. The multipart endpoint rejects inline video files with a 400 that
   points at that flow.
+- A purged sender leaves `messages.sender_id` NULL; the attachment authorizer
+  compares it null-safely, so the message history (and its attachments) stay
+  readable instead of failing with a 500.
 - Moderation delete (admin, BR-5.3): `deleteMedia(id)` tombstones the asset
   (`status='deleted'`), writes an `audit_log` row, and the bytes stop being served
   everywhere. The file itself stays on disk until a retention sweep exists.
@@ -243,6 +254,13 @@ upload (REST multipart)            in-app async pipeline
   recipients query index `(recipient_id, read_at, created_at)`.
 - Fan-out is write-time (row per recipient) — correct at company scale; no queue needed
   until proven otherwise.
+- Visibility is resolved in bulk: a page of notifications is checked with one query per
+  entity type (posts, comments, messages), not one query per row — the unread set is
+  unbounded, so a per-row check would be an N+1.
+- The notification list has no cursor, so a page must be **filled**: when the newest rows
+  point at tombstoned content, the service keeps scanning backwards until the requested
+  number of visible notifications is collected. Otherwise the older visible ones would be
+  unreachable.
 
 ## 8. Moderation & audit
 
@@ -258,7 +276,7 @@ upload (REST multipart)            in-app async pipeline
 | Concern | Approach |
 |---------|----------|
 | Artifact | OCI image for backend + static assets via frontend build; `compose.yaml` for the full self-hosted stack (app + MySQL + volume) — dev compose exists today and doubles as the reference |
-| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline, `V2` media column alignment, `V3` `users.email_verified_at` (migrations in `backend/src/main/resources/db/migration/`) |
+| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline, `V2` media column alignment, `V3` `users.email_verified_at`, `V4` `media_assets.thumbnail_key` (migrations in `backend/src/main/resources/db/migration/`) |
 | Backups | `mysqldump`/volume snapshot, admin-facing docs; restore tested per release |
 | TLS | Terminated at company reverse proxy; app serves plain HTTP internally |
 | Observability | Actuator health/metrics; logs to stdout; **no** mandatory external telemetry |
