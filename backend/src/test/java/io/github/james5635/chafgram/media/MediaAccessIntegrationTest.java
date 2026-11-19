@@ -10,6 +10,7 @@ import io.github.james5635.chafgram.identity.UserRepository;
 import io.github.james5635.chafgram.identity.UserStatus;
 import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
+import io.github.james5635.chafgram.messaging.Message;
 import io.github.james5635.chafgram.messaging.MessagingService;
 import io.github.james5635.chafgram.social.PostMedia;
 import io.github.james5635.chafgram.social.PostMediaRepository;
@@ -283,6 +284,20 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 		mockMvc.perform(get("/api/v1/media/{id}/bytes", asset.getId())
 						.with(csrf()))
 				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@WithMockUser(username = "alice2", roles = "MEMBER")
+	void purgedSenderKeepsMessageAttachmentsReadable() throws Exception {
+		MediaAsset asset = createMediaWithExplicitId(bob, FAR_ASSET_ID + 3);
+		Message sent = messaging.send(bob, alice.getId(), "look at this", List.of(asset.getId()));
+
+		// a purged sender leaves messages.sender_id NULL (ON DELETE SET NULL)
+		jdbc.update("UPDATE messages SET sender_id = NULL WHERE id = ?", sent.getId());
+
+		mockMvc.perform(get("/api/v1/media/{id}/bytes", asset.getId())
+						.with(csrf()))
+				.andExpect(status().isOk());
 	}
 
 	@Test

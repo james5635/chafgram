@@ -91,7 +91,8 @@ public class MediaAccessService {
 		for (MessageMedia mm : mmList) {
 			Message msg = messages.findById(mm.getMessageId()).orElse(null);
 			if (msg != null) {
-				boolean isSender = msg.getSenderId().equals(viewer.getId());
+				// null-safe: a purged sender leaves sender_id NULL
+				boolean isSender = viewer.getId().equals(msg.getSenderId());
 				// active membership only — a member who left keeps the row
 				boolean isMember = conversationMembers
 						.findActiveByConversationAndUser(msg.getConversationId(), viewer.getId())
