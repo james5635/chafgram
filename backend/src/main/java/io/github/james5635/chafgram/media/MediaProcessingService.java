@@ -324,11 +324,14 @@ public class MediaProcessingService {
 
 	// — DB updates (minimal repo methods assumed) —
 
-	/** Marks the asset failed so it never stays stuck in {@code processing}. */
+	/**
+	 * Marks the asset failed so it never stays stuck in {@code processing}.
+	 * Guarded on the current status: a moderation tombstone (BR-5.3) must
+	 * survive a failing or rejected pipeline run.
+	 */
 	private void markFailed(Long id) {
-		mediaAssets.findById(id).ifPresent(a -> {
-			a.setStatus(MediaStatus.FAILED);
-			mediaAssets.save(a);
-		});
+		if (mediaAssets.markFailed(id) == 0) {
+			log.info("Media {} is no longer processing — leaving its status untouched", id);
+		}
 	}
 }

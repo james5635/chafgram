@@ -4,6 +4,7 @@ import com.jayway.jsonpath.JsonPath;
 import io.github.james5635.chafgram.AbstractIntegrationTest;
 import io.github.james5635.chafgram.identity.MemberService;
 import io.github.james5635.chafgram.identity.User;
+import io.github.james5635.chafgram.identity.UserRepository;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,12 @@ class MediaProcessingIntegrationTest extends AbstractIntegrationTest {
 
 	@Autowired
 	private MediaStorage storage;
+
+	@Autowired
+	private MediaProcessingService processing;
+
+	@Autowired
+	private UserRepository users;
 
 	private static Path testClip;
 
@@ -196,6 +203,27 @@ class MediaProcessingIntegrationTest extends AbstractIntegrationTest {
 		assertThat(asset.getWidth()).isEqualTo(1);
 		assertThat(asset.getHeight()).isEqualTo(1);
 		assertThat(asset.getBlurhash()).isNotNull();
+	}
+
+	/**
+	 * BR-5.3: a moderation tombstone must survive a failing pipeline — the
+	 * failure path must not flip a deleted asset back to a servable status.
+	 */
+	@Test
+	void failedProcessingDoesNotFlipATombstonedAsset() {
+		User owner = users.findByUsername("alice").orElseThrow();
+		MediaAsset asset = new MediaAsset();
+		asset.setOwnerUserId(owner.getId());
+		asset.setKind(MediaKind.VIDEO);
+		asset.setStatus(MediaStatus.DELETED);
+		asset.setStorageKey("test/missing.mp4"); // the transcode will fail
+		asset.setMimeType("video/mp4");
+		asset.setSizeBytes(1L);
+		mediaAssets.save(asset);
+
+		processing.process(asset.getId());
+
+		assertThat(mediaAssets.findById(asset.getId()).orElseThrow().getStatus()).isEqualTo(MediaStatus.DELETED);
 	}
 
 	/** A real 1×1 PNG (the other fixtures pass base64 text as bytes). */

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskRejectedException;
 
 import java.time.Duration;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -32,10 +31,7 @@ class MediaProcessingServiceTest {
 	@Test
 	void queueRejectionMarksTheAssetFailedInsteadOfLeavingItProcessing() {
 		MediaAssetRepository assets = mock(MediaAssetRepository.class);
-		MediaAsset asset = new MediaAsset();
-		asset.setId(42L);
-		asset.setStatus(MediaStatus.PROCESSING);
-		when(assets.findById(42L)).thenReturn(Optional.of(asset));
+		when(assets.markFailed(42L)).thenReturn(1);
 
 		MediaProcessingService service = new MediaProcessingService(
 				mock(MediaStorage.class), assets, task -> {
@@ -44,8 +40,7 @@ class MediaProcessingServiceTest {
 
 		service.processAsync(42L);
 
-		assertThat(asset.getStatus()).isEqualTo(MediaStatus.FAILED);
-		verify(assets).save(asset);
+		verify(assets).markFailed(42L);
 	}
 
 	/**
