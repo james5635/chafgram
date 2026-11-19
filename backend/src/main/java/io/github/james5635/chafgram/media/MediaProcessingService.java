@@ -105,15 +105,18 @@ public class MediaProcessingService {
 			throw new IllegalStateException("Failed to store the processed video", e);
 		}
 
-		// 3) thumbnail at 10% or 1s → blurhash (taken from the processed video)
+		// 3) thumbnail at 10% or 1s → stored for clients (FR-5.2) + blurhash
 		Path thumb = extractThumbnail(output, probe.durationMs());
 		String blurhash = null;
+		String thumbnailKey = null;
 		if (thumb != null) {
 			try {
 				blurhash = BlurhashEncoder.encode(ImageIO.read(thumb.toFile()), 4, 3);
+				thumbnailKey = thumbnailStorageKey(asset.getStorageKey());
+				storage.storeProcessed(thumb, thumbnailKey);
 			}
 			catch (Exception e) {
-				log.warn("Blurhash failed for media {}: {}", asset.getId(), e.getMessage());
+				log.warn("Thumbnail storage failed for media {}: {}", asset.getId(), e.getMessage());
 			}
 			finally {
 				try {
@@ -130,11 +133,12 @@ public class MediaProcessingService {
 
 		// 5) mark ready — only if the asset is still processing: an admin may
 		//    have deleted it while the transcode ran (BR-5.3 tombstone survives)
-		if (mediaAssets.markReady(asset.getId(), blurhash) == 0) {
+		if (mediaAssets.markReady(asset.getId(), blurhash, thumbnailKey) == 0) {
 			log.info("Media {} is no longer processing — discarding the pipeline result", asset.getId());
 			return;
 		}
-		log.info("Pipeline completed for media {} (blurhash={})", asset.getId(), blurhash);
+		log.info("Pipeline completed for media {} (blurhash={}, thumbnail={})",
+				asset.getId(), blurhash, thumbnailKey);
 	}
 
 	/**
@@ -148,6 +152,16 @@ public class MediaProcessingService {
 			return sourceKey.substring(0, dot) + ".mp4";
 		}
 		return sourceKey + ".mp4";
+	}
+
+	/** The thumbnail lives next to the transcoded video: {@code <base>.thumb.jpg}. */
+	static String thumbnailStorageKey(String sourceKey) {
+		int dot = sourceKey.lastIndexOf('.');
+		int slash = sourceKey.lastIndexOf('/');
+		if (dot > slash && dot >= 0) {
+			return sourceKey.substring(0, dot) + ".thumb.jpg";
+		}
+		return sourceKey + ".thumb.jpg";
 	}
 
 	// — ffmpeg / ffprobe helpers —

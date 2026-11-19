@@ -41,8 +41,9 @@ public interface MediaAssetRepository extends JpaRepository<MediaAsset, Long> {
 	 */
 	@Modifying
 	@Transactional
-	@Query("UPDATE MediaAsset a SET a.status = 'ready', a.blurhash = :blurhash WHERE a.id = :id AND a.status = 'processing'")
-	int markReady(@Param("id") Long id, @Param("blurhash") String blurhash);
+	@Query("UPDATE MediaAsset a SET a.status = 'ready', a.blurhash = :blurhash, a.thumbnailKey = :thumbnailKey WHERE a.id = :id AND a.status = 'processing'")
+	int markReady(@Param("id") Long id, @Param("blurhash") String blurhash,
+			@Param("thumbnailKey") String thumbnailKey);
 
 	/**
 	 * Marks the asset failed. Guarded the same way: a tombstoned asset must

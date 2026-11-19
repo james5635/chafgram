@@ -12,6 +12,7 @@ public record MediaAssetDto(
 		Integer height,
 		Integer durationMs,
 		String blurhash,
+		Boolean hasThumbnail,
 		String sizeBytes,
 		Instant createdAt) {
 }

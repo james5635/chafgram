@@ -21,7 +21,10 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -205,6 +208,12 @@ class MediaProcessingIntegrationTest extends AbstractIntegrationTest {
 		assertThat(asset.getBlurhash()).isNotNull();
 	}
 
+	/** A real 1×1 PNG (the other fixtures pass base64 text as bytes). */
+	private byte[] realPngBytes() {
+		return Base64.getDecoder()
+				.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==");
+	}
+
 	/**
 	 * BR-5.3: a moderation tombstone must survive a failing pipeline — the
 	 * failure path must not flip a deleted asset back to a servable status.
@@ -226,10 +235,41 @@ class MediaProcessingIntegrationTest extends AbstractIntegrationTest {
 		assertThat(mediaAssets.findById(asset.getId()).orElseThrow().getStatus()).isEqualTo(MediaStatus.DELETED);
 	}
 
-	/** A real 1×1 PNG (the other fixtures pass base64 text as bytes). */
-	private byte[] realPngBytes() {
-		return Base64.getDecoder()
-				.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==");
+	/**
+	 * FR-5.2: the pipeline's thumbnail is stored and served, not discarded —
+	 * clients need it to render the video.
+	 */
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void videoUploadStoresAndServesTheThumbnail() throws Exception {
+		var result = mockMvc.perform(multipart("/api/v1/media")
+						.file(createMultipartFile("file", "clip.mp4", "video/mp4", Files.readAllBytes(testClip)))
+						.with(csrf()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("processing"))
+				.andReturn();
+
+		long id = Long.parseLong(JsonPath.read(result.getResponse().getContentAsString(), "$.id").toString());
+		awaitReady(id);
+
+		// the generated thumbnail is persisted under its own key
+		assertThat(jdbc.queryForObject("SELECT thumbnail_key FROM media_assets WHERE id = ?", String.class, id))
+				.isNotNull();
+
+		// …and served through the bytes endpoint
+		mockMvc.perform(get("/api/v1/media/{id}/bytes", id)
+						.param("variant", "thumbnail")
+						.with(csrf()))
+				.andExpect(status().isOk())
+				.andExpect(content().contentTypeCompatibleWith("image/jpeg"));
+
+		// …and announced on the metadata surface, so clients know it exists
+		mockMvc.perform(post("/graphql")
+						.with(csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"query { mediaAsset(id: " + id + ") { id hasThumbnail } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.mediaAsset.hasThumbnail").value(true));
 	}
 
 	private MockMultipartFile createMultipartFile(String name, String filename, String contentType, byte[] content) {

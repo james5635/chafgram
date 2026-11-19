@@ -117,7 +117,8 @@ public class MessagingMutationResolver {
 				.filter(Objects::nonNull)
 				.map(ma -> new MediaAssetDto(ma.getId(), ma.getKind().name().toLowerCase(), ma.getStatus().name().toLowerCase(),
 						ma.getOwnerUserId(), ma.getMimeType(), ma.getWidth(), ma.getHeight(),
-						ma.getDurationMs(), ma.getBlurhash(), ma.getSizeBytes() == null ? null : ma.getSizeBytes().toString(),
+						ma.getDurationMs(), ma.getBlurhash(), ma.getThumbnailKey() != null,
+						ma.getSizeBytes() == null ? null : ma.getSizeBytes().toString(),
 						ma.getCreatedAt()))
 				.collect(Collectors.toList());
 		return new MessageDto(m.getId(), m.getConversationId(), senderId, m.getType().name().toLowerCase(), m.getBody(), media, m.getCreatedAt());

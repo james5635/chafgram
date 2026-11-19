@@ -23,6 +23,14 @@ class MediaProcessingServiceTest {
 		assertThat(result.durationMs()).isEqualTo(2000);
 	}
 
+	@Test
+	void thumbnailKeySitsNextToTheTranscodedVideo() {
+		assertThat(MediaProcessingService.thumbnailStorageKey("uploads/abc.webm"))
+				.isEqualTo("uploads/abc.thumb.jpg");
+		assertThat(MediaProcessingService.thumbnailStorageKey("uploads/abc"))
+				.isEqualTo("uploads/abc.thumb.jpg");
+	}
+
 	/**
 	 * A bounded pipeline executor rejects work once its queue is full. The
 	 * asset row is already committed at that point, so it must not stay stuck

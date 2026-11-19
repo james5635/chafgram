@@ -8,6 +8,7 @@ type MediaAsset {
   height: Int
   durationMs: Int
   blurhash: String
+  hasThumbnail: Boolean
   sizeBytes: String!
   createdAt: String!
 }

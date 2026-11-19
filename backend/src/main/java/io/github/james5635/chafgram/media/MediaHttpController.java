@@ -49,15 +49,24 @@ public class MediaHttpController {
 				"sizeBytes", asset.getSizeBytes());
 	}
 
+	/**
+	 * Authorized byte streaming. {@code ?variant=thumbnail} serves the
+	 * generated video thumbnail (image/jpeg) instead of the asset itself —
+	 * the same authorization decision applies to both.
+	 */
 	@GetMapping("/api/v1/media/{id}/bytes")
-	public ResponseEntity<byte[]> bytes(@PathVariable Long id) {
+	public ResponseEntity<byte[]> bytes(@PathVariable Long id,
+			@RequestParam(required = false) String variant) {
 		// Reads stay open for suspended members (FR-1.4: read but not write)
 		User actor = access.currentMember(currentUsername()); // members only, never anonymous (BR-5.2)
 		MediaAsset asset = media.get(id);
 		mediaAccess.assertCanView(actor, asset); // authorization: blocks/tombstones → 404
-		try (InputStream in = media.read(asset).stream()) {
+		boolean thumbnail = "thumbnail".equals(variant) && asset.getThumbnailKey() != null;
+		String key = thumbnail ? asset.getThumbnailKey() : asset.getStorageKey();
+		String mimeType = thumbnail ? "image/jpeg" : asset.getMimeType();
+		try (InputStream in = media.read(key).stream()) {
 			return ResponseEntity.ok()
-					.contentType(MediaType.parseMediaType(asset.getMimeType()))
+					.contentType(MediaType.parseMediaType(mimeType))
 					.body(in.readAllBytes());
 		}
 		catch (IOException e) {

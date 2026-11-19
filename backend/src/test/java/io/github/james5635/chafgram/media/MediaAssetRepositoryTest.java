@@ -31,9 +31,11 @@ class MediaAssetRepositoryTest extends AbstractIntegrationTest {
 		MediaAsset asset = videoAsset("ready.mp4", MediaStatus.PROCESSING);
 		mediaAssets.save(asset);
 
-		mediaAssets.markReady(asset.getId(), "hash");
+		mediaAssets.markReady(asset.getId(), "hash", "test/ready.mp4.thumb.jpg");
 
-		assertThat(mediaAssets.findById(asset.getId()).orElseThrow().getStatus()).isEqualTo(MediaStatus.READY);
+		MediaAsset ready = mediaAssets.findById(asset.getId()).orElseThrow();
+		assertThat(ready.getStatus()).isEqualTo(MediaStatus.READY);
+		assertThat(ready.getThumbnailKey()).isEqualTo("test/ready.mp4.thumb.jpg");
 	}
 
 	/**
@@ -45,7 +47,7 @@ class MediaAssetRepositoryTest extends AbstractIntegrationTest {
 		MediaAsset asset = videoAsset("deleted.mp4", MediaStatus.DELETED);
 		mediaAssets.save(asset);
 
-		mediaAssets.markReady(asset.getId(), "hash");
+		mediaAssets.markReady(asset.getId(), "hash", null);
 
 		assertThat(mediaAssets.findById(asset.getId()).orElseThrow().getStatus()).isEqualTo(MediaStatus.DELETED);
 	}

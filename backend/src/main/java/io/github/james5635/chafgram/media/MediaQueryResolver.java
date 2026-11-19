@@ -40,6 +40,7 @@ public class MediaQueryResolver {
 				asset.getHeight(),
 				asset.getDurationMs(),
 				asset.getBlurhash(),
+				asset.getThumbnailKey() != null,
 				asset.getSizeBytes() == null ? null : String.valueOf(asset.getSizeBytes()),
 				asset.getCreatedAt());
 	}
