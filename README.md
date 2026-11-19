@@ -1,6 +1,6 @@
 # Chafgram
 
-**Chafgram is an open-source, self-hosted private social platform for companies.**
+**Chafgram is an open-source, self-hosted private social platform.**
 
 Admins deploy Chafgram on their own infrastructure; their people get the full modern
 social experience — short video, watch, posts, comments, follows, and direct messages —
