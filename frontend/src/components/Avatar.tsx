@@ -1,21 +1,23 @@
 import { cn } from '@/lib/utils'
 
+type AvatarSize = 24 | 32 | 40 | 56
+
 interface AvatarProps {
   src?: string
   initials?: string
   label?: string
-  size?: 24 | 32 | 40 | 56
+  size?: AvatarSize
   className?: string
 }
 
-const SIZE_CLASSES: Record<AvatarProps['size'], string> = {
+const SIZE_CLASSES: Record<AvatarSize, string> = {
   24: 'h-6 w-6',
   32: 'h-8 w-8',
   40: 'h-10 w-10',
   56: 'h-14 w-14',
 }
 
-const TEXT_CLASSES: Record<AvatarProps['size'], string> = {
+const TEXT_CLASSES: Record<AvatarSize, string> = {
   24: 'text-[0.625rem]',
   32: 'text-[0.75rem]',
   40: 'text-[0.875rem]',

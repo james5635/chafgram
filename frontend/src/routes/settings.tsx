@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import Avatar from '../components/Avatar'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,

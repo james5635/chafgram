@@ -27,11 +27,11 @@ function Messages() {
           Direct messages
         </div>
         <div className="divide-y divide-[var(--line)]">
-          {CONVERSATIONS.map((conv, i) => (
+          {CONVERSATIONS.map((conv) => (
             <Link
               key={conv.id}
               to="/messages/$conversationId"
-              params={{ $conversationId: conv.id }}
+              params={{ conversationId: conv.id }}
               className="block px-4 sm:px-6 py-4 hover:bg-[color-mix(in_oklab,var(--surface-strong)60%,white_40%)] transition"
             >
               <div className="flex items-center gap-3">

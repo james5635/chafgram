@@ -26,7 +26,7 @@ export default function PostCard({ post }: PostCardProps) {
       <div className="flex-shrink-0">
         <Link
           to="/profile/$username"
-          params={{ $username: post.author.username }}
+          params={{ username: post.author.username }}
           className="flex items-center gap-3"
         >
           <Avatar

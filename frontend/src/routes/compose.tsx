@@ -11,7 +11,6 @@ const CHIPS = ['Photo', 'Video', 'Feeling', 'Poll'] as const
 function Compose() {
   const [body, setBody] = useState('')
   const [selectedChip, setSelectedChip] = useState<string | null>(null)
-  const [mediaCount, setMediaCount] = useState(0)
 
   return (
     <main className="page-wrap px-4 pb-8 pt-14 max-w-2xl">
@@ -55,7 +54,7 @@ function Compose() {
           <div className="flex-1">
             <button type="button" className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]">
               <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true"><path fill="currentColor" d="M11.8 12c0-.7-.6-1.3-1.3-1.3h-.8c-.1 0-.3-.1-.4-.2l-2.3-2.3c-.4-.4-1-.4-1.4 0s-.4 1 0 1.4l.6.6c.2.2.4.3.7.3h.1c.3 0 .6-.1.8-.3l2.3-2.3c.4-.4.4-1 0-1.4v-.6c0-.7-.6-1.3-1.3-1.3h-3c-.7 0-1.3.6-1.3 1.3v3c0 .7.6 1.3 1.3 1.3h3c.7 0 1.3-.6 1.3-1.3v-.8zM6.5 6c-.3 0-.5-.2-.5-.5s.2-.5.5-.5.5.2.5.5-.2.5-.5.5zm7.5-4.5H2.5C1.1 1.5 0 2.6 0 4v8c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.4-.9-2.5-2-2.5z"/></svg>
-              {mediaCount > 0 ? `${mediaCount} item${mediaCount > 1 ? 's' : ''} attached` : 'Attach photo or video'}
+              Attach photo or video
             </button>
           </div>
         </div>

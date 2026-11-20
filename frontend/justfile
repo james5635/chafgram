@@ -12,9 +12,9 @@ dev:
 build:
     npm run build
 
-# Run frontend tests (no test runner configured yet — no-op until one is added)
+# Run frontend tests with Vitest
 test:
-    npm run test --if-present
+    npm run test
 
 # Verify the frontend is healthy: run tests and build the production bundle
 verify: test build

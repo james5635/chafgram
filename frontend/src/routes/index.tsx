@@ -1,8 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
 import Composer from '../components/Composer'
 import PostCard from '../components/PostCard'
-import Avatar from '../components/Avatar'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -50,8 +48,6 @@ const POSTS = [
 ]
 
 function Home() {
-  const [body, setBody] = useState('')
-
   return (
     <main className="page-wrap px-4 pb-8 pt-14">
       <Composer member={MEMBER} />

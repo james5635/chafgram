@@ -1,4 +1,4 @@
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import ThemeToggle from './ThemeToggle'
 import Avatar from './Avatar'
 
@@ -11,8 +11,6 @@ const navLinks = [
 ]
 
 export default function Header() {
-  const location = useLocation()
-
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-lg">
       <nav className="page-wrap flex flex-wrap items-center gap-x-3 gap-y-2 py-3 sm:py-4">
@@ -40,46 +38,34 @@ export default function Header() {
         </div>
 
         <div className="order-3 flex w-full flex-wrap items-center gap-x-4 gap-y-1 pb-1 text-sm font-semibold sm:order-none sm:w-auto sm:flex-nowrap sm:pb-0">
-          {navLinks.map((link) => {
-            const isActive = location.pathname === link.to || location.pathname.startsWith(link.to + '/')
-            return (
-              <Link
-                key={link.label}
-                to={link.to}
-                className="nav-link px-2 py-1.5"
-                activeProps={{ className: 'nav-link is-active px-2 py-1.5' }}
-              >
-                {link.label}
-                {link.label === 'Messages' && (
-                  <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-white bg-[var(--lagoon)] px-1 text-[0.625rem] font-bold text-white shadow-sm">
-                    3
-                  </span>
-                )}
-                {link.label === 'Notifications' && (
-                  <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-white bg-[var(--palm)] px-1 text-[0.625rem] font-bold text-white shadow-sm">
-                    5
-                  </span>
-                )}
-              </Link>
-            )
-          })}
-          <Link
-            to="/more"
-            className="nav-link px-2 py-1.5"
-            activeProps={{ className: 'nav-link is-active px-2 py-1.5' }}
-          >
-            More
-          </Link>
+          {navLinks.map((link) => (
+            <Link
+              key={link.label}
+              to={link.to}
+              className="nav-link px-2 py-1.5"
+              activeProps={{ className: 'nav-link is-active px-2 py-1.5' }}
+            >
+              {link.label}
+              {link.label === 'Messages' && (
+                <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-white bg-[var(--lagoon)] px-1 text-[0.625rem] font-bold text-white shadow-sm">
+                  3
+                </span>
+              )}
+              {link.label === 'Notifications' && (
+                <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-white bg-[var(--palm)] px-1 text-[0.625rem] font-bold text-white shadow-sm">
+                  5
+                </span>
+              )}
+            </Link>
+          ))}
         </div>
 
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
-          <Link
-            to="/profile/me"
-            className="flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] no-underline shadow-[0_8px_24px_rgba(30,90,72,0.08)]"
-          >
-            <Avatar src="/placeholder.svg" initials="JD" label="You" size={32} />
-          </Link>
+          <div className="flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow-[0_8px_24px_rgba(30,90,72,0.08)]">
+            <Avatar src="/placeholder.svg" initials="YD" label="You" size={32} />
+            <span className="text-[var(--sea-ink-soft)]">You</span>
+          </div>
         </div>
       </nav>
     </header>

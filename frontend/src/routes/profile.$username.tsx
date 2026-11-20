@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import PostCard from '../components/PostCard'
 import Avatar from '../components/Avatar'
 
@@ -32,9 +32,6 @@ const POSTS = [
 ]
 
 function Profile() {
-  const params = useParams()
-  const username = params.$username
-
   return (
     <main className="page-wrap px-4 pb-8 pt-14">
       <section className="island-shell rise-in rounded-2xl p-6 sm:p-8 mb-8">

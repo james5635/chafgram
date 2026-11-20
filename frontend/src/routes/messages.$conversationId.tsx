@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import Avatar from '../components/Avatar'
 
 export const Route = createFileRoute('/messages/$conversationId')({
@@ -14,9 +14,6 @@ const MESSAGES = [
 ]
 
 function MessageThread() {
-  const params = useParams()
-  const conversationId = params.$conversationId
-
   return (
     <main className="page-wrap px-4 pb-8 pt-14">
       <header className="mb-6 flex items-center gap-3">
@@ -39,7 +36,7 @@ function MessageThread() {
       <section className="island-shell rise-in rounded-2xl h-[60vh] flex flex-col overflow-hidden border border-[var(--line)]">
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-4">
-            {MESSAGES.map((msg, i) => (
+            {MESSAGES.map((msg) => (
               <div key={msg.id} className={`flex ${msg.mine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-2xl p-3 ${msg.mine ? 'bg-[color-mix(in_oklab,var(--lagoon)22%,var(--surface-strong))] text-[var(--sea-ink)]' : 'bg-[color-mix(in_oklab,var(--surface-strong)88%,white_12%)] text-[var(--sea-ink)] border border-[var(--line)]'}`}>
                   {!msg.mine && (

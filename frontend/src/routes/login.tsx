@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/login')({
@@ -6,12 +6,9 @@ export const Route = createFileRoute('/login')({
 })
 
 function Login() {
-  const search = useSearch()
-  const redirect = (search.redirect as string) || '/'
   const [mode, setMode] = useState<'passkey' | 'password'>('passkey')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
 
   return (
     <main className="min-h-[calc(100vh-13rem)] flex items-center justify-center px-4 pb-8 pt-14">
@@ -26,12 +23,6 @@ function Login() {
             Welcome back
           </h1>
         </div>
-
-        {error && (
-          <div className="mb-4 rounded-lg border border-[rgba(196,71,71,0.3)] bg-[rgba(196,71,71,0.1)] p-3 text-sm text-[#9f3030]">
-            {error}
-          </div>
-        )}
 
         <div className="space-y-3">
           <button
@@ -106,11 +97,6 @@ function Login() {
             ← Back to welcome
           </Link>
         </div>
-
-        <p className="mt-6 text-[0.7rem] text-[var(--sea-ink-soft)] text-center">
-          Redirects to <code className="bg-[color-mix(in_oklab,var(--surface-strong)80%,white_20%)] px-1.5 rounded">{redirect}</code>
-          after sign in. (UI preview — backend not connected.)
-        </p>
       </section>
     </main>
   )
