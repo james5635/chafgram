@@ -35,7 +35,7 @@ time-boxed tokens (`account_tokens`, only SHA-256 hashes stored).
 **FR-2.2 (M)** Follow/unfollow any member; view followers/following lists.
 **FR-2.3 (M)** Block/unblock a member.
 **FR-2.4 (S)** Avatar upload via the media pipeline (`avatar_media_id`).
-**FR-2.5 (S)** Last-seen presence (throttled client updates). *(proposal)*
+**FR-2.5 (S)** Last-seen presence (throttled client updates).
 
 ## 3. Posts & feed
 

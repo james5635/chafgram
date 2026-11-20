@@ -6,6 +6,7 @@ import io.github.james5635.chafgram.identity.UserRepository;
 import io.github.james5635.chafgram.notifications.NotificationEntityType;
 import io.github.james5635.chafgram.notifications.NotificationService;
 import io.github.james5635.chafgram.notifications.NotificationType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,12 +77,12 @@ public class FollowService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<User> followers(Long userId, org.springframework.data.domain.Pageable pageable) {
+	public List<User> followers(Long userId, Pageable pageable) {
 		return follows.findFollowers(userId, pageable);
 	}
 
 	@Transactional(readOnly = true)
-	public List<User> followees(Long userId, org.springframework.data.domain.Pageable pageable) {
+	public List<User> followees(Long userId, Pageable pageable) {
 		return follows.findFollowees(userId, pageable);
 	}
 

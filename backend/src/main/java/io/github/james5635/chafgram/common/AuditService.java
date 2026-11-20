@@ -1,8 +1,10 @@
 package io.github.james5635.chafgram.common;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +31,13 @@ public class AuditService {
 
 	@Transactional(readOnly = true)
 	public List<AuditLog> recent(int first) {
-		return auditLog.findRecent(org.springframework.data.domain.PageRequest.of(0, Math.min(Math.max(first, 1), 100)));
+		return auditLog.findRecent(PageRequest.of(0, Math.min(Math.max(first, 1), 100)));
+	}
+
+	@Transactional(readOnly = true)
+	public List<AuditLog> findByCriteria(Long actorId, String action, String targetType,
+			Instant from, Instant to, int limit) {
+		return auditLog.findByCriteria(actorId, action, targetType, from, to,
+				PageRequest.of(0, Math.min(Math.max(limit, 1), 100)));
 	}
 }

@@ -17,6 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 
 /** Assembles member/post/comment/notification views with per-viewer context. */
@@ -53,7 +55,8 @@ public class Views {
 	public MemberDto member(User u, User viewer) {
 		return new MemberDto(
 				u.getId(), u.getUsername(), u.getDisplayName(), u.getBio(), u.getAvatarMediaId(),
-				u.getRole().name().toLowerCase(), u.getStatus().name().toLowerCase(), u.getCreatedAt(),
+				u.getRole().name().toLowerCase(), u.getStatus().name().toLowerCase(),
+				u.getEmailVerifiedAt(), u.getLastSeenAt(), u.getCreatedAt(),
 				follows.followerCount(u.getId()), follows.followingCount(u.getId()),
 				viewer != null && follows.isFollowing(viewer.getId(), u.getId()));
 	}
@@ -101,7 +104,7 @@ public class Views {
 	}
 
 	public String encodeCursor(long id) {
-		return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(String.valueOf(id).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		return Base64.getUrlEncoder().withoutPadding().encodeToString(String.valueOf(id).getBytes(StandardCharsets.UTF_8));
 	}
 
 	public long decodeCursor(String cursor) {
@@ -109,7 +112,7 @@ public class Views {
 			return Long.MAX_VALUE;
 		}
 		try {
-			return Long.parseLong(new String(java.util.Base64.getUrlDecoder().decode(cursor), java.nio.charset.StandardCharsets.UTF_8));
+			return Long.parseLong(new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8));
 		}
 		catch (IllegalArgumentException e) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid cursor");

@@ -24,6 +24,6 @@ public class PublicQueryResolver {
 	@QueryMapping
 	public WorkspaceDto workspace() {
 		WorkspaceResponse w = workspaceService.get();
-		return new WorkspaceDto(w.name(), w.slug(), w.primaryColor(), w.signupMode());
+		return new WorkspaceDto(w.name(), w.slug(), w.primaryColor(), w.signupMode(), w.logoMediaId());
 	}
 }

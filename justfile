@@ -17,7 +17,7 @@ default:
 # Install backend and frontend dependencies
 install: backend::install frontend::install
 
-# Check local toolchain (JDK 21, Node, npm)
+# Check local toolchain (JDK 21, Node, npm, Docker, ffmpeg)
 doctor:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -34,7 +34,10 @@ doctor:
     fi
     command -v node >/dev/null && echo "node: $(node -v)" || echo "node: MISSING"
     command -v npm >/dev/null && echo "npm: $(npm -v)" || echo "npm: MISSING"
-    echo "backend needs local MySQL for dev and tests — run it with: just mysql (reset with: just seed)"
+    command -v docker >/dev/null && echo "docker: $(docker --version)" || echo "docker: MISSING (needed by compose + Testcontainers)"
+    command -v ffmpeg >/dev/null && echo "ffmpeg: $(ffmpeg -version 2>/dev/null | head -n1)" || echo "ffmpeg: MISSING (video processing only; images work without it)"
+    echo "backend needs local MySQL for dev — run it with: just mysql (reset with: just seed)"
+    echo "  (backend tests are hermetic — Testcontainers starts its own MySQL 8)"
     echo "  (compose.yaml dev defaults; override via git-ignored .env)"
 
 # Start local MySQL 8.0 and wait until it reports healthy
@@ -76,7 +79,7 @@ dev: backend::dev frontend::dev
 # Build backend jar (target/) and frontend production bundle
 build: backend::build frontend::build
 
-# Run backend and frontend tests (backend wipes the dev chafgram schema; restore afterwards with: just seed)
+# Run backend and frontend tests (backend tests are hermetic — Testcontainers MySQL)
 test: backend::test frontend::test
 
 # Verify the repo is healthy: run just test and just build

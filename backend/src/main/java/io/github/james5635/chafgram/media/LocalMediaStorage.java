@@ -6,8 +6,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 /** Stores media under a configurable root (default ./media-data) with opaque keys. */
@@ -32,6 +34,46 @@ public class LocalMediaStorage implements MediaStorage {
 			throw new IllegalStateException("Failed to store media", e);
 		}
 		return key;
+	}
+
+	@Override
+	public Path resolvePath(String storageKey) {
+		Path path = root.resolve(storageKey).normalize();
+		if (!path.startsWith(root)) {
+			throw new IllegalArgumentException("Invalid storage key");
+		}
+		return path;
+	}
+
+	@Override
+	public void storeProcessed(Path source, String storageKey) {
+		Path target = root.resolve(storageKey).normalize();
+		if (!target.startsWith(root)) {
+			throw new IllegalArgumentException("Invalid storage key");
+		}
+		try {
+			Files.createDirectories(target.getParent());
+			try {
+				Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			}
+			catch (AtomicMoveNotSupportedException e) {
+				Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+			}
+		}
+		catch (IOException e) {
+			throw new IllegalStateException("Failed to store processed media", e);
+		}
+	}
+
+	@Override
+	public void delete(String storageKey) {
+		Path path = resolvePath(storageKey);
+		try {
+			Files.deleteIfExists(path);
+		}
+		catch (IOException e) {
+			// A leftover blob is not worth failing the pipeline over.
+		}
 	}
 
 	@Override

@@ -55,6 +55,10 @@ public class MediaAsset {
 	@Column(length = 64)
 	private String blurhash;
 
+	/** Key of the generated thumbnail (videos); null when there is none. */
+	@Column(name = "thumbnail_key", length = 512)
+	private String thumbnailKey;
+
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;

@@ -52,7 +52,7 @@ services:
       GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:-c550efd14088f04414caa03396fc2785baa912ee9f3bbef18dea0612d8cac0f6}
       GARAGE_METRICS_TOKEN: ${GARAGE_METRICS_TOKEN:-61ac6d636d85aec61b79a8d16fb1b22a}
     volumes:
-      - ./scripts/garage.toml:/etc/garage.toml:ro
+      - ./config/garage.toml:/etc/garage.toml:ro
       - garage-data:/var/lib/garage
     healthcheck:
       test: ["CMD", "/garage", "-c", "/etc/garage.toml", "status"]

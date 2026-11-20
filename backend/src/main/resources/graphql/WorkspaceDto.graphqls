@@ -3,4 +3,5 @@ type Workspace {
   slug: String!
   primaryColor: String
   signupMode: String!
+  logoMediaId: ID
 }

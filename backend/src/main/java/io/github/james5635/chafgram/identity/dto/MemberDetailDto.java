@@ -9,5 +9,6 @@ public record MemberDetailDto(
 		String email,
 		String role,
 		String status,
+		Instant emailVerifiedAt,
 		Instant createdAt) {
 }

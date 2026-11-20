@@ -14,4 +14,11 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
 
 	@Query("select m from ConversationMember m where m.conversationId = :conversationId and m.userId = :userId")
 	Optional<ConversationMember> findByConversationAndUser(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
+
+	/**
+	 * Membership that is still active — a member who left or was removed keeps
+	 * the row, but must not count as a participant.
+	 */
+	@Query("select m from ConversationMember m where m.conversationId = :conversationId and m.userId = :userId and m.leftAt is null")
+	Optional<ConversationMember> findActiveByConversationAndUser(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
 }

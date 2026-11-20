@@ -12,6 +12,7 @@
 | Node.js + npm | any current LTS | `just doctor` |
 | Docker + Docker Compose | — | `docker compose version` |
 | just | latest | `just --version` |
+| ffmpeg + ffprobe | any recent | `ffmpeg -version` (video pipeline; images work without it) |
 
 `just` is the entry point for everything below; raw commands are in each section.
 Package-specific recipes live in `backend/justfile` (`just backend::<recipe>`) and
@@ -39,6 +40,8 @@ just dev               # backend :8080 + frontend :3000 (parallel; Ctrl-C stops 
 - Optional, for media uploads: `docker compose up -d garage garage-init` — one-shot,
   idempotent S3 setup (bucket `chafgram-media`, endpoint `http://localhost:3900`,
   region `garage`). Re-running is safe.
+- Optional, for video: `ffmpeg` + `ffprobe` on `PATH`. The in-app pipeline shells out
+  to them; without them video uploads end in `status='failed'` (images are unaffected).
 
 ## 3. The daily loop
 
@@ -62,29 +65,36 @@ Rules:
 - `just migrate` applies migrations without touching data.
 - `just seed` WIPES the dev database and re-seeds full fixtures (asks for `yes`).
 - `just unseed` WIPES and leaves an empty migrated schema (asks for `yes`).
-- **`./mvnw test` wipes the dev `chafgram` schema on every run.** After running tests,
-  restore fixtures with `just seed` if you want the demo data back.
 - Dev credentials (`chafgram` / `chafgram`, DB `chafgram`) are throwaway, local-only;
-  override via `SPRING_DATASOURCE_*` / `CHAFGRAM_TEST_DATASOURCE_*` for anything else.
-  Never commit real credentials.
+  override via `SPRING_DATASOURCE_*` for anything else. Never commit real credentials.
 
 ## 5. Testing
 
-Backend integration tests run against the dev MySQL (via `compose.yaml`), not
-Testcontainers, and wipe/re-create tables per run:
+Backend integration tests are hermetic: they run against a throwaway MySQL 8
+container (Testcontainers), started once per test JVM. The dev database is never
+touched, so no `just seed` is needed afterwards. Docker must be running:
 
 ```bash
 cd backend
-./mvnw test                # requires `just mysql`
+./mvnw test                # no `just mysql` needed — Testcontainers starts its own DB
 ```
 
+Test-only configuration lives in `backend/src/test/resources/application-test.properties`
+and is activated by the `test` profile (`AbstractIntegrationTest`). Do **not** add a
+test-scoped `application.properties`: it shadows the main one on the classpath and
+silently drops every real configuration value.
+
 Suites: application context boot, workspace/identity flows, GraphQL surface
-(`GraphqlApiTest`), social flow (`SocialFlowIntegrationTest`), schema/DTO sync
-(`SchemaDtoSyncTest`). Conventions to respect:
+(`GraphqlApiTest`), social flow (`SocialFlowIntegrationTest`), admin filters and
+audit log (`AdminFilterIntegrationTest`), account flows
+(`EmailFlowsIntegrationTest`), actuator exposure (`ActuatorSecurityIntegrationTest`),
+schema/DTO sync (`SchemaDtoSyncTest`). Conventions to respect:
 
 - Authorization failures from GraphQL come back as HTTP 200 + `errors[]` with
-  `extensions.classification` (`UNAUTHENTICATED` / `UNAUTHORIZED`) — tests assert on
-  `$.errors`, never on the HTTP status.
+  `extensions.classification` (`UNAUTHORIZED` for anonymous, `FORBIDDEN` for an
+  authenticated member without the role, `BAD_REQUEST`/`NOT_FOUND` for validation and
+  lookup failures) — tests assert on `$.errors`, never on the HTTP status. Service-layer
+  `ApiException`s are mapped by `common/GraphQlApiExceptionHandler`.
 - Resolver classes carry class-level `@PreAuthorize("isFullyAuthenticated()")`; only the
   `permitAll()` operations are public.
 - Keep `*.graphqls` files in sync with the DTOs — `SchemaDtoSyncTest` fails otherwise.
@@ -96,7 +106,8 @@ Frontend has no test runner yet (`just frontend::test` is a `--if-present` no-op
 
 - Everything is GraphQL at `/graphql`. REST exists only for what GraphQL cannot
   express — the keep-list (session ceremonies, WebAuthn endpoints, media
-  upload/`bytes`, Actuator) is documented in [`architecture.md`](architecture.md).
+  upload/`bytes`, multipart message sends, Actuator) is documented in
+  [`architecture.md`](architecture.md).
 - Adding an API: new/extended `.graphqls` (one file per DTO) + resolver + DTO, then
   re-sync `target/generated-sources` via `./mvnw generate` (DGS codegen).
 - CSRF: double-submit cookie (`XSRF-TOKEN`, readable JS) with an `X-XSRF-TOKEN` header
@@ -104,6 +115,13 @@ Frontend has no test runner yet (`just frontend::test` is a `--if-present` no-op
   Anonymous POSTs without a valid pair get 403 — by design, not a bug.
 - GraphiQL executes queries but needs the same CSRF pair; the masked token is exposed
   as the hidden `_csrf` field on the `/login` page.
+- The operation surface lives in `backend/src/main/resources/graphql/schema.graphqls`
+  (Query/Mutation roots) with one `.graphqls` file per DTO. Notable groups:
+  profile (`updateProfile`), passkeys (`myPasskeys`/`renamePasskey`/`revokePasskey`),
+  account flows (`requestEmailVerification`, `requestPasswordReset`, `resetPassword`,
+  `verifyEmail`), watch feed (`watchFeed`), message media + editing (`mediaIds`,
+  `editMessage`, `deleteMessage`), admin (`members(query:)`, `auditLog(...)`,
+  `deleteMedia(id:)`).
 
 ## 7. Verification & pushing
 
@@ -127,7 +145,8 @@ just verify   # = just test + just build; run before every push / on a fresh clo
 | Port 8080 already in use | A stray `spring-boot:run`/devtools instance; kill it (`pgrep -af ChafgramApplication`). |
 | Port 3000 already in use | Another Vite instance; stop it or change port. |
 | App fails with `SchemaManagementException … position` | Applied DB drifted from mappings; align with a new migration (see §4), never by editing applied files. |
-| `./mvnw test` "works" but the dev DB is empty | The test suite wiped it — `just seed` to restore fixtures. |
+| `./mvnw test` fails with "Could not find a valid Docker environment" | Testcontainers needs a running Docker daemon — start Docker (or Podman) and retry. |
+| Tests hit the dev database / the dev DB looks wiped by a test run | They don't: the suite uses its own throwaway container. A test-scoped `application.properties` is the usual culprit for a *misconfigured* run — rename it to `application-test.properties` (see §5). |
 | GraphQL returns 403 from curl | Missing CSRF double-submit pair (cookie + `X-XSRF-TOKEN`) — see §6. |
 | `.env` changes ignored by the JVM | The JVM doesn't read `.env`; export the variables or rely on `application.properties` defaults. |
 | Flyway checksum validation failure | An applied migration was edited; restore it and add a new `V<n>` alignment instead. |

@@ -3,6 +3,7 @@ package io.github.james5635.chafgram.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -35,7 +36,31 @@ public class SecurityConfiguration {
 	@Value("${chafgram.webauthn.allowed-origins:http://localhost:3000}")
 	private List<String> allowedOrigins;
 
+	/**
+	 * Actuator endpoints get their own chain (FR-10.4).
+	 *
+	 * <p>Health is a public liveness probe; {@code info} and {@code metrics}
+	 * are admin-only. HTTP Basic is the only entry point here, so an
+	 * anonymous request gets a {@code 401} with a {@code WWW-Authenticate}
+	 * challenge instead of the member-facing login redirect — the global
+	 * chain's form-login entry point would answer {@code 302} and send
+	 * monitoring agents to an HTML login page.</p>
+	 */
 	@Bean
+	@Order(1)
+	SecurityFilterChain actuatorFilterChain(HttpSecurity http) throws Exception {
+		http
+			.securityMatcher("/actuator/**")
+			.csrf(csrf -> csrf.disable())
+			.authorizeHttpRequests(auth -> auth
+				.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+				.anyRequest().hasRole("ADMIN"))
+			.httpBasic(Customizer.withDefaults());
+		return http.build();
+	}
+
+	@Bean
+	@Order(2)
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
 			.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
@@ -43,7 +68,6 @@ public class SecurityConfiguration {
 				.requestMatchers(HttpMethod.GET, "/api/v1/workspace").permitAll()
 				.requestMatchers("/api/v1/bootstrap", "/api/v1/register", "/api/v1/invites/accept")
 					.permitAll()
-				.requestMatchers("/actuator/health", "/actuator/info").permitAll()
 				.requestMatchers("/login", "/login/webauthn", "/webauthn/authenticate/options",
 						"/error").permitAll()
 				// GraphQL and GraphiQL are public at the HTTP boundary; authorization

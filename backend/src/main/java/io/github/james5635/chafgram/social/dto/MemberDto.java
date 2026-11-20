@@ -10,6 +10,8 @@ public record MemberDto(
 		Long avatarMediaId,
 		String role,
 		String status,
+		Instant emailVerifiedAt,
+		Instant lastSeenAt,
 		Instant createdAt,
 		long followerCount,
 		long followingCount,

@@ -1,7 +1,7 @@
 #!/bin/sh
 # One-shot dev init for the local Garage S3 bucket `chafgram-media`.
 # Dev-only: this initializes the throwaway dev instance in compose.yaml
-# (scripts/garage.toml). Safe to re-run. The pinned Garage dev build serves
+# (config/garage.toml). Safe to re-run. The pinned Garage dev build serves
 # the admin API v1 surface.
 set -eu
 

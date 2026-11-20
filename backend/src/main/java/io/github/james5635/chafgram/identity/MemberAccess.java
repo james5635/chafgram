@@ -1,6 +1,8 @@
 package io.github.james5635.chafgram.identity;
 
 import io.github.james5635.chafgram.common.ApiException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -14,15 +16,36 @@ import java.util.Optional;
 @Service
 public class MemberAccess {
 
-	private final UserRepository users;
+	private static final Logger log = LoggerFactory.getLogger(MemberAccess.class);
 
-	public MemberAccess(UserRepository users) {
+	private final UserRepository users;
+	private final LastSeenService lastSeen;
+
+	public MemberAccess(UserRepository users, LastSeenService lastSeen) {
 		this.users = users;
+		this.lastSeen = lastSeen;
 	}
 
 	public User currentMember(String username) {
-		return users.findByUsername(username)
+		User user = users.findByUsername(username)
 				.orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Not authenticated"));
+		// FR-2.5: throttled presence; a last-seen failure must never break the request
+		touchPresence(user);
+		return user;
+	}
+
+	/**
+	 * Records the activity of the given member. The guard covers the whole
+	 * transactional call — a presence write that only fails at commit must not
+	 * take the request down with it.
+	 */
+	private void touchPresence(User user) {
+		try {
+			lastSeen.touch(user.getId());
+		}
+		catch (RuntimeException e) {
+			log.debug("last-seen update failed for user {}: {}", user.getId(), e.getMessage());
+		}
 	}
 
 	public Optional<User> find(String username) {

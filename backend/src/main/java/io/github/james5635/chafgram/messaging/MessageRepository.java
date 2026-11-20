@@ -18,4 +18,11 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
 	@Query("select count(m) from Message m where m.conversationId = :conversationId and m.deletedAt is null and m.id > :afterId")
 	long countUnread(@Param("conversationId") Long conversationId, @Param("afterId") long afterId);
+
+	@Query("select count(m) from Message m where m.id = :id and m.deletedAt is null")
+	long countVisibleMessage(@Param("id") Long id);
+
+	/** Bulk visibility check — one query for a whole page of notifications. */
+	@Query("select m.id from Message m where m.id in :ids and m.deletedAt is null")
+	List<Long> findVisibleIds(@Param("ids") List<Long> ids);
 }

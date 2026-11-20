@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -157,16 +158,191 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 		Post mine = posts.create(member, PostType.NOTE, "Blocked viewer cannot see this", List.of());
 		blocks.block(member, admin.getId()); // Bob blocks Alice
 		assertThat(feed.discoverFeed(admin, 20, Long.MAX_VALUE)).isEmpty(); // Alice can't see his post
-		assertThatThrownBy(() -> messaging.send(member, admin.getId(), "hi")).isInstanceOf(ApiException.class);
-		assertThatThrownBy(() -> messaging.send(admin, member.getId(), "hi")).isInstanceOf(ApiException.class);
+		assertThatThrownBy(() -> messaging.send(member, admin.getId(), "hi", List.of())).isInstanceOf(ApiException.class);
+		assertThatThrownBy(() -> messaging.send(admin, member.getId(), "hi", List.of())).isInstanceOf(ApiException.class);
 
 		blocks.unblock(member, admin.getId());
 		assertThat(feed.discoverFeed(admin, 20, Long.MAX_VALUE)).hasSize(1);
 	}
 
 	@Test
+	void watchFeedHidesVideosOfMembersWhoBlockedTheViewer() {
+		// alice (admin) blocks bob (member) — bob must not see alice's videos
+		MediaAsset shortVideo = new MediaAsset();
+		shortVideo.setOwnerUserId(admin.getId());
+		shortVideo.setKind(MediaKind.VIDEO);
+		shortVideo.setStatus(MediaStatus.READY);
+		shortVideo.setStorageKey("test/blocked-short.mp4");
+		shortVideo.setMimeType("video/mp4");
+		shortVideo.setDurationMs(10000);
+		shortVideo.setWidth(320);
+		shortVideo.setHeight(240);
+		shortVideo.setSizeBytes(1000L);
+		mediaAssets.save(shortVideo);
+
+		Post blockedVideo = posts.create(admin, PostType.VIDEO, "Alice's short video", List.of(shortVideo.getId()));
+		// compare by id — the feed reloads the rows, so entity identity differs
+		assertThat(feed.watchFeed(member, 10, Long.MAX_VALUE))
+				.extracting(Post::getId)
+				.contains(blockedVideo.getId());
+
+		// BR-2.2: blocking is mutual-effect — the blocker also disappears
+		blocks.block(admin, member.getId());
+		assertThat(feed.watchFeed(member, 10, Long.MAX_VALUE)).isEmpty();
+	}
+
+	@Test
+	void followingFeedHidesPostsOfMembersWhoBlockedTheViewer() {
+		follows.follow(member, admin.getId());
+		Post mine = posts.create(admin, PostType.NOTE, "Alice's post", List.of());
+		// compare by id — the feed reloads the rows, so entity identity differs
+		assertThat(feed.followingFeed(member, 10, Long.MAX_VALUE))
+				.extracting(Post::getId)
+				.contains(mine.getId());
+
+		// BR-2.2: blocking is mutual-effect in both directions
+		blocks.block(admin, member.getId());
+		assertThat(feed.followingFeed(member, 10, Long.MAX_VALUE)).isEmpty();
+	}
+
+	@Test
+	void watchFeedReturnsOnlyShortReadyVideos() {
+		// Create test media assets directly
+		MediaAsset shortVideo = new MediaAsset();
+		shortVideo.setOwnerUserId(member.getId());
+		shortVideo.setKind(MediaKind.VIDEO);
+		shortVideo.setStatus(MediaStatus.READY);
+		shortVideo.setStorageKey("test/short.mp4");
+		shortVideo.setMimeType("video/mp4");
+		shortVideo.setDurationMs(10000); // 10s <= 60s
+		shortVideo.setWidth(320);
+		shortVideo.setHeight(240);
+		shortVideo.setSizeBytes(1000L);
+		mediaAssets.save(shortVideo);
+
+		MediaAsset longVideo = new MediaAsset();
+		longVideo.setOwnerUserId(member.getId());
+		longVideo.setKind(MediaKind.VIDEO);
+		longVideo.setStatus(MediaStatus.READY);
+		longVideo.setStorageKey("test/long.mp4");
+		longVideo.setMimeType("video/mp4");
+		longVideo.setDurationMs(90000); // 90s > 60s
+		longVideo.setWidth(1920);
+		longVideo.setHeight(1080);
+		longVideo.setSizeBytes(10000L);
+		mediaAssets.save(longVideo);
+
+		MediaAsset processingVideo = new MediaAsset();
+		processingVideo.setOwnerUserId(member.getId());
+		processingVideo.setKind(MediaKind.VIDEO);
+		processingVideo.setStatus(MediaStatus.PROCESSING);
+		processingVideo.setStorageKey("test/processing.mp4");
+		processingVideo.setMimeType("video/mp4");
+		processingVideo.setDurationMs(30000);
+		processingVideo.setWidth(640);
+		processingVideo.setHeight(480);
+		processingVideo.setSizeBytes(5000L);
+		mediaAssets.save(processingVideo);
+
+		// Create posts with each media
+		Post shortPost = posts.create(member, PostType.VIDEO, "Short video", List.of(shortVideo.getId()));
+		Post longPost = posts.create(member, PostType.VIDEO, "Long video", List.of(longVideo.getId()));
+		Post procPost = posts.create(member, PostType.VIDEO, "Processing video", List.of(processingVideo.getId()));
+		Post notePost = posts.create(member, PostType.NOTE, "Just a note", List.of());
+
+		// watchFeed should only return the short ready video (<= 60s)
+		var watch = feed.watchFeed(admin, 10, Long.MAX_VALUE);
+		assertThat(watch).hasSize(1);
+		assertThat(watch.get(0).getId()).isEqualTo(shortPost.getId());
+	}
+
+	/**
+	 * BR-2.2 pagination: the newest video is blocked, so a page that fills
+	 * with it must still reach the older allowed videos — the next cursor
+	 * cannot stop on a hidden row, or they become unreachable.
+	 */
+	@Test
+	void watchFeedFillsThePagePastBlockedVideos() {
+		MediaAsset allowed = shortVideo(member, "watch-allowed.mp4");
+		Post allowedPost = posts.create(member, PostType.VIDEO, "Allowed video", List.of(allowed.getId()));
+		MediaAsset blocked = shortVideo(admin, "watch-blocked.mp4");
+		posts.create(admin, PostType.VIDEO, "Blocked video", List.of(blocked.getId()));
+
+		// member blocks admin — mutual-effect: admin's videos are hidden from member
+		blocks.block(member, admin.getId());
+
+		assertThat(feed.watchFeed(member, 1, Long.MAX_VALUE))
+				.extracting(Post::getId)
+				.containsExactly(allowedPost.getId());
+	}
+
+	private MediaAsset shortVideo(User owner, String key) {
+		MediaAsset video = new MediaAsset();
+		video.setOwnerUserId(owner.getId());
+		video.setKind(MediaKind.VIDEO);
+		video.setStatus(MediaStatus.READY);
+		video.setStorageKey("test/" + key);
+		video.setMimeType("video/mp4");
+		video.setDurationMs(10000);
+		video.setWidth(320);
+		video.setHeight(240);
+		video.setSizeBytes(1000L);
+		mediaAssets.save(video);
+		return video;
+	}
+
+	@Test
+	void searchPostsWithKindFilter() {
+		MediaAsset shortVideo = new MediaAsset();
+		shortVideo.setOwnerUserId(member.getId());
+		shortVideo.setKind(MediaKind.VIDEO);
+		shortVideo.setStatus(MediaStatus.READY);
+		shortVideo.setStorageKey("test/short.mp4");
+		shortVideo.setMimeType("video/mp4");
+		shortVideo.setDurationMs(10000);
+		shortVideo.setWidth(320);
+		shortVideo.setHeight(240);
+		shortVideo.setSizeBytes(1000L);
+		mediaAssets.save(shortVideo);
+
+		MediaAsset photoAsset = new MediaAsset();
+		photoAsset.setOwnerUserId(member.getId());
+		photoAsset.setKind(MediaKind.IMAGE);
+		photoAsset.setStatus(MediaStatus.READY);
+		photoAsset.setStorageKey("test/photo.png");
+		photoAsset.setMimeType("image/png");
+		photoAsset.setWidth(640);
+		photoAsset.setHeight(480);
+		photoAsset.setSizeBytes(2000L);
+		mediaAssets.save(photoAsset);
+
+		Post videoPost = posts.create(member, PostType.VIDEO, "Video post", List.of(shortVideo.getId()));
+		Post photoPost = posts.create(member, PostType.PHOTO, "Photo post", List.of(photoAsset.getId()));
+		Post notePost = posts.create(member, PostType.NOTE, "Note post", List.of());
+
+		// Search with kind VIDEO
+		var videoResults = feed.search(admin, "post", 20, PostType.VIDEO);
+		assertThat(videoResults).hasSize(1);
+		assertThat(videoResults.get(0).getId()).isEqualTo(videoPost.getId());
+
+		// Search with kind PHOTO
+		var photoResults = feed.search(admin, "post", 20, PostType.PHOTO);
+		assertThat(photoResults).hasSize(1);
+		assertThat(photoResults.get(0).getId()).isEqualTo(photoPost.getId());
+
+		// Search with kind NOTE
+		var noteResults = feed.search(admin, "post", 20, PostType.NOTE);
+		assertThat(noteResults).hasSize(1);
+		assertThat(noteResults.get(0).getId()).isEqualTo(notePost.getId());
+
+		// Search without kind filter returns all
+		var allResults = feed.search(admin, "post", 20, null);
+		assertThat(allResults).hasSize(3);
+	}
+
+	@Test
 	void messagingFlowBetweenMembers() {
-		Message message = messaging.send(admin, member.getId(), "Welcome to Chafgram, Bob!");
+		Message message = messaging.send(admin, member.getId(), "Welcome to Chafgram, Bob!", List.of());
 		assertThat(message.getType().name()).isEqualTo("TEXT");
 
 		List<Conversation> convs = messaging.list(member, 20);
@@ -178,8 +354,8 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 		assertThat(messaging.unreadCount(member, conversationId)).isEqualTo(0);
 
 		// bob muted the conversation → unread is 0 even with new messages
-		messaging.send(admin, member.getId(), "ping");
-		messaging.mute(member, conversationId, java.time.Instant.now().plusSeconds(3600));
+		messaging.send(admin, member.getId(), "ping", List.of());
+		messaging.mute(member, conversationId, Instant.now().plusSeconds(3600));
 		assertThat(messaging.unreadCount(member, conversationId)).isEqualTo(0);
 	}
 }

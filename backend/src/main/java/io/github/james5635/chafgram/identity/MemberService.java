@@ -2,6 +2,10 @@ package io.github.james5635.chafgram.identity;
 
 import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.identity.dto.MemberResponse;
+import io.github.james5635.chafgram.media.MediaKind;
+import io.github.james5635.chafgram.media.MediaValidation;
+import io.github.james5635.chafgram.social.dto.MemberDto;
+import io.github.james5635.chafgram.social.dto.Views;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,13 +26,17 @@ public class MemberService {
 	private final MemberAccess access;
 	private final PasswordEncoder passwordEncoder;
 	private final WorkspaceSettingsRepository settings;
+	private final MediaValidation mediaValidation;
+	private final Views views;
 
 	public MemberService(UserRepository users, MemberAccess access, PasswordEncoder passwordEncoder,
-			WorkspaceSettingsRepository settings) {
+			WorkspaceSettingsRepository settings, MediaValidation mediaValidation, Views views) {
 		this.users = users;
 		this.access = access;
 		this.passwordEncoder = passwordEncoder;
 		this.settings = settings;
+		this.mediaValidation = mediaValidation;
+		this.views = views;
 	}
 
 	@Transactional(readOnly = true)
@@ -37,9 +45,19 @@ public class MemberService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<MemberResponse> listMembers() {
-		return users.findAll().stream()
+	public List<MemberResponse> listMembers(String query, int first) {
+		List<User> all = users.findAll().stream()
 				.sorted(Comparator.comparing(User::getUsername))
+				.toList();
+		String q = (query == null || query.isBlank()) ? null : query.trim().toLowerCase();
+		if (q != null) {
+			all = all.stream()
+					.filter(u -> u.getUsername().toLowerCase().startsWith(q)
+							|| (u.getDisplayName() != null && u.getDisplayName().toLowerCase().startsWith(q)))
+					.toList();
+		}
+		return all.stream()
+				.limit(Math.max(first, 1))
 				.map(MemberService::toResponse)
 				.toList();
 	}
@@ -69,6 +87,28 @@ public class MemberService {
 					"Self-service registration is disabled for this workspace");
 		}
 		return createUser(username, displayName, email, password, Role.MEMBER);
+	}
+
+	/** Self-service profile edit (FR-2.1/FR-2.4). Suspended members blocked. */
+	@Transactional
+	public MemberDto updateProfile(String username, String displayName, String bio, Long avatarMediaId) {
+		User actor = access.requireWriteable(username);
+		if (displayName != null) {
+			actor.setDisplayName(Validation.requireDisplayName(displayName));
+		}
+		if (bio != null) {
+			if (bio.length() > 160) {
+				throw new ApiException(HttpStatus.BAD_REQUEST, "Bio is limited to 160 characters");
+			}
+			actor.setBio(bio);
+		}
+		if (avatarMediaId != null) {
+			actor.setAvatarMediaId(mediaValidation
+					.validateAttachable(actor, List.of(avatarMediaId), 1, MediaKind.IMAGE)
+					.get(0).getId());
+		}
+		users.save(actor);
+		return views.member(actor, actor);
 	}
 
 	@Transactional
@@ -159,6 +199,7 @@ public class MemberService {
 				user.getEmail(),
 				user.getRole().name().toLowerCase(),
 				user.getStatus().name().toLowerCase(),
+				user.getEmailVerifiedAt(),
 				user.getCreatedAt());
 	}
 }

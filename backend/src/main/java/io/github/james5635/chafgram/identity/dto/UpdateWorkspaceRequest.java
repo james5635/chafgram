@@ -5,5 +5,6 @@ public record UpdateWorkspaceRequest(
 		String name,
 		String slug,
 		String primaryColor,
-		String signupMode) {
+		String signupMode,
+		Long logoMediaId) {
 }

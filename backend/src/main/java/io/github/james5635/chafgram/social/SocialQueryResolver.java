@@ -20,8 +20,11 @@ import io.github.james5635.chafgram.notifications.NotificationService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
+
+import io.github.james5635.chafgram.common.ApiException;
 
 import java.util.List;
 
@@ -37,11 +40,11 @@ public class SocialQueryResolver {
 	private final FollowService follows;
 	private final UserBlockRepository blocks;
 	private final NotificationService notifications;
-	private final io.github.james5635.chafgram.identity.UserRepository users;
+	private final UserRepository users;
 
 	public SocialQueryResolver(CurrentMember current, Views views, PostService posts, FeedService feed,
 			CommentService comments, FollowService follows, UserBlockRepository blocks,
-			NotificationService notifications, io.github.james5635.chafgram.identity.UserRepository users) {
+			NotificationService notifications, UserRepository users) {
 		this.current = current;
 		this.views = views;
 		this.posts = posts;
@@ -103,6 +106,15 @@ public class SocialQueryResolver {
 	}
 
 	@QueryMapping
+	public FeedPageDto watchFeed(@Argument Integer first, @Argument String cursor) {
+		User actor = current.require();
+		int limit = first == null ? 20 : Math.min(Math.max(first, 1), 100);
+		long afterId = views.decodeCursor(cursor);
+		List<Post> page = feed.watchFeed(actor, limit, afterId);
+		return new FeedPageDto(views.posts(page, actor), views.nextCursor(page, cursor));
+	}
+
+	@QueryMapping
 	public PostDto post(@Argument Long id) {
 		User actor = current.require();
 		Post post = posts.get(id);
@@ -117,10 +129,10 @@ public class SocialQueryResolver {
 	}
 
 	@QueryMapping
-	public List<PostDto> searchPosts(@Argument String query, @Argument Integer first) {
+	public List<PostDto> searchPosts(@Argument String query, @Argument Integer first, @Argument PostType kind) {
 		User actor = current.require();
 		int limit = first == null ? 20 : Math.min(Math.max(first, 1), 100);
-		return views.posts(feed.search(actor, query, limit), actor);
+		return views.posts(feed.search(actor, query, limit, kind), actor);
 	}
 
 	@QueryMapping
@@ -134,12 +146,12 @@ public class SocialQueryResolver {
 	public List<NotificationDto> myNotifications(@Argument Integer first) {
 		User actor = current.require();
 		int limit = first == null ? 30 : Math.min(Math.max(first, 1), 100);
-		return views.notifications(notifications.list(actor.getId(), limit), actor);
+		return views.notifications(notifications.listVisible(actor, limit), actor);
 	}
 
 	@QueryMapping
 	public long unreadNotifications() {
-		return notifications.unreadCount(current.require().getId());
+		return notifications.countUnreadVisible(current.require());
 	}
 
 	@QueryMapping
@@ -152,7 +164,6 @@ public class SocialQueryResolver {
 
 	private User findByUsername(String username) {
 		return users.findByUsername(username)
-				.orElseThrow(() -> new io.github.james5635.chafgram.common.ApiException(
-						org.springframework.http.HttpStatus.NOT_FOUND, "Member not found"));
+				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Member not found"));
 	}
 }

@@ -28,7 +28,7 @@ public class MemberUserDetailsService implements UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		io.github.james5635.chafgram.identity.User member = users.findByUsername(username)
+		var member = users.findByUsername(username)
 				.orElseThrow(() -> new UsernameNotFoundException("Unknown username: " + username));
 
 		if (member.getStatus() == UserStatus.DEACTIVATED) {

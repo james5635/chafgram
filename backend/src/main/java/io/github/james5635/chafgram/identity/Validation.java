@@ -18,11 +18,17 @@ final class Validation {
 	}
 
 	static String requireUsername(String username) {
-		if (username == null || !USERNAME.matcher(username).matches()) {
+		if (username == null) {
 			throw new ApiException(HttpStatus.BAD_REQUEST,
 					"Username must be 3–30 chars, lowercase letters/digits/hyphens, starting with a letter or digit");
 		}
-		return username;
+		// BR-1.2: usernames are stored lowercased; comparison is case-insensitive
+		String normalized = username.trim().toLowerCase(Locale.ROOT);
+		if (!USERNAME.matcher(normalized).matches()) {
+			throw new ApiException(HttpStatus.BAD_REQUEST,
+					"Username must be 3–30 chars, lowercase letters/digits/hyphens, starting with a letter or digit");
+		}
+		return normalized;
 	}
 
 	static String requireDisplayName(String displayName) {

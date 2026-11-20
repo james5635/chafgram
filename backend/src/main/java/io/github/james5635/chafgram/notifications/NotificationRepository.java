@@ -18,4 +18,13 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
 	@Query("select n from Notification n where n.recipientId = :recipientId and n.readAt is null")
 	List<Notification> findUnreadByRecipient(@Param("recipientId") Long recipientId);
+
+	@Query("select count(p) from Post p where p.id = :id and p.deletedAt is null")
+	long countVisiblePost(@Param("id") Long id);
+
+	@Query("select count(c) from Comment c where c.id = :id and c.deletedAt is null")
+	long countVisibleComment(@Param("id") Long id);
+
+	@Query("select count(m) from Message m where m.id = :id and m.deletedAt is null")
+	long countVisibleMessage(@Param("id") Long id);
 }

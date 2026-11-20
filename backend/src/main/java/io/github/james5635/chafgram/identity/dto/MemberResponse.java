@@ -9,5 +9,6 @@ public record MemberResponse(
 		String email,
 		String role,
 		String status,
+		Instant emailVerifiedAt,
 		Instant createdAt) {
 }

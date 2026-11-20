@@ -16,6 +16,7 @@ assume public-social-network semantics anywhere in the codebase.
 backend/    Spring Boot 4 (Java 21) service — Maven wrapper, package io.github.james5635.chafgram
 frontend/   TanStack Start (React 19, Vite, Tailwind v4) app — file-based routing
 compose.yaml  Local dev MySQL 8.0 (dev-only throwaway credentials)
+config/     Dev service config (Garage object-storage config)
 docs/functional-requirements.md  Functional requirements (FR)
 docs/business-rules.md  Business rules (BR)
 docs/architecture.md  Architecture (system design)
@@ -23,8 +24,13 @@ docs/development-workflow.md  Setup, dev loop, DB, testing, verification
 product.md  Product definition (what/who/why, goals, non-goals)
 design.md   Design system (tokens, components, motion, a11y)
 README.md   Human-facing overview and quick start
-.agents/    Local agent tooling/skills — not part of the product, don't ship it
+.agents/    Agent tooling/skills — tracked in the repo, dev-only, never shipped
 ```
+
+`.agents/` holds local agent skills. It is versioned so every contributor gets the
+same toolkit, but it is **not** part of the product: no backend or frontend code
+may depend on it, and it must not be bundled into deployable artifacts (jar,
+`.output/`, container images).
 
 ## Commands
 
@@ -41,7 +47,7 @@ just seed                  # RESET dev DB: wipe, Flyway-migrate, insert full dem
 docker compose up -d       # start MySQL AND Garage (S3-compatible dev object storage, bucket chafgram-media)
 docker compose up garage-init   # one-shot: layout assign, dev key import, bucket create, permissions — idempotent
 ./mvnw spring-boot:run     # run dev server (default port 8080)
-./mvnw test                # run tests (wipes the dev chafgram schema)
+./mvnw test                # run tests (hermetic — Testcontainers MySQL)
 just migrate               # apply Flyway migrations only, no data wiped
 just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 ./mvnw package             # build jar (target/)
@@ -56,16 +62,24 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 - Dev object storage: Garage (S3-compatible API on `http://localhost:3900`, region
   `garage`, bucket `chafgram-media`, dev key + secret in `scripts/garage-init.sh`).
   Bucket/layout/key are created by `garage-init` on first run — re-running is safe.
-- `./mvnw test` uses the dev MySQL from `compose.yaml` (`just mysql` must be running)
-  and **wipes the dev `chafgram` schema on every run**. Afterwards run `just seed` to
-  restore the dev fixtures. Override the connection with
-  `CHAFGRAM_TEST_DATASOURCE_URL|_USERNAME|_PASSWORD` (it wipes whatever it points at —
-  not for shared databases).
-- Identity Backend modules implemented: `identity` (users/invites/workspace, REST
-  `/api/v1`), `social` (posts/comments/reactions/follows/feed/search + GraphQL at
+- `./mvnw test` is hermetic: it starts a throwaway MySQL 8 container via
+  Testcontainers (one per test JVM, Docker must be running). The dev database is never
+  touched — no `just seed` afterwards. Test-only config lives in
+  `backend/src/test/resources/application-test.properties` (profile `test`); never add a
+  test-scoped `application.properties`, it shadows the main one on the classpath.
+- Identity Backend modules implemented: `identity` (users/invites/workspace/passkeys/account
+  flows, REST `/api/v1`), `social` (posts/comments/reactions/follows/feed/search + GraphQL at
   `/graphql`), `messaging` (1:1 + groups, REST), `notifications`, `moderation`
-  (reports + audit log), `media` (local-disk upload). See `docs/architecture.md` for the
-  system design.
+  (reports + audit log), `media` (upload/bytes + in-app async video pipeline), `mail`
+  (account mail: logging fallback by default, SMTP opt-in). See `docs/architecture.md`
+  for the system design.
+- Account mail (email verification, password reset — FR-1.7) is opt-in: unless
+  `CHAFGRAM_MAIL_SMTP_ENABLED=true`, mail is written to the app log (no outbound call,
+  BR-10.1). `CHAFGRAM_APP_URL` builds the links in those mails.
+- Video processing runs in-app: `ffmpeg`/`ffprobe` must be on `PATH` for videos to
+  reach `status='ready'`; images are unaffected.
+- Actuator has its own security chain: `/actuator/health` is public, `/actuator/info`
+  and `/actuator/metrics` are admin-only with HTTP Basic (anonymous → 401).
 - Passkeys are handled by Spring Security WebAuthn; the `user_entities` and
   `user_credentials` tables are framework-managed — do not add JPA entities on top of
   them or alter their DDL. Configure via env `CHAFGRAM_WEBAUTHN_RP_ID` (default
@@ -87,6 +101,8 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 - Migrations go in `src/main/resources/db/migration/` as `V<n>__snake_case.sql` (Flyway).
   The migration files are the schema of record. `spring.jpa.hibernate.ddl-auto`
   is `validate` — Hibernate never creates or updates; Flyway owns the schema.
+  Baseline: `V1__init.sql`; `V2` aligns media position columns; `V3` adds
+  `users.email_verified_at` (FR-1.7).
 - Both `spring-boot-starter-webmvc` and `-webflux` are present; prefer the MVC/servlet path
   unless a reactive endpoint is explicitly needed.
 
@@ -118,7 +134,8 @@ npm run preview            # serve the production build
   practical. Keep the base package `io.github.james5635.chafgram`.
 - **API surface:** GraphQL-first — everything goes through `/graphql` (social, identity,
   invites, workspace, messaging, moderation). REST only for the documented keep-list in
-  `docs/architecture.md` (session ceremonies, WebAuthn, media upload/bytes, Actuator).
+  `docs/architecture.md` (session ceremonies, WebAuthn, media upload/bytes, multipart
+  message sends, Actuator).
   Resolver classes carry class-level `@PreAuthorize("isFullyAuthenticated()")`; only
   explicitly public operations carry `permitAll()` (workspace branding query).
   Authorization failures return HTTP 200 + `errors[]` with `extensions.classification`,
@@ -132,6 +149,11 @@ npm run preview            # serve the production build
   `test`, `chore`, `build`, `ci`. Scope: the area touched (`backend`, `frontend`, `db`,
   `docs`, `justfile`, …). Subject is imperative with no trailing period; describe
   *why*, not just *what*. PR titles follow the same format.
+- **Imports:** Never use fully-qualified class names (FQCN) inline. Always import the class and use the simple name.
+  - Test utilities: `import org.springframework.mock.web.MockMultipartFile;` → `new MockMultipartFile(...)`
+  - Test utilities: `import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;` → `.with(csrf())`
+  - All other code: same rule — import, don't FQCN.
+  - Avoid `org.springframework.mock.web.MockMultipartFile` or `org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()` inline anywhere.
 - **Docs-first for direction:** if a change contradicts `product.md`/`design.md`, update
   the doc in the same change or flag it — don't fork the truth in code.
 
@@ -150,6 +172,8 @@ npm run preview            # serve the production build
   extend it.
 - Ask before deleting or rewriting anything you didn't create; the repo is young but
   every file is someone's decision.
+- `.agents/` is dev-only tooling: tracked, but never a dependency of the product and
+  never bundled into a deployable artifact.
 
 ## Definition of done for a change
 
@@ -159,4 +183,4 @@ npm run preview            # serve the production build
    visible; tokens used, not magic values.
 3. Docs updated (`README.md`, `product.md`, `design.md`, this file) if behavior, scope, or
    decisions changed.
-4. No secrets, no generated files, no `.agents/` content in the diff.
+4. No secrets, no generated files in the diff.

@@ -10,6 +10,9 @@ public record MediaAssetDto(
 		String mimeType,
 		Integer width,
 		Integer height,
+		Integer durationMs,
+		String blurhash,
+		Boolean hasThumbnail,
 		String sizeBytes,
 		Instant createdAt) {
 }

@@ -1,6 +1,6 @@
 # Chafgram
 
-**Chafgram is an open-source, self-hosted private social platform for companies.**
+**Chafgram is an open-source, self-hosted private social platform.**
 
 Admins deploy Chafgram on their own infrastructure; their people get the full modern
 social experience — short video, watch, posts, comments, follows, and direct messages —
@@ -26,6 +26,11 @@ open source under MIT. See **[product.md](product.md)** for the full product def
 - Follows and a personal, work-relevant feed
 - Direct messages
 - Admin workspace: member management, moderation, configuration
+
+The backend API surface behind these is complete against the decided requirements —
+see [`docs/functional-requirements.md`](docs/functional-requirements.md) and
+[`docs/business-rules.md`](docs/business-rules.md) for what is implemented, and
+[`docs/architecture.md`](docs/architecture.md) for how it is put together.
 
 (Feature scope and open questions: [product.md](product.md).)
 
@@ -72,7 +77,7 @@ cd backend
 Run `just mysql` first if the backend needs the database (it is not auto-started).
 
 ```bash
-./mvnw test        # requires `just mysql` — WIPES the dev `chafgram` schema; restore with `just seed`
+./mvnw test        # hermetic — Testcontainers starts a throwaway MySQL 8; the dev DB is untouched
 just seed           # reset dev DB: wipe, Flyway-migrate, insert full fixtures
 just migrate        # apply Flyway migrations only (data untouched)
 just unseed         # empty dev DB: wipe, Flyway-migrate, no fixtures
@@ -88,18 +93,23 @@ audit-log entries and an email-verification token row. Media rows reference fake
 `demo/...` keys — no blobs exist until real uploads happen. Dev fixtures only.
 
 The API is GraphQL-first (see `docs/architecture.md`): all operations go through
-`POST /graphql` — social data (feed, posts, comments, reactions, follows), identity
-(members, workspace), invites, messaging, reports, audit log. Explore it with
-GraphiQL at `http://localhost:8080/graphiql` (dev). Authorization failures return
-HTTP 200 with a GraphQL `errors[]` (classification `UNAUTHENTICATED`/`UNAUTHORIZED`),
-and every resolver class enforces `isFullyAuthenticated()` except explicitly-public
-operations. CSRF is enforced for browser clients.
+`POST /graphql` — social data (feed, watch feed, posts, comments, reactions, follows),
+identity (members, workspace, profile, passkeys), invites, account flows (email
+verification, password reset), messaging, reports, audit log, and media metadata.
+Explore it with GraphiQL at `http://localhost:8080/graphiql` (dev). Authorization
+failures return HTTP 200 with a GraphQL `errors[]` (classification `UNAUTHORIZED` for
+anonymous, `FORBIDDEN` for an authenticated member without the role), and every resolver
+class enforces `isFullyAuthenticated()` except explicitly-public operations. CSRF is
+enforced for browser clients.
 
 REST exists only for what GraphQL cannot express — the keep-list lives in
 `docs/architecture.md`: session ceremonies (`/api/v1/bootstrap`, `/api/v1/register`,
 `/api/v1/invites/accept`), Spring Security's WebAuthn endpoints, media upload
-(`POST /api/v1/media`) and byte serving (`GET /api/v1/media/{id}/bytes`), and
-Actuator. Public branding is a public GraphQL query: `{ workspace { name slug } }`.
+(`POST /api/v1/media`) and byte serving (`GET /api/v1/media/{id}/bytes`), multipart
+message sends (`POST /api/v1/messages`, image attachments inline — videos are
+uploaded first and attached by id once the pipeline marks them ready), and
+Actuator (`/actuator/health` public; `/actuator/info` and `/actuator/metrics`
+admin-only). Public branding is a public GraphQL query: `{ workspace { name slug } }`.
 
 Requires JDK 21. The datasource defaults in `application.properties` match the
 `compose.yaml` dev credentials (`chafgram` / `chafgram`, database `chafgram`); override
@@ -108,6 +118,31 @@ beyond local dev — never commit credentials. Migrations are applied by Flyway 
 `db/migration/`.
 `CHAFGRAM_WEBAUTHN_RP_ID` and `CHAFGRAM_WEBAUTHN_ALLOWED_ORIGINS` configure the WebAuthn
 relying party (defaults: `localhost`, `http://localhost:3000`).
+
+#### Email (optional)
+
+Email verification and password reset are opt-in and never required to use the
+instance. With no mail server configured, Chafgram writes the message (including the
+one-time link) to the application log — so the flows stay exercisable on a fresh clone
+and air-gapped installs make no outbound calls.
+
+To send real mail, set `CHAFGRAM_MAIL_SMTP_ENABLED=true` plus `SPRING_MAIL_HOST`,
+`SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME` and `SPRING_MAIL_PASSWORD`
+(`SPRING_MAIL_SMTP_AUTH` / `SPRING_MAIL_SMTP_STARTTLS` as needed), and point
+`CHAFGRAM_APP_URL` at the frontend so the links resolve (`http://localhost:3000` by
+default). See `.env.example` for the full list. Both flows use single-use tokens that
+expire after 30 minutes; only their SHA-256 hash is stored.
+
+#### Video processing
+
+Video uploads are processed in the backend by a bounded async pipeline
+(`ffprobe` → `ffmpeg` transcode → thumbnail → blurhash), so `ffmpeg` and `ffprobe` must
+be on `PATH` for videos to finish (`status='ready'`). Without them a video upload ends
+in `status='failed'`; images are unaffected. Short videos (≤ 60 s) surface in the watch
+feed, longer ones in the regular feed. If the pipeline queue is full, the upload ends
+in `status='failed'` as well — it never stays stuck in `status='processing'`. The
+generated thumbnail is kept and served through the byte endpoint
+(`GET /api/v1/media/{id}/bytes?variant=thumbnail`).
 
 ### Frontend
 
@@ -121,6 +156,52 @@ npm run dev        # http://localhost:3000
 npm run build      # production build
 npm run preview    # serve the production build
 ```
+
+### Using the app (dev)
+
+The frontend is still the TanStack Start template (two placeholder routes) — no
+Chafgram screens yet. The backend is fully built, so the app is usable today over
+HTTP. Every step below was verified against a fresh `just seed` on a local MySQL.
+
+1. **Sign in.** Make sure the dev fixtures are loaded (`just seed`), start the backend,
+   and open the default login page at http://localhost:8080/login. Form sign-in:
+   `admin` (admin role) or `maya` / `tao` / `lena` (members), password
+   `chafgram-dev-password` — a successful sign-in redirects to `/`. If you land on
+   `/login?error`, the dev database was wiped (the test suite wipes it) — run
+   `just seed` and try again.
+2. **Query the API after sign-in.** GraphiQL is served at
+   http://localhost:8080/graphiql (dev only). The page loads, but its requests need
+   the CSRF double-submit pair: Spring renders a hidden `_csrf` input on the
+   `/login` page — the masked token that decrypts to the `XSRF-TOKEN` cookie. Copy
+   that value into GraphiQL's **Headers** tab:
+
+   ```json
+   { "X-XSRF-TOKEN": "<hidden _csrf value from the /login page>" }
+   ```
+
+   The session cookie is sent automatically. If requests start returning `403` after
+   you sign in, the token rotated — reload `/login` and copy a fresh `_csrf`.
+
+   Examples (verified against the seeded fixtures):
+
+   ```graphql
+   query { me { username role } }                      # → admin / admin
+   query { unreadNotifications }                       # → 4 for the seeded admin
+   query { followingFeed(first: 2) { posts { body } } }  # seeded fixture posts
+   ```
+
+3. **Public, no sign-in:** `{ workspace { name slug } }` returns the workspace
+   branding. Everything else is `isFullyAuthenticated()` — anonymous callers get
+   `HTTP 200` with `errors[]` (`classification: UNAUTHENTICATED`/`UNAUTHORIZED`),
+   or `403` if the CSRF pair is missing entirely (by design).
+4. **Fixture content** to explore once signed in: posts/comments/reactions, a follows
+   graph, direct + group conversations, notifications, moderation reports and the
+   audit log. Seeded media rows reference fake `demo/…` keys (no blobs) — real
+   uploads require Garage (`docker compose up -d garage garage-init`).
+5. **Passkeys** are wired at the WebAuthn endpoints (`/webauthn/register/*`,
+   `/login/webauthn`) but have no UI yet; the seeded accounts use the password path.
+6. **Invite flow:** accept the seeded reusable demo invite via
+   `POST /api/v1/invites/accept` (REST keep-list) — `demo-invite-token`.
 
 ## Documentation
 

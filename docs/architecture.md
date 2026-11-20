@@ -46,8 +46,8 @@
 │                                           └───▲──────────────────┘    │
 │                                               │ transcode/thumbs        │
 │                                       ┌───────┴────────────────┐       │
-│                                       │ media worker           │       │
-│                                       │ (ffmpeg, sidecar)      │       │
+│                                       │ in-app async pipeline   │       │
+│                                       │ (ffmpeg, bounded pool)  │       │
 │                                       └────────────────────────┘       │
 └───────────────────────────────────────────────────────────────────────┘
 ```
@@ -56,8 +56,10 @@
   backend (BFF pattern) so no internal URLs or secrets leak to the browser.
 - The **backend** owns all domain logic, auth, and data. The frontend holds no
   authoritative state.
-- The **media worker** is a separate process (or sidecar container) consuming
-  `media_assets` rows with `status='processing'`. *(proposal — media worker phase)*
+- The **media pipeline runs in-app**: a bounded executor inside the backend
+  picks up `media_assets` rows with `status='processing'` after the upload transaction
+  commits. A separate worker process/sidecar remains possible later, but it is not
+  required for v1.
 - **Reverse proxy / TLS** (nginx, Traefik, company LB) terminates HTTPS; not part of
   this repo. Configuration documented here later.
 
@@ -100,6 +102,7 @@ io.github.james5635.chafgram
 ├── messaging        conversations, conversation_members, messages, realtime transport  ← implemented
 ├── notifications    emit/consume, unread badges, (no push in v1)  ← implemented
 ├── moderation       reports workflow, audit_log, content tombstones  ← implemented
+├── mail             account mail only: logging fallback (default) or SMTP  ← implemented
 └── common           errors (RFC-7807), paging cursors, mappers, constants  ← implemented
 ```
 
@@ -107,9 +110,9 @@ io.github.james5635.chafgram
 
 | Surface | Used for | Notes |
 |---------|----------|-------|
-| **GraphQL** (Spring GraphQL) | **Every API operation** — social data, identity, invites, workspace, messaging, moderation, media metadata | Single endpoint `POST /graphql`. Class-level `@PreAuthorize("isFullyAuthenticated()")` on every resolver class; `permitAll()` only on the public `workspace` branding query. Authorization failures return HTTP 200 with `errors[]` and `extensions.classification` (`UNAUTHENTICATED`/`UNAUTHORIZED`); assert on `$.errors`, never the HTTP status. |
+| **GraphQL** (Spring GraphQL) | **Every API operation** — social data, identity, invites, workspace, messaging, moderation, media metadata | Single endpoint `POST /graphql`. Class-level `@PreAuthorize("isFullyAuthenticated()")` on every resolver class; `permitAll()` only on the public `workspace` branding query and the account-flow mutations (`requestPasswordReset`, `resetPassword`, `verifyEmail`). Authorization failures return HTTP 200 with `errors[]` and `extensions.classification` (`UNAUTHORIZED` for anonymous, `FORBIDDEN` for an authenticated member without the role, `BAD_REQUEST`/`NOT_FOUND` for validation and lookup failures); assert on `$.errors`, never the HTTP status. |
 | **REST** | Session ceremonies, WebAuthn, media upload/bytes, Actuator | The keep-list below — mandated by the fact that a GraphQL operation cannot set the session cookie a login needs, cannot receive multipart bodies, and cannot stream bytes. |
-| **Actuator** | `/actuator/health`, `/actuator/info` for ops | Exposed; network-boundary or proxy auth expected in production |
+| **Actuator** | `/actuator/health` for probes; `/actuator/info` + `/actuator/metrics` for ops | Own security chain (`SecurityConfiguration.actuatorFilterChain`): health is public, info and metrics are admin-only. HTTP Basic is the only entry point, so anonymous requests get `401` + `WWW-Authenticate` instead of the member-facing login redirect. |
 | **WebSocket/SSE** *(proposal)* | Messaging delivery (see §6) | Transport decision pending |
 
 **REST keep-list (all other APIs are GraphQL):**
@@ -120,8 +123,10 @@ io.github.james5635.chafgram
 - `POST /login/webauthn`, `/webauthn/authenticate/options` — passkey authentication (Spring Security built-ins)
 - `POST /webauthn/register/options`, `POST /webauthn/register` — passkey registration (Spring Security built-ins)
 - `POST /api/v1/media` — multipart media upload (image/video)
+- `POST /api/v1/messages` — multipart message send (image attachments inline)
 - `GET /api/v1/media/{id}/bytes` — authorized byte streaming for media
-- `GET /actuator/health`, `/actuator/info` — ops probes
+- `GET /actuator/health` — public liveness/readiness probe (status only, no details)
+- `GET /actuator/info`, `/actuator/metrics` — admin-only ops endpoints (HTTP Basic)
 - `/error` — servlet error dispatch
 
 Public workspace branding is a **GraphQL** operation, not REST: `query { workspace { name slug } }`
@@ -139,24 +144,88 @@ Public workspace branding is a **GraphQL** operation, not REST: `query { workspa
   mirror the same codes (`code`, `detail`, `status`).
 - **Transactions** — service layer owns `@Transactional`; no lazy loading across
   GraphQL boundary (fetch joins / projections).
+- **Social graph filtering** — blocking is mutual-effect (BR-2.2): every feed
+  (discover, following, watch) drops an author when *either* side blocked the other.
+  A one-directional filter is not enough — the blocker must disappear from the
+  blockee's feeds too.
+- **Watch-feed pagination** — the watch feed fetches past the rows the
+  mutual-block filter hides: a blocked video must not leave the page short, and
+  the next cursor must not stop on a hidden row — the older allowed videos
+  behind it would become unreachable.
+- **Presence** — last-seen (FR-2.5) is refreshed on every authenticated read
+  (`CurrentMember.require()`), not only on login. The write is throttled to one
+  update per member per five minutes and never breaks the request that triggered
+  it — the caller guards the whole transactional call, so a write that fails at
+  commit is swallowed too. `Member.lastSeenAt` exposes the timestamp to clients.
 - **Logging** — structured logs to stdout; never log credential material; correlation
-  ids propagated frontend→backend.
+  ids propagated frontend→backend. The dev mail fallback is no exception: the logged
+  body keeps everything except the account-flow token (`?token=…` is redacted), so a
+  reset/verification link in the log cannot be redeemed.
 
 ## 5. Media pipeline
 
 ```
-upload (REST multipart)            worker (sidecar)
+upload (REST multipart)            in-app async pipeline
   │  media_assets row: status=processing, kind=image|video
   ▼
- local disk / S3-compatible  ◀── ffmpeg: transcode, thumbnail, blurhash
+ local disk / S3-compatible  ◀── ffmpeg/ffprobe: transcode, thumbnail, blurhash
   │                                        │
   └── feed/watch query: WHERE status='ready'
 ```
 
+- The pipeline is an in-app task inside the backend (`AsyncConfig`: 2 threads, queue
+  64, `media-pipeline-*` threads), started after the upload transaction commits. It runs
+  `ffprobe` (duration, dimensions) → `ffmpeg` (H.264/AAC transcode, metadata stripped)
+  → thumbnail → blurhash, then flips the row to `status='ready'`. Any error or a
+  10-minute timeout lands it in `status='failed'`.
+- The work is handed to the bounded executor explicitly (not via an `@Async` proxy), so
+  a full queue is visible: a rejected asset is marked `status='failed'` instead of
+  staying stuck in `status='processing'`.
+- The external tools run with their output drained while the process runs. ffmpeg writes
+  progress to stdout/stderr; a pipe nobody reads fills up and blocks the tool, which
+  would look like a transcode timeout. The process is killed when it overruns its
+  timeout, and the captured tail is kept for the error message.
+- The transcode always produces MP4, so the pipeline moves the asset to a `.mp4`
+  storage key and updates `mime_type` to `video/mp4` — the stored bytes and the
+  served content type always agree. The pre-transcode source blob is dropped.
+- `markReady`/`markFailed` only transition a still-`processing` asset
+  (`WHERE status = 'processing'`): an admin moderation delete while a transcode
+  runs must survive — the byte authorizer would otherwise serve the video again.
+  When the guard matches nothing the pipeline discards the result.
 - Short vs. long video: same `media_assets` table; short feed =
   `kind='video' AND duration_ms <= 60000 AND status='ready'` — a query, not a table.
-- Storage behind `MediaStorage` interface (`store`, `read`, `delete`, `presign`);
+- Storage behind `MediaStorage` interface (`store`, `storeProcessed`, `delete`, `read`);
   default local disk under a configurable root; S3-compatible via SDK later.
+- Bytes are never served anonymously: `GET /api/v1/media/{id}/bytes` runs the
+  authorization tree in `MediaAccessService` (owner, message participants, visible
+  posts, avatars/logos; staff see everything) and answers `404` for every denial.
+  Suspended members keep read access (FR-1.4) — only writes are blocked for them.
+  Message attachments require **active** participation: a member who left or was
+  removed from a conversation keeps the membership row for history, but `left_at` is
+  set and the row no longer grants access to the conversation's attachments.
+- Passkey mutations (`renamePasskey`, `revokePasskey`) require a writeable member
+  (FR-1.4, BR-5.2), like every other write path.
+- Image uploads are ready immediately and carry the required metadata: the
+  upload reads the stored file back with ImageIO and records `width`/`height`
+  and the blurhash (FR-5.2). Formats ImageIO cannot read (e.g. WebP) leave the
+  fields null. Both image paths share one helper — `POST /api/v1/media` and the
+  inline `POST /api/v1/messages` upload expose the same metadata.
+- Video thumbnails are kept, not discarded: the pipeline stores the generated
+  JPG next to the transcoded video (`media_assets.thumbnail_key`) and the
+  bytes endpoint serves it with `GET /api/v1/media/{id}/bytes?variant=thumbnail`
+  (`image/jpeg`). The same authorization decision as the asset itself applies;
+  `MediaAsset.hasThumbnail` tells clients that one exists.
+- Message attachments: `POST /api/v1/messages` (multipart) takes **image** files
+  inline. Videos cannot be ready in the same request (FR-5.2), so the flow is
+  upload → poll `mediaAsset(id)` until `status='ready'` → send the message with
+  `mediaIds`. The multipart endpoint rejects inline video files with a 400 that
+  points at that flow.
+- A purged sender leaves `messages.sender_id` NULL; the attachment authorizer
+  compares it null-safely, so the message history (and its attachments) stay
+  readable instead of failing with a 500.
+- Moderation delete (admin, BR-5.3): `deleteMedia(id)` tombstones the asset
+  (`status='deleted'`), writes an `audit_log` row, and the bytes stop being served
+  everywhere. The file itself stays on disk until a retention sweep exists.
 - Failures land in `status='failed'` with last error in `blurhash`-adjacent column or
   a proper `error_message` if added — **(proposal)** if retried 3×, require manual
   re-upload rather than infinite retry.
@@ -170,7 +239,11 @@ upload (REST multipart)            worker (sidecar)
   `last_read_message_id` for unread badges) → `messages` + `message_media`.
 - Ordering: messages are totally ordered by `id` per conversation; cursor pagination
   by `(conversation_id, id)`; unread count = messages with `id >` member's
-  `last_read_message_id`.
+  `last_read_message_id`. The per-conversation badge is exposed as
+  `query { unreadMessageCount(conversationId: ID!): Int! }`.
+- Membership is soft: leaving a conversation keeps the row (history), but `left_at`
+  is set — the former member loses access to the conversation, its messages and its
+  attachments.
 - No server-side read receipts (per-message "seen") in v1 — privacy and simplicity.
 
 ## 7. Notifications
@@ -181,6 +254,13 @@ upload (REST multipart)            worker (sidecar)
   recipients query index `(recipient_id, read_at, created_at)`.
 - Fan-out is write-time (row per recipient) — correct at company scale; no queue needed
   until proven otherwise.
+- Visibility is resolved in bulk: a page of notifications is checked with one query per
+  entity type (posts, comments, messages), not one query per row — the unread set is
+  unbounded, so a per-row check would be an N+1.
+- The notification list has no cursor, so a page must be **filled**: when the newest rows
+  point at tombstoned content, the service keeps scanning backwards until the requested
+  number of visible notifications is collected. Otherwise the older visible ones would be
+  unreachable.
 
 ## 8. Moderation & audit
 
@@ -196,7 +276,7 @@ upload (REST multipart)            worker (sidecar)
 | Concern | Approach |
 |---------|----------|
 | Artifact | OCI image for backend + static assets via frontend build; `compose.yaml` for the full self-hosted stack (app + MySQL + volume) — dev compose exists today and doubles as the reference |
-| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline (migrations in `backend/src/main/resources/db/migration/`) |
+| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline, `V2` media column alignment, `V3` `users.email_verified_at`, `V4` `media_assets.thumbnail_key` (migrations in `backend/src/main/resources/db/migration/`) |
 | Backups | `mysqldump`/volume snapshot, admin-facing docs; restore tested per release |
 | TLS | Terminated at company reverse proxy; app serves plain HTTP internally |
 | Observability | Actuator health/metrics; logs to stdout; **no** mandatory external telemetry |
