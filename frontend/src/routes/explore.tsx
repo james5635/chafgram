@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { gradientPlaceholder } from '../lib/placeholders'
 
 export const Route = createFileRoute('/explore')({
   component: Explore,
@@ -7,12 +8,12 @@ export const Route = createFileRoute('/explore')({
 const TABS = ['For You', 'Following', 'Trending', 'Nearby'] as const
 
 const CARDS = [
-  { title: 'Better Together', likes: '12.5K', img: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=80' },
-  { title: 'Good Morning ☀️', likes: '24.1K', img: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&q=80' },
-  { title: 'City Architecture', likes: '11.3K', img: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80' },
-  { title: 'Coffee Break', likes: '15.6K', img: 'https://images.unsplash.com/photo-1497944071364-3ef9c02c4ba8?w=600&q=80' },
-  { title: 'Ocean View', likes: '8.9K', img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80' },
-  { title: 'Morning Light', likes: '7.2K', img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80' },
+  { title: 'Better Together', likes: '12.5K', img: gradientPlaceholder({ colors: ['#5b8dd6', '#8ec5f7'] }) },
+  { title: 'Good Morning ☀️', likes: '24.1K', img: gradientPlaceholder({ colors: ['#6ba8e0', '#b8d9f5'] }) },
+  { title: 'City Architecture', likes: '11.3K', img: gradientPlaceholder({ colors: ['#3f6fa8', '#6b9bd2'] }) },
+  { title: 'Coffee Break', likes: '15.6K', img: gradientPlaceholder({ colors: ['#8b6f5a', '#c4a58c'] }) },
+  { title: 'Ocean View', likes: '8.9K', img: gradientPlaceholder({ colors: ['#2f7fa8', '#7fc8e0'] }) },
+  { title: 'Morning Light', likes: '7.2K', img: gradientPlaceholder({ colors: ['#e0a45c', '#f5d6a0'] }) },
 ]
 
 function Explore() {

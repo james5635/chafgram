@@ -40,10 +40,10 @@ export default function LeftRail() {
             <Link
               key={link.label}
               to={link.to}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition no-underline ${
                 isActive
-                  ? 'bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold'
-                  : 'text-[var(--sea-ink-soft)] hover:bg-[var(--brand-light)]/50'
+                  ? '!bg-[var(--brand-light)] !text-[var(--brand-dark)] font-semibold'
+                  : '!text-[var(--sea-ink-soft)] hover:!bg-[var(--brand-light)]/50'
               }`}
             >
               <span
@@ -65,7 +65,7 @@ export default function LeftRail() {
       <div className="mt-auto pt-6">
         <Link
           to="/compose"
-          className="w-full flex items-center justify-center gap-2 rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--brand-dark)] hover:shadow-lg hover:shadow-[var(--brand)]/40"
+          className="w-full flex items-center justify-center gap-2 rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 py-3 text-sm font-semibold !text-white no-underline transition hover:!bg-[var(--brand-dark)] hover:shadow-lg hover:shadow-[var(--brand)]/40"
           aria-label="Create post"
         >
           <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">

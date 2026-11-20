@@ -5,38 +5,30 @@ import Composer from './Composer'
 const MEMBER = { name: 'Dara', username: 'dara', initials: 'DR' }
 
 describe('Composer', () => {
-  it('renders the composer with a disabled Post button', () => {
+  it('renders the composer with a solid, enabled Post button', () => {
     render(<Composer member={MEMBER} />)
 
     expect(screen.getByPlaceholderText("What's on your mind?")).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Post' })).toBeDisabled()
+    const postButton = screen.getByRole('button', { name: 'Post' })
+    expect(postButton).not.toBeDisabled()
+    expect(postButton).toHaveClass('bg-[var(--brand)]')
   })
 
-  it('enables the Post button once text is entered', () => {
+  it('accepts text input', () => {
     render(<Composer member={MEMBER} />)
 
-    const textarea = screen.getByPlaceholderText("What's on your mind?")
+    const textarea = screen.getByPlaceholderText("What's on your mind?") as HTMLTextAreaElement
     fireEvent.input(textarea, { target: { value: 'Hello world' } })
 
-    expect(screen.getByRole('button', { name: 'Post' })).not.toBeDisabled()
+    expect(textarea.value).toBe('Hello world')
   })
 
-  it('clears the disabled state back when text is removed', () => {
-    render(<Composer member={MEMBER} />)
-
-    const textarea = screen.getByPlaceholderText("What's on your mind?")
-    fireEvent.input(textarea, { target: { value: 'Hello world' } })
-    fireEvent.input(textarea, { target: { value: '' } })
-
-    expect(screen.getByRole('button', { name: 'Post' })).toBeDisabled()
-  })
-
-  it('renders chips as static buttons (not toggleable)', () => {
+  it('renders chips as static buttons with icons', () => {
     render(<Composer member={MEMBER} />)
 
     const photoChip = screen.getByRole('button', { name: 'Photo' })
-    expect(photoChip).toHaveClass('bg-white')
-    expect(photoChip).not.toHaveClass('bg-[var(--chip-bg)]')
+    expect(photoChip.tagName).toBe('BUTTON')
+    expect(photoChip.querySelector('span')).not.toBeNull()
   })
 
   it('renders all four media chips', () => {

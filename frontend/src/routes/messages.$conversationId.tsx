@@ -22,7 +22,7 @@ function MessageThread() {
           Back
         </Link>
         <div className="flex items-center gap-2">
-          <Avatar src="/placeholder.svg" initials="DR" label="Dara" size={32} />
+          <Avatar initials="DR" label="Dara" size={32} />
           <span className="text-sm font-semibold text-[var(--sea-ink)]">Dara</span>
         </div>
         <div className="ml-auto flex items-center gap-2">

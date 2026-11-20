@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import PostCard from '../components/PostCard'
 import Avatar from '../components/Avatar'
+import { gradientPlaceholder } from '../lib/placeholders'
 
 export const Route = createFileRoute('/profile/$username')({
   component: Profile,
@@ -12,7 +13,7 @@ const POSTS = [
     author: { name: 'Rojame', username: 'rojame', avatar: undefined, initials: 'RJ' },
     createdAt: '1d ago',
     body: 'Keep going! 💙',
-    media: [{ url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80', alt: 'Mountain landscape' }],
+    media: [{ url: gradientPlaceholder({ colors: ['#5b8dd6', '#9ec8f0'] }), alt: 'Mountain landscape' }],
     reactions: { count: 45 },
     comments: 8,
     shares: 3,
@@ -37,7 +38,7 @@ function Profile() {
       <section className="island-shell rise-in rounded-2xl p-6 sm:p-8 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-start gap-6">
           <div className="flex-shrink-0">
-            <Avatar src="/placeholder.svg" initials="RJ" label="Rojame" size={56} />
+            <Avatar initials="RJ" label="Rojame" size={56} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-3 sm:gap-4">

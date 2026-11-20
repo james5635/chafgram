@@ -53,10 +53,9 @@ export default function RightRail() {
 
       <section className="island-shell rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-4">
-          <span className="flex items-center gap-1 text-[var(--brand-dark)] font-bold">
-            <span className="h-2 w-2 rounded-full bg-[var(--brand)]" />
-            Trending
-          </span>
+          <h3 className="m-0 flex items-center gap-1.5 text-lg font-bold text-[var(--sea-ink)]">
+            <span aria-hidden="true">🔥</span> Trending
+          </h3>
         </div>
         <ol className="list-none m-0 p-0 space-y-3">
           {TRENDING.map((item) => (
@@ -82,9 +81,13 @@ export default function RightRail() {
 
       <section className="island-shell rounded-2xl p-5 text-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="relative h-20 w-20 mx-auto overflow-hidden rounded-full border border-[var(--line)] bg-[var(--brand-light)]">
-            <svg viewBox="0 0 64 64" className="h-full w-full text-[var(--brand-dark)]" aria-hidden="true">
-              <path d="M32 2c-3.2 0-6.3.4-9.3 1.2-5.6 1.5-10.8 5.6-14.2 11.2-2.1 3.4-3.3 7.3-3.3 11.3s1.2 7.8 3.3 11.3c3.4 5.6 8.6 9.7 14.2 11.2 3 0.8 6.1 1.2 9.3 1.2s6.3-.4 9.3-1.2c5.6-1.5 10.8-5.6 14.2-11.2 2.1-3.4 3.3-7.3 3.3-11.3s-1.2-7.8-3.3-11.3c-3.4-5.6-8.6-9.7-14.2-11.2-3-0.8-6.1-1.2-9.3-1.2zm0 58c-1.7 0-3.3-.2-4.8-.6-2.8-.8-5.4-2.8-7.1-5.6-1-1.7-1.6-3.6-1.6-5.6s.6-3.9 1.6-5.6c1.7-2.8 4.3-4.8 7.1-5.6 1.5-.4 3.1-.6 4.8-.6s3.3.2 4.8.6c2.8.8 5.4 2.8 7.1 5.6 1 1.7 1.6 3.6 1.6 5.6s-.6 3.9-1.6 5.6c-1.7 2.8-4.3 4.8-7.1 5.6-1.5.4-3.1.6-4.8.6z" fill="currentColor"/>
+          <div className="relative w-full">
+            <svg viewBox="0 0 200 90" className="w-full h-24" aria-hidden="true">
+              <path d="M20 70 Q80 90 180 50 L180 90 L20 90 Z" fill="#dbeafe" />
+              <path d="M185 12 L30 55 L85 62 L120 85 L135 60 L185 12 Z" fill="#60a5fa" />
+              <path d="M185 12 L85 62 L135 60 Z" fill="#3b82f6" />
+              <path d="M30 55 L185 12 L135 60 Z" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d="M120 85 L135 60 L185 12" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinejoin="round" />
             </svg>
           </div>
           <h3 className="m-0 text-lg font-bold text-[var(--sea-ink)]">Join Chafgram Today</h3>

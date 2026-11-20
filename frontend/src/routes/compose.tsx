@@ -25,7 +25,7 @@ function Compose() {
       <section className="island-shell rise-in rounded-2xl p-6 sm:p-8">
         <div className="flex gap-3 mb-6">
           <div className="flex-shrink-0">
-            <Avatar src="/placeholder.svg" initials="YD" label="You" size={40} />
+            <Avatar initials="YD" label="You" size={40} />
           </div>
           <div className="flex-1 min-w-0">
             <textarea
