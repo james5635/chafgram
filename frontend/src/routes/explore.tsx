@@ -53,7 +53,7 @@ function SuggestedTopics() {
   )
 }
 
-function Explore() {
+export function Explore() {
   return (
     <AppShell rightRail={<SuggestedTopics />}>
       <div className="page-wrap px-4 pb-8 pt-6">

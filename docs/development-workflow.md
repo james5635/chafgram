@@ -101,8 +101,22 @@ schema/DTO sync (`SchemaDtoSyncTest`). Conventions to respect:
   `permitAll()` operations are public.
 - Keep `*.graphqls` files in sync with the DTOs — `SchemaDtoSyncTest` fails otherwise.
 
-Frontend has no test runner yet (`just frontend::test` is a `--if-present` no-op);
-`npm run build` is the frontend gate. Root `just test` runs both.
+**Tests are mandatory for every change** (feature, bug fix, refactor, behavior-affecting
+config) — see "Testing (mandatory)" in `AGENTS.md`. Write them in the same change; there is
+no "tests later". Bug fixes get a failing regression test first.
+
+Frontend tests use Vitest + React Testing Library (`jsdom`), colocated as `*.test.ts(x)`
+next to the source. Mock TanStack Router's `Link` / `useLocation` / `useParams` to render
+components in isolation (see `src/components/PostCard.test.tsx` and
+`src/routes/-screens.test.tsx`). Run `just frontend::test`.
+
+```bash
+cd frontend
+npm run test
+```
+
+Root `just test` runs both suites; `just verify` runs tests + builds and is enforced by the
+pre-push hook installed with `just bootstrap`. Docs-only changes are exempt from code tests.
 
 ## 6. API conventions (GraphQL-first)
 
@@ -138,7 +152,8 @@ just bootstrap  # one-time: install the pre-push hook from scripts/hooks/pre-pus
   idempotent and will not overwrite an unrelated existing hook. Skip deliberately with
   `git push --no-verify` (discouraged). Re-run `just bootstrap` after updating the hook
   source; `.git/hooks/` itself is local and never committed.
-- All green: backend `Tests run: … Failures: 0`, frontend production build clean.
+- All green: backend `Tests run: … Failures: 0`, frontend `Test Files … passed` (Vitest),
+  and both client and SSR builds clean.
 - Docs-first: if your change contradicts `product.md` / `design.md`, update the doc in
   the same change or flag it — don't fork the truth in code.
 - Commits: `<type>(<scope>): <subject>` — e.g. `feat(backend): …`, `fix(db): …`,

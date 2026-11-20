@@ -224,7 +224,10 @@ HTTP. Every step below was verified against a fresh `just seed` on a local MySQL
 
 1. Read [AGENTS.md](AGENTS.md) and the relevant product/design docs.
 2. Keep changes small and consistent with the existing structure and tokens.
-3. `./mvnw test` and `npm run build` must pass; update docs when behavior or scope changes.
+3. Write tests for every change (new feature, bug fix, refactor) — see the mandatory
+   testing rules in [AGENTS.md](AGENTS.md). There is no "tests later".
+4. Run `just verify` (backend + frontend tests and builds) before pushing; the pre-push hook
+   installed by `just bootstrap` enforces it. Update docs when behavior or scope changes.
 
 ## License
 

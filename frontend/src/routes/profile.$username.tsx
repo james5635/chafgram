@@ -71,7 +71,7 @@ function ProfilePanels() {
   )
 }
 
-function Profile() {
+export function Profile() {
   return (
     <AppShell rightRail={<ProfilePanels />}>
       <div className="page-wrap px-4 pb-8 pt-6">

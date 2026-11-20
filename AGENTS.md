@@ -162,6 +162,35 @@ npm run preview            # serve the production build
 - **Docs-first for direction:** if a change contradicts `product.md`/`design.md`, update
   the doc in the same change or flag it — don't fork the truth in code.
 
+## Testing (mandatory)
+
+**Every implementation ships with tests in the same change.** There is no "tests later".
+This applies to new features, bug fixes, refactors, config/build changes that alter behavior,
+and any other code change that can regress. A change without tests is not done.
+
+- **Frontend (`frontend/`):** Vitest + React Testing Library (`jsdom`). Colocate tests as
+  `*.test.ts` / `*.test.tsx` next to the source they cover. Mock TanStack Router's `Link`,
+  `useLocation`, and `useParams` to render components in isolation (see
+  `src/components/PostCard.test.tsx`, `src/routes/-screens.test.tsx`). Cover the happy path,
+  visible states/disabled states, and user interactions (typing, clicking chips/tabs/buttons).
+  Run `just frontend::test`.
+- **Backend (`backend/`):** JUnit + MockMvc integration tests against Testcontainers MySQL
+  (hermetic). Cover success, validation/authorization failures, boundary cases, and GraphQL
+  `errors[]` extensions where relevant. Add or update a test for every endpoint/resolver or
+  service-rule change. Run `just backend::test`.
+- **Shared helpers/pure logic:** these are the easiest tests to write — extract a predicate
+  or mapper and unit-test it directly (e.g. `src/lib/public-paths.test.ts`). Do not hide
+  behavior inside a component just because it is hard to test.
+- **What a test must prove:** the new behavior works; the old behavior it replaced does not
+  regress; error and empty states are handled; accessibility-relevant labels/roles where the
+  UI changed. Assert on observable output, never on implementation details.
+- **Bug fixes:** write a failing test that reproduces the bug first, then make it pass. The
+  regression test stays in the suite permanently.
+- **Verification:** run `just verify` (tests + builds) before claiming done; the pre-push hook
+  installed by `just bootstrap` enforces this. Never disable or skip it without saying so.
+- **Docs-only changes** (markdown, specs, AGENTS.md updates) are exempt from code tests, but
+  still run `just verify` when the docs describe shipped behavior.
+
 ## Guardrails
 
 - Never commit secrets (`application.properties` with real credentials, `.env`, keys).
@@ -182,10 +211,13 @@ npm run preview            # serve the production build
 
 ## Definition of done for a change
 
-1. Backend: `./mvnw test` green; migration (if any) is forward-only and reversible by a
+1. Tests written and committed for the change (see "Testing (mandatory)" above), including a
+   regression test for any bug fix. `just verify` is green — this runs backend + frontend
+   tests and both builds.
+2. Backend: `./mvnw test` green; migration (if any) is forward-only and reversible by a
    documented restore; OpenAPI/GraphQL schema updated where applicable.
-2. Frontend: `npm run build` clean; new UI verified in light/dark/auto; keyboard focus
+3. Frontend: `npm run build` clean; new UI verified in light/dark/auto; keyboard focus
    visible; tokens used, not magic values.
-3. Docs updated (`README.md`, `product.md`, `design.md`, this file) if behavior, scope, or
+4. Docs updated (`README.md`, `product.md`, `design.md`, this file) if behavior, scope, or
    decisions changed.
-4. No secrets, no generated files in the diff.
+5. No secrets, no generated files in the diff.

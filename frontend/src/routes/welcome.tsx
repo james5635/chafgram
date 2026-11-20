@@ -4,7 +4,7 @@ export const Route = createFileRoute('/welcome')({
   component: Welcome,
 })
 
-function Welcome() {
+export function Welcome() {
   return (
     <main className="min-h-screen px-4 py-4 sm:py-6 bg-[#eaf1ff]">
       <section className="island-shell rise-in relative overflow-hidden rounded-[2rem] mx-auto max-w-[1500px] min-h-[calc(100vh-4rem)]">

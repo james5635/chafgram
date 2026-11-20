@@ -14,7 +14,7 @@ const CHIPS = [
   { label: 'Poll', color: '#4f46e5', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8v8M10 4v12M15 10v6M20 6v10"/></svg>' },
 ] as const
 
-function Compose() {
+export function Compose() {
   const [body, setBody] = useState('')
 
   return (

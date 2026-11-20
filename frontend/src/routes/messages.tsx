@@ -19,7 +19,7 @@ const MESSAGES = [
   { from: 'them', text: "Great! Let's catch up soon.", time: '10:26 AM' },
 ]
 
-function Messages() {
+export function Messages() {
   return (
     <AppShell>
       <div className="page-wrap px-4 pb-8 pt-6">

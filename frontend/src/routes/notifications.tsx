@@ -19,7 +19,7 @@ const ITEMS = [
   { actor: 'Chanha', action: 'mentioned you in a comment', target: '', time: '2h ago', unread: false, initials: 'CH', thumb: THUMB },
 ]
 
-function Notifications() {
+export function Notifications() {
   const unreadCount = ITEMS.filter((i) => i.unread).length
 
   return (
