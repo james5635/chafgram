@@ -348,7 +348,39 @@ Traceability: FR-1.6, FR-1.7, FR-7.3, design.md §6.
 
 ---
 
-## 12. Open questions (confirm with owner)
+## 13. Implementation mapping (mobile → frontend/src)
+
+| Spec section | Screen/component | Frontend file |
+|--------------|------------------|---------------|
+| §3 Global shell | Header | `src/components/Header.tsx` |
+| §3 Global shell | Bottom tab bar + FAB | `src/components/Footer.tsx` |
+| §4.1 Welcome | Welcome page | `src/routes/welcome.tsx` |
+| §4.2 Login | Login page | `src/routes/login.tsx` |
+| §5.1 Home feed | Home page | `src/routes/index.tsx` |
+| §5.1 Post card | Post card | `src/components/PostCard.tsx` |
+| §5.1 Composer | Composer | `src/components/Composer.tsx` |
+| §5.2 Explore / Watch | Explore page | `src/routes/explore.tsx` |
+| §5.3 Notifications | Notifications page | `src/routes/notifications.tsx` |
+| §5.4 Profile | Profile page | `src/routes/profile.\$username.tsx` |
+| §5.5 Messages list | Messages list | `src/routes/messages.tsx` |
+| §5.6 Messages thread | Message thread | `src/routes/messages.\$conversationId.tsx` |
+| §5.7 Create post | Compose page | `src/routes/compose.tsx` |
+| §5.8 Admin | Admin pages | *(not yet implemented — placeholder routes)* |
+| §5.9 Member settings | Settings page | `src/routes/settings.tsx` |
+| §6 Component library | Avatar | `src/components/Avatar.tsx` |
+| §6 Component library | Theme toggle | `src/components/ThemeToggle.tsx` |
+| §6 Component library | Footer | `src/components/Footer.tsx` |
+| §6 Component library | Utilities | `src/lib/utils.ts` |
+| §1 Design tokens | Token definitions | `src/styles.css` |
+| — | Route tree (generated) | `src/routeTree.gen.ts` |
+| — | Root shell | `src/routes/__root.tsx` |
+| — | Router | `src/router.tsx` |
+
+Tests: `src/components/Avatar.test.tsx`, `src/components/Composer.test.tsx`, `src/components/PostCard.test.tsx`, `src/test/setupTests.ts`, `vitest.config.ts`
+
+---
+
+## 14. Open questions (confirm with owner)
 
 1. IA: bottom tab bar (Home/Explore/+/Messages/Profile) vs top-tab or rail pattern on larger mobile (product.md Q1; design.md §13 #1, §14 #1).
 2. Watch: vertical shorts vs 16:9 inline player vs both (design.md §14 #2).

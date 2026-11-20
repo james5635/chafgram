@@ -409,7 +409,40 @@ This section lists every reusable component type used across web screens. Each e
 
 ---
 
-## 12. Open questions (confirm with owner)
+## 13. Implementation mapping (web → frontend/src)
+
+| Spec section | Screen/component | Frontend file |
+|--------------|------------------|---------------|
+| §3 Global shell | Header | `src/components/Header.tsx` |
+| §3 Global shell | LeftRail | `src/components/LeftRail.tsx` |
+| §3 Global shell | RightRail | `src/components/RightRail.tsx` |
+| §4.1 Welcome | Welcome page | `src/routes/welcome.tsx` |
+| §4.2 Login | Login page | `src/routes/login.tsx` |
+| §5.1 Home feed | Home page | `src/routes/index.tsx` |
+| §5.1.1 Post card | Post card | `src/components/PostCard.tsx` |
+| §5.1 Composer | Composer | `src/components/Composer.tsx` |
+| §5.2 Explore / Watch | Explore page | `src/routes/explore.tsx` |
+| §5.3 Notifications | Notifications page | `src/routes/notifications.tsx` |
+| §5.4 Profile | Profile page | `src/routes/profile.\$username.tsx` |
+| §5.5 Messages list | Messages list | `src/routes/messages.tsx` |
+| §5.6 Messages thread | Message thread | `src/routes/messages.\$conversationId.tsx` |
+| §5.7 Create post | Compose page | `src/routes/compose.tsx` |
+| §5.8 Admin | Admin pages | *(not yet implemented — placeholder routes)* |
+| §5.9 Member settings | Settings page | `src/routes/settings.tsx` |
+| §7 Component library | Avatar | `src/components/Avatar.tsx` |
+| §7 Component library | Theme toggle | `src/components/ThemeToggle.tsx` |
+| §7 Component library | Footer | `src/components/Footer.tsx` |
+| §7 Component library | Utilities | `src/lib/utils.ts` |
+| §1 Design tokens | Token definitions | `src/styles.css` |
+| — | Route tree (generated) | `src/routeTree.gen.ts` |
+| — | Root shell | `src/routes/__root.tsx` |
+| — | Router | `src/router.tsx` |
+
+Tests: `src/components/Avatar.test.tsx`, `src/components/Composer.test.tsx`, `src/components/PostCard.test.tsx`, `src/test/setupTests.ts`, `vitest.config.ts`
+
+---
+
+## 14. Open questions (confirm with owner)
 
 1. Final IA: left rail vs top tabs for Feed · Watch · Messages · Notifications (product.md Q1; design.md §13 #1, §14 #1).
 2. Right rail ("Who to follow"/"Trending") ships in v1 or behind a flag — discover feed on/off default (BR-12 #2).
