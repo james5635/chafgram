@@ -23,6 +23,8 @@ docs/architecture.md  Architecture (system design)
 docs/development-workflow.md  Setup, dev loop, DB, testing, verification
 product.md  Product definition (what/who/why, goals, non-goals)
 design.md   Design system (tokens, components, motion, a11y)
+docs/web-ui.md   Complete web UI spec (wireframe + component what/where/how)
+docs/mobile-ui.md Complete mobile UI spec (wireframe + component what/where/how)
 README.md   Human-facing overview and quick start
 .agents/    Agent tooling/skills — tracked in the repo, dev-only, never shipped
 ```
