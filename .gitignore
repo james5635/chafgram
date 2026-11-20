@@ -10,3 +10,5 @@ backend/media-data/
 # OS junk
 .DS_Store
 Thumbs.db
+
+.tmp
