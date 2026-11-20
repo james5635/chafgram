@@ -82,7 +82,7 @@ right notification bell with unread badge (FR-7.2) + theme/overflow. Background
   reference frames.
 
 **Tablet (641–1023px):** same single-column pattern but wider content; may expose the web
-left rail or keep bottom tabs — confirm IA with owner (product.md Q1; design.md §14 #1).
+left rail or keep bottom tabs — confirm IA with owner (product.md Q1; design.md §13 #1).
 
 ---
 
@@ -293,7 +293,7 @@ Traceability: FR-1.6, FR-1.7, FR-7.3, design.md §6.
 
 | State | Treatment |
 |-------|-----------|
-| Loading | `sand`/`foam` shimmer skeletons (no spinners; design.md §13) |
+| Loading | `sand`/`foam` shimmer skeletons (no spinners; design.md §13 #6) |
 | Empty | Empty-state pattern: kicker + one line + one action |
 | Error | `.demo-alert` tinted, 1rem radius, path forward (never bare code) |
 | Success | Brand/lagoon tinted confirmation; auto-dismiss toast (proposal, design.md §8) |
@@ -306,8 +306,8 @@ Traceability: FR-1.6, FR-1.7, FR-7.3, design.md §6.
 | Breakpoint | Layout |
 |------------|--------|
 | Mobile ≤ 640px | Single column, bottom tab bar (Home/Explore/+/Messages/Profile), header search may tuck into menu, story row horizontally scrollable |
-| Tablet 641–1023px | Same single-column pattern but wider content; may expose web left rail or keep bottom tabs — confirm IA with owner (product.md Q1; design.md §14 #1) |
-| Dark mode | Re-lit scene (design.md §6); tested in light/dark/auto; watch view may use pure `--bg-base` theater or lifted surface (design.md §14 #6) |
+| Tablet 641–1023px | Same single-column pattern but wider content; may expose web left rail or keep bottom tabs — confirm IA with owner (product.md Q1; design.md §13 #1) |
+| Dark mode | Re-lit scene (design.md §6); tested in light/dark/auto; watch view may use pure `--bg-base` theater or lifted surface (design.md §14 #5) |
 
 ---
 
@@ -382,10 +382,10 @@ Tests: `src/components/Avatar.test.tsx`, `src/components/Composer.test.tsx`, `sr
 
 ## 14. Open questions (confirm with owner)
 
-1. IA: bottom tab bar (Home/Explore/+/Messages/Profile) vs top-tab or rail pattern on larger mobile (product.md Q1; design.md §13 #1, §14 #1).
-2. Watch: vertical shorts vs 16:9 inline player vs both (design.md §14 #2).
+1. IA: bottom tab bar (Home/Explore/+/Messages/Profile) vs top-tab or rail pattern on larger mobile (product.md Q1; design.md §13 #1).
+2. Watch: vertical shorts vs 16:9 inline player vs both (design.md §14 #1).
 3. Discover/"Trending" on or off by default for new workspaces (BR-12 #2).
-4. Brand mark + favicon/app icons (design.md §14 #3).
+4. Brand mark + favicon/app icons (design.md §14 #2).
 5. Welcome screen: direct "open" signup or strictly invite acceptance (BR-1.5 — `open` never means internet-public).
 6. Admin surface scope on mobile and which routes are `moderator`-visible vs `admin`-only.
 

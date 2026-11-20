@@ -328,7 +328,7 @@ Traceability: FR-1.6, FR-1.7, FR-7.3, design.md §6.
 
 | State | Treatment |
 |-------|-----------|
-| Loading | `sand`/`foam` shimmer skeletons (no spinners; design.md §13) |
+| Loading | `sand`/`foam` shimmer skeletons (no spinners; design.md §13 #6) |
 | Empty | Empty-state pattern: kicker + one line + one action |
 | Error | `.demo-alert` tinted, 1rem radius, path forward (never bare code) |
 | Success | Lagoon/brand tinted confirmation; auto-dismiss toast (proposal, design.md §8) |
@@ -444,12 +444,12 @@ Tests: `src/components/Avatar.test.tsx`, `src/components/Composer.test.tsx`, `sr
 
 ## 14. Open questions (confirm with owner)
 
-1. Final IA: left rail vs top tabs for Feed · Watch · Messages · Notifications (product.md Q1; design.md §13 #1, §14 #1).
+1. Final IA: left rail vs top tabs for Feed · Watch · Messages · Notifications — resolved for web (rail) per design.md §13 #1; still open for tablet.
 2. Right rail ("Who to follow"/"Trending") ships in v1 or behind a flag — discover feed on/off default (BR-12 #2).
 3. "Join Chafgram today" card copy: private/invite-only default (BR-1.5) conflicts with public signup framing — confirm copy.
-4. Brand mark for Chafgram (current dot is placeholder; design.md §14 #3).
-5. Watch: vertical shorts vs 16:9 inline player vs both (design.md §14 #2).
-6. Dark-mode watch view: pure `--bg-base` theater or lifted surface (design.md §14 #6).
+4. Brand mark for Chafgram (the rail's white "C" disc is a placeholder; design.md §14 #2).
+5. Watch: vertical shorts vs 16:9 inline player vs both (design.md §14 #1).
+6. Dark-mode watch view: pure `--bg-base` theater or lifted surface (design.md §14 #5).
 7. Admin surface scope and which routes are `moderator`-visible vs `admin`-only.
 
 ---

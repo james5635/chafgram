@@ -4,6 +4,13 @@
 > product UI (the `frontend/` app). It is grounded in the visual language already present in
 > the codebase and extends it for the full product. Decisions not covered here should be
 > made to be consistent with this document, then added to it.
+>
+> **Status & related docs.** This is the *system* (tokens, principles, components). The
+> screen-by-screen contracts — wireframes plus what/where/how for every control — live in
+> [`docs/web-ui.md`](docs/web-ui.md) and [`docs/mobile-ui.md`](docs/mobile-ui.md). Where this
+> doc names a concrete value, that value is the one currently in `frontend/src/styles.css`;
+> proposals are marked *(proposal)*. Member surfaces are implemented; admin surfaces are
+> still mocked.
 
 ## 1. Design intent
 
@@ -14,27 +21,32 @@ Chafgram is a private social platform for companies. Its design must do two jobs
 2. **Reassure the buyer** — companies trust what looks deliberate, stable, and under
    control. No gimmicks, no dark patterns, no growth-hack chrome.
 
-The existing identity — a deep-sea, lagoon-and-palm palette, editorial serif display type
-paired with a friendly grotesque — already does this. Chafgram keeps and evolves it; it is
-not replaced.
+The original identity was a deep-sea, lagoon-and-palm palette with editorial serif display
+type. The shipped member UI (following the `web-ui.webp` / `mobile-ui.webp` references) keeps
+that calm, human character but promotes a **clear brand blue** as the primary interactive
+colour. Lagoon and palm remain as supporting accents and in the atmospheric moments — they
+are not discarded, but they no longer carry primary actions.
 
-**One line:** *calm, tidal, human — the internal social space that feels like a well-kept
-harbor, not a public square.*
+**One line:** *calm, clear, human — the internal social space that feels like a well-kept
+harbor, not a public square* — with brand blue as the signal of "you can act here."
 
 ## 2. Principles
 
-1. **Calm over loud.** Soft gradients, generous spacing, low-contrast surfaces. Attention
-   is earned by content, not by color or motion.
-2. **Editorial, not corporate.** Fraunces gives headlines a literary, considered voice;
-   Enterprise UI should not whisper "mandatory training."
+1. **Calm over loud.** Generous spacing, low-contrast surfaces, a clean canvas. Attention is
+   earned by content, not by colour or motion.
+2. **Editorial, not corporate.** Fraunces gives headlines a literary, considered voice; the
+   app should not whisper "mandatory training."
 3. **One idea per screen.** Every view has a single primary action or a single reading
    focus; secondary actions recede.
-4. **Depth through light, not lines.** Surfaces are separated by translucency, blur, and
-   soft shadow — never by heavy borders or boxes.
-5. **Motion is tidal.** Gentle, decelerating, brief. Nothing bounces; nothing snaps.
-6. **Accessible by default.** 4.5:1 text contrast, visible focus, reduced-motion support,
+4. **Depth through light, not lines.** Surfaces are separated by translucency, a hairline,
+   and soft shadow — never by heavy borders or boxes.
+5. **Blue means action.** Brand blue marks the one thing you can do on a surface: the
+   primary button, the active nav item, a link, an unread badge. Everything else is ink or
+   neutral. See the **Blue Means Action Rule** (§5).
+6. **Motion is tidal.** Gentle, decelerating, brief. Nothing bounces; nothing snaps.
+7. **Accessible by default.** 4.5:1 text contrast, visible focus, reduced-motion support,
    keyboard-navigable everything.
-7. **Light and dark are equal citizens.** Dark mode is not an inversion; it is a
+8. **Light and dark are equal citizens.** Dark mode is not an inversion; it is a
    re-lit scene (see §6).
 
 ## 3. Voice & copy
@@ -47,6 +59,8 @@ harbor, not a public square.*
 - Errors say what happened and what to do next; never a bare code without a path forward.
 - Empty states invite action ("Nothing here yet — be the first to post") rather than
   apologizing.
+- UI copy for the shipped screens is enumerated in [`docs/web-ui.md`](docs/web-ui.md) §4–§5
+  and [`docs/mobile-ui.md`](docs/mobile-ui.md) §4–§5.
 
 ## 4. Typography
 
@@ -66,6 +80,8 @@ Rules:
   lead `1.125–1.25rem` · h2 `~1.25rem` · h1 `clamp(2.25rem, 4vw + 1rem, 3.75rem)` with
   `line-height ≈ 1.02–1.05`.
 - `.display-title` (repo utility class) applies the serif; use it for h1-level moments.
+- Link colour is `inherit` globally — components own their text colour. Never rely on the
+  UA/default underline; make interactive text distinguishable by weight or colour.
 
 ## 5. Color system
 
@@ -77,10 +93,13 @@ raw hex, in components.
 
 | Token | Value | Role |
 |-------|-------|------|
+| `--brand` | `#2563eb` | **Primary interactive** — filled buttons, active nav, unread badges, focus |
+| `--brand-dark` | `#1d4ed8` | Brand hover/active state; link text |
+| `--brand-light` | `#eff6ff` | Active nav wash, subtle brand surfaces |
 | `--sea-ink` | `#173a40` | Primary text (deep sea slate) |
 | `--sea-ink-soft` | `#416166` | Secondary text, icons |
-| `--lagoon` | `#4fb8b2` | Accent — links, highlights, focus washes |
-| `--lagoon-deep` | `#328f97` | Accent strong — link text, active states |
+| `--lagoon` | `#4fb8b2` | Supporting accent — focus washes, secondary highlights |
+| `--lagoon-deep` | `#328f97` | Supporting accent strong; legacy focus ring on `.demo-input` |
 | `--palm` | `#2f6a4a` | Deep green — kickers, brand gradient end |
 | `--sand` | `#e7f0e8` | Warm neutral base |
 | `--foam` | `#f3faf5` | Near-white green-tinted surface |
@@ -91,17 +110,18 @@ raw hex, in components.
 | `--kicker` | `rgba(47,106,74,0.9)` | Eyebrow text |
 | `--header-bg` | `rgba(251,255,248,0.84)` | Sticky header (backdrop-blur) |
 | `--chip-bg` / `--chip-line` | `rgba(255,255,255,0.8)` / `rgba(47,106,74,0.18)` | Pills, brand chip |
-| `--hero-a` / `--hero-b` | `rgba(79,184,178,0.36)` / `rgba(47,106,74,0.2)` | Background washes |
+| `--hero-a` / `--hero-b` | `rgba(79,184,178,0.36)` / `rgba(47,106,74,0.2)` | Background washes (marketing/welcome only — see below) |
 | `--inset-glint` | `rgba(255,255,255,0.82)` | Inner top highlight on shells |
 
 ### Dark
 
 | Token | Value | Role |
 |-------|-------|------|
+| `--brand` / `--brand-dark` / `--brand-light` | *inherited from light* (`#2563eb` / `#1d4ed8` / `#eff6ff`) | Brand tokens are currently mode-agnostic; see §14 for the dark link-contrast follow-up |
 | `--sea-ink` | `#d7ece8` | Primary text |
 | `--sea-ink-soft` | `#afcdc8` | Secondary text |
-| `--lagoon` | `#60d7cf` | Accent (lifted for dark) |
-| `--lagoon-deep` | `#8de5db` | Accent strong |
+| `--lagoon` | `#60d7cf` | Supporting accent (lifted for dark) |
+| `--lagoon-deep` | `#8de5db` | Supporting accent strong |
 | `--palm` | `#6ec89a` | Lifted palm |
 | `--sand` / `--foam` | `#0f1a1e` / `#101d22` | Neutrals (near-black green) |
 | `--bg-base` | `#0a1418` | Page background |
@@ -115,19 +135,29 @@ raw hex, in components.
 
 ### Background construction
 
-`body` layers, in order: two large radial washes (`--hero-a` top-left, `--hero-b`
-top-right), a faint lagoon wash at the bottom center, then a vertical
-`sand → foam → bg-base` gradient; plus a `body::before` aurora (three soft radial
-glows, opacity 0.28) and a `body::after` blueprint grid (28px, masked to fade by 78%
-radial). Dark mode re-lights the same structure with lower-opacity teal glows. Do not
-add busy patterns; the atmosphere should read as weather, not wallpaper.
+The shipped member app uses a **flat, clean canvas**: `body` is `#f4f6fb` with no aurora
+and no blueprint grid. Depth comes from the shells, not from wallpaper. The ambient
+radial washes (`--hero-a` / `--hero-b`) and `body::before` / `body::after` effects belong to
+**marketing, welcome, and login** surfaces only — add them locally to those surfaces, do not
+restore them globally. *(The starter template originally applied them to `body`; that was
+removed when the member UI was built.)*
+
+**The Flat Canvas Rule.** Member screens are flat at rest. If a surface needs atmosphere,
+scope the gradient to that component — never to `body`.
 
 ### Status colors *(proposal)*
 
 Success → palm family; warning → amber (`rgba(193,126,42,…)` as used in `.demo-alert`);
 danger → `#c44747` family (`rgba(196,71,71,…)`, text `#9f3030` light / lifted in dark);
-info → lagoon. All status UI uses tinted backgrounds at ~10% alpha with matching 30% alpha
+info → brand blue. All status UI uses tinted backgrounds at ~10% alpha with matching 30% alpha
 borders, never solid fills.
+
+### Color hierarchy
+
+**The Blue Means Action Rule.** Brand blue marks the single primary action on a surface —
+filled button, active nav item, link, or unread badge. If everything is blue, nothing is.
+Lagoon and palm are supporting: focus washes, kickers, ambient moments, and status. Never
+use blue for static text or decoration.
 
 ## 6. Theming
 
@@ -142,6 +172,17 @@ borders, never solid fills.
 
 - **Content column:** `.page-wrap` — `min(1080px, 100% - 2rem)`, centered. Wide canvases
   (tables, video grids) may extend to 1280px as `.demo-page-wide` does.
+- **App shell (web):** three columns — a fixed `w-64` left rail (`LeftRail`), a fluid content
+  column offset by `lg:pl-64`, and a `w-80` right rail (`RightRail`) shown at `lg` and up.
+  The sticky header sits above the content region and is also offset by `lg:pl-64`.
+- **Left rail:** brand chip + wordmark; nav links Home · Explore · Messages · Notifications
+  · Profile · More with unread badges; bottom "Create Post" pill and the tagline
+  "Connect. Share. Belong." Active item uses `--brand-light` background + `--brand-dark`
+  text; inactive uses `--sea-ink-soft`.
+- **Right rail:** Who to follow · Trending · Join card. Hidden below `lg` so the feed stays
+  readable on tablet.
+- **Mobile shell:** single column with a fixed bottom tab bar (Home · Explore · `+` ·
+  Messages · Profile), 44px+ targets and safe-area insets. See `docs/mobile-ui.md` §3.
 - **Shells:** `.island-shell` — 1px `--line` border, `165deg` gradient from
   `--surface-strong` to `--surface`, inner `--inset-glint` top highlight, two-layer soft
   shadow (`0 22px 44px rgba(30,90,72,0.1)` + `0 6px 18px rgba(23,58,64,0.08)`), `blur(4px)`.
@@ -149,36 +190,40 @@ borders, never solid fills.
 - **Spacing rhythm:** 4/8 base; section gaps 2rem (`mt-8`); shell padding 1.5rem → 2.5rem
   responsive; page gutters 1rem.
 - **Hero pattern:** eyebrow kicker → display-title (max ~3xl lines) → lead paragraph →
-  pill-shaped CTA row (primary tonal lagoon pill; secondary ghost pill). Two ambient radial
-  glows clipped inside the shell (`-left-20 -top-24` style), pointer-events none.
+  pill-shaped CTA row (primary brand pill; secondary ghost pill). Two ambient radial
+  glows clipped inside the shell (`-left-20 -top-24` style), pointer-events none — welcome
+  and login only.
 - **Feature grids:** 2×2 on `sm`, 4-up on `lg`; each cell an `.island-shell.feature-card`
   with hover lift (`translateY(-2px)`) and lagoon border-mix.
-- **Sticky header:** blur backdrop, hairline bottom border, brand chip (rounded-full,
-  pulsing two-tone dot), left nav links with animated underline (`scaleX 0→1`), right
-  utility icons + theme toggle.
 
 ## 8. Components
 
 | Component | Spec |
 |-----------|------|
-| Brand chip | rounded-full, `chip-bg` + `chip-line`, dot `linear-gradient(90deg,#56c6be,#7ed3bf)` |
-| Nav link | `--sea-ink-soft`, underline 2px gradient `lagoon → #7ed3bf`, `scaleX` transition 170ms |
-| Button (primary) | rounded-full tonal lagoon (`rgba(79,184,178,0.14→0.24)` hover), `lagoon-deep` text, or `.demo-button` for form contexts |
+| Brand chip | `rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)]`; in the app rail the mark is a `h-8 w-8 rounded-full bg-[var(--brand)]` disc with a white "C" and a soft brand shadow |
+| Nav link (rail) | `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium`; active `bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold`; inactive `--sea-ink-soft`; badge is a brand-filled circle |
+| Button (primary) | `rounded-full border border-[var(--brand)] bg-[var(--brand)] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[var(--brand)]/30`; hover `--brand-dark`. `.demo-button` (tonal lagoon) remains for legacy form contexts |
 | Button (secondary) | transparent/ghost, `--sea-ink`, hover `--link-bg-hover` |
-| Card | `.island-shell`; hover only if interactive |
+| Card / post | `.island-shell rounded-[1.5rem] overflow-hidden border border-[var(--line)] bg-white shadow-sm`; header, body, media, interaction bar, action row |
+| Composer | `.island-shell rounded-[1.5rem]`; prompt row → `--line` divider → icon chips [Photo][Video][Feeling][Poll] + solid brand Post button |
 | Pill / tag | `.demo-pill` — rounded-full, chip tokens, 0.75rem 700 |
-| Input | `.demo-input` — 0.75rem radius, `--line` border, focus `lagoon-deep` border + 3px `lagoon` 24% ring |
+| Input | `.demo-input` — 0.75rem radius, `--line` border, focus `--lagoon-deep` border + 3px `--lagoon` 24% ring *(legacy; new inputs use `--brand` focus — migrate on touch)* |
 | Alert | `.demo-alert` tinted amber/red variants, 1rem radius |
 | Table | `.demo-table-shell` overflow-x; header `chip-bg`; row hover `lagoon` 8% |
+| Bottom tab bar | fixed, five destinations, active `--brand` icon + label, `--sea-ink-soft` inactive, safe-area inset |
 | Empty state | kicker + one line of guidance + one action; never a dead end |
 | Toast *(proposal)* | bottom-center, `surface-strong`, `--line` border, auto-dismiss 4s |
+
+Per-component what/where/how detail lives in [`docs/web-ui.md`](docs/web-ui.md) §7 and
+[`docs/mobile-ui.md`](docs/mobile-ui.md) §6.
 
 ## 9. Motion
 
 - **Entrance:** `.rise-in` — 700ms `cubic-bezier(0.16,1,0.3,1)`, `translateY(12px) + fade`,
   staggered ~90ms per sibling.
 - **Hover/press:** 180ms `ease` on background/color/border/transform; lifts ≤ 2px.
-- **Nav underline:** 170ms `ease`, `scaleX` from left.
+- **Nav active state:** instant pill background/colour change (no sliding underline in the
+  rail pattern); the legacy `.nav-link` underline remains for horizontal top-nav contexts.
 - **Global:** interactive elements transition `background-color, color, border-color,
   transform` 180ms ease (see `styles.css` catch-all).
 - **Rules:** no springs/bounce; no parallax; durations ≤ 700ms; everything must respect
@@ -189,12 +234,14 @@ borders, never solid fills.
 
 - Text contrast ≥ 4.5:1 (tokens above satisfy this on their intended surfaces); large
   display type ≥ 3:1.
-- Visible focus: 3px `lagoon` 24% ring on inputs; equivalent `:focus-visible` outline on
-  all interactive elements — never `outline: none` without a replacement.
+- Visible focus: 3px `--lagoon` 24% ring on legacy inputs; 3px `--brand` 24% ring on new
+  inputs; equivalent `:focus-visible` outline on all interactive elements — never
+  `outline: none` without a replacement.
 - Icons that carry meaning have `aria-label` (e.g. theme toggle announces current mode);
   decorative icons `aria-hidden`.
-- Touch targets ≥ 44px on mobile; nav wraps to a second row at ≤ 640px (existing pattern).
-- Color is never the only signal (status pills pair tint + text).
+- Touch targets ≥ 44px on mobile; nav wraps to a second row at ≤ 640px where a horizontal
+  nav is used.
+- Colour is never the only signal (status pills pair tint + text; unread pairs badge + text).
 - Reduced motion honored (§9). Document language `en` is set on `<html>`.
 
 ## 11. Iconography & imagery
@@ -202,50 +249,70 @@ borders, never solid fills.
 - Stroke icons, 1.5px, round caps/joins; 16–24px grid; currentColor. (X/GitHub brand glyphs
   in header/footer are filled exceptions.)
 - Avatars: circular, `--line` ring, initials fallback on `shell`-toned fill; sizes
-  24/32/40/56.
+  24/32/40/56. Do not point `src` at a placeholder file that does not exist — omit `src`
+  so the initials fallback renders.
 - Imagery (video thumbnails, post media) is always user content; the UI never fabricates
-  stock photography. Placeholders are tonal lagoon/sand gradients with a centered glyph.
+  stock photography. Placeholders are inline SVG gradients or tonal lagoon/sand fills with
+  a centred glyph (`src/lib/placeholders.ts`), never remote URLs that render blank offline.
 
 ## 12. Do / Don't
 
 **Do**
 - Reach for tokens; add a new token before adding a new raw value.
-- Keep shells floating on the ambient background; let content breathe.
+- Use brand blue for the one primary action on a surface (§5 Blue Means Action Rule).
+- Keep shells floating on the flat canvas; let content breathe.
 - Use kickers + display type to establish hierarchy on every new surface.
 - Test every component in light, dark, and auto.
 
 **Don't**
-- Don't introduce a third accent hue; lagoon + palm carry the brand.
+- Don't paint blue onto static text or decoration; it is an action signal.
 - Don't use pure black/white (`#000`/`#fff`) text; use `--sea-ink` / `--foam`.
 - Don't stack heavy shadows or borders; if a divider is needed, `--line` hairline only.
+- Don't restore the starter aurora/grid to `body` (§5 Flat Canvas Rule).
 - Don't use Fraunces below ~1.25rem.
 - Don't animate layout properties (width/height/top); transform and opacity only.
 - Don't put admin-only jargon in member-facing copy.
+- Don't rely on external image URLs for mock UI; generate local SVG placeholders.
 
-## 13. Applying this to the product (evolution)
+## 13. Applying this to the product (current state)
 
-The current app is the starter shell; the product builds on it as follows:
+The member-facing UI is implemented in `frontend/src/` as UI-only screens (mock data, no
+backend connection). It follows this system as follows:
 
-1. **Shell → App shell.** Header gains workspace identity (company logo/name slot, member
-   avatar menu); footer stays minimal. Left rail or top tabs for Feed · Watch · Messages ·
-   Notifications — final pattern to be prototyped before committing.
-2. **Feed.** Single-column `page-wrap` list of `island-shell` posts; video posts open an
-   immersive watch view (dark-first by design).
-3. **Compose.** Modal or dedicated route; one primary action ("Post"); video upload shows
-   progress inline.
-4. **Admin console.** Same tokens, denser layout, `.demo-table` patterns; clearly separated
-   from member surfaces.
-5. **Empty/loading/error states** follow §8; skeletons use `sand`/`foam` shimmer, never
+1. **Shell → app shell (done).** Sticky header + fixed left rail + content column + right
+   rail on web; bottom tab bar on mobile. The rail-vs-tabs IA question is resolved for web;
+   mobile keeps the bottom bar.
+2. **Feed (done).** Composer + reverse-chronological post cards in `.island-shell` cards;
+   media is locally generated SVG; video posts will open an immersive watch view later.
+3. **Compose (done).** Dedicated `/compose` route (mobile: bottom sheet); one primary
+   "Post"; video upload shows progress inline when wired to the backend.
+4. **Auth (done).** `/welcome` and `/login` use the ambient hero treatment scoped to those
+   pages; passkey-first with password fallback.
+5. **Admin console (not yet implemented).** Same tokens, denser layout, `.demo-table`
+   patterns; clearly separated from member surfaces.
+6. **Empty/loading/error states** follow §8; skeletons use `sand`/`foam` shimmer, never
    spinners for content regions.
-6. **What stays:** the token set, the background atmosphere, `island-shell`, `rise-in`,
-   nav underline, theme toggle, Fraunces/Manrope pairing — these are the brand.
+7. **What stays:** the token set, the flat canvas, `island-shell`, `rise-in`, theme toggle,
+   Fraunces/Manrope pairing — these are the brand.
+
+Screen contracts: [`docs/web-ui.md`](docs/web-ui.md) and [`docs/mobile-ui.md`](docs/mobile-ui.md).
 
 ## 14. Open questions
 
-1. Final information architecture for the member shell (rail vs. top tabs) — needs a
-   prototype pass.
-2. Watch experience: vertical shorts vs. 16:9 inline player vs. both.
-3. Brand mark for Chafgram (current dot is a placeholder); favicon/app icons.
-4. Whether the marketing/landing page (if any) shares this system or gets its own.
-5. Density preference for admin tables and data-heavy views.
-6. Dark-mode watch view: pure `--bg-base` or lifted surface for the theater.
+1. Watch experience: vertical shorts vs. 16:9 inline player vs. both.
+2. Brand mark for Chafgram (the rail's white "C" disc is a placeholder); favicon/app icons.
+3. Whether the marketing/landing page (if any) shares this system or gets its own.
+4. Density preference for admin tables and data-heavy views.
+5. Dark-mode watch view: pure `--bg-base` or lifted surface for the theater.
+6. **Dark-mode brand link contrast.** `--brand*` tokens are currently mode-agnostic;
+   `--brand-dark` (`#1d4ed8`) on a dark surface is low contrast for link text. Introduce a
+   lifted `--brand-link` token for text links in dark mode (keep `--brand` for filled
+   buttons, whose white text needs the deeper blue), then migrate `text-[var(--brand-dark)]`
+   usages. *(Resolved in doc as follow-up; not yet in code.)*
+7. Legacy `.demo-input` still uses a lagoon focus ring while new inputs use brand — migrate
+   the utility to `--brand` for consistency.
+
+---
+
+*Related:* [`product.md`](product.md) · [`docs/web-ui.md`](docs/web-ui.md) ·
+[`docs/mobile-ui.md`](docs/mobile-ui.md) · [`docs/architecture.md`](docs/architecture.md)
