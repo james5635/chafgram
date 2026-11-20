@@ -31,16 +31,11 @@ describe('Composer', () => {
     expect(screen.getByRole('button', { name: 'Post' })).toBeDisabled()
   })
 
-  it('toggles a chip selected state when clicked', () => {
+  it('renders chips as static buttons (not toggleable)', () => {
     render(<Composer member={MEMBER} />)
 
     const photoChip = screen.getByRole('button', { name: 'Photo' })
-    expect(photoChip).not.toHaveClass('bg-[var(--chip-bg)]')
-
-    fireEvent.click(photoChip)
-    expect(photoChip).toHaveClass('bg-[var(--chip-bg)]')
-
-    fireEvent.click(photoChip)
+    expect(photoChip).toHaveClass('bg-white')
     expect(photoChip).not.toHaveClass('bg-[var(--chip-bg)]')
   })
 

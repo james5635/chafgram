@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import Composer from '../components/Composer'
 import PostCard from '../components/PostCard'
+import LeftRail from '../components/LeftRail'
+import RightRail from '../components/RightRail'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -31,35 +33,29 @@ const POSTS = [
     shares: 6,
     edited: false,
   },
-  {
-    id: '3',
-    author: { name: 'Mey', username: 'mey', avatar: undefined, initials: 'MY' },
-    createdAt: '6h ago',
-    body: 'Just shipped the new onboarding flow. What do you think?',
-    media: [
-      { url: 'https://images.unsplash.com/photo-1460925895917-afc68e22c688?w=800&q=80', alt: 'Laptop on desk' },
-      { url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80', alt: 'Code on screen' },
-    ],
-    reactions: { count: 156 },
-    comments: 28,
-    shares: 9,
-    edited: true,
-  },
 ]
 
 function Home() {
   return (
-    <main className="page-wrap px-4 pb-8 pt-14">
-      <Composer member={MEMBER} />
+    <div className="flex min-h-[calc(100vh-14rem)]">
+      <LeftRail />
 
-      <section className="mt-8 space-y-6">
-        {POSTS.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
-        <div className="h-24 flex items-center justify-center">
-          <p className="text-[var(--sea-ink-soft)] text-sm">End of feed</p>
+      <div className="flex-1 pt-4 sm:pt-6">
+        <div className="page-wrap px-4 pb-8">
+          <Composer member={MEMBER} />
+
+          <section className="mt-8 space-y-6">
+            {POSTS.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+            <div className="h-24 flex items-center justify-center">
+              <p className="text-[var(--sea-ink-soft)] text-sm">End of feed</p>
+            </div>
+          </section>
         </div>
-      </section>
-    </main>
+      </div>
+
+      <RightRail />
+    </div>
   )
 }
