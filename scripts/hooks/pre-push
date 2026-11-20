@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Chafgram pre-push hook — runs the full verification suite before a push.
+#
+# Installed by `just bootstrap` (the source lives in scripts/hooks/pre-push).
+# To skip deliberately: git push --no-verify
+set -euo pipefail
+
+if ! command -v just >/dev/null 2>&1; then
+  echo "pre-push: 'just' not found on PATH — install it, or use 'git push --no-verify'" >&2
+  exit 1
+fi
+
+echo "==> pre-push: just verify (tests + build)"
+just verify

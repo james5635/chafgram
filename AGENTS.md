@@ -17,6 +17,7 @@ backend/    Spring Boot 4 (Java 21) service — Maven wrapper, package io.github
 frontend/   TanStack Start (React 19, Vite, Tailwind v4) app — file-based routing
 compose.yaml  Local dev MySQL 8.0 (dev-only throwaway credentials)
 config/     Dev service config (Garage object-storage config)
+scripts/hooks/pre-push  Tracked git hook source (installed by just bootstrap)
 docs/functional-requirements.md  Functional requirements (FR)
 docs/business-rules.md  Business rules (BR)
 docs/architecture.md  Architecture (system design)
@@ -39,7 +40,9 @@ may depend on it, and it must not be bundled into deployable artifacts (jar,
 A `justfile` at the repo root wraps common dev tasks — `just` lists them,
 `just dev` runs backend + frontend (run `just mysql` first for the database), `just test` runs the test suites, `just verify` runs just test + just build.
 Per-package recipes live in `backend/justfile` and `frontend/justfile` — `just install`
-is a root alias for `backend::install` + `frontend::install`. The raw commands below remain the source of truth.
+is a root alias for `backend::install` + `frontend::install`. Run `just bootstrap` once after
+cloning to install the tracked pre-push hook (`scripts/hooks/pre-push`), which runs
+`just verify` before every push. The raw commands below remain the source of truth.
 
 ### Backend (`backend/`)
 

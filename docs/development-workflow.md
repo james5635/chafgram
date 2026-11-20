@@ -24,6 +24,7 @@ Package-specific recipes live in `backend/justfile` (`just backend::<recipe>`) a
 git clone <remote> chafgram && cd chafgram
 cp .env.example .env   # optional — compose/just load it; dev defaults work as-is
 just install           # backend (maven go-offline) + frontend (npm ci)
+just bootstrap         # install local git hooks (pre-push → just verify)
 just mysql             # start local MySQL 8.0, wait for healthy
 just seed              # WIPES dev DB, migrates, inserts full demo fixtures
 just dev               # backend :8080 + frontend :3000 (parallel; Ctrl-C stops both)
@@ -50,7 +51,8 @@ just dev               # backend :8080 + frontend :3000 (parallel; Ctrl-C stops 
    edit frontend → Vite hot-reloads.
 3. Explore the API with GraphiQL at `http://localhost:8080/graphiql` (dev only —
    disable in production profiles). All operations go through `POST /graphql`.
-4. Before you call it done: `just verify` (tests + build). Before pushing: same.
+4. Before you call it done: `just verify` (tests + build). Pushing runs the same check
+   automatically via the pre-push hook installed by `just bootstrap`.
 
 ## 4. Database & migrations
 
@@ -127,8 +129,15 @@ Frontend has no test runner yet (`just frontend::test` is a `--if-present` no-op
 
 ```bash
 just verify   # = just test + just build; run before every push / on a fresh clone
+just bootstrap  # one-time: install the pre-push hook from scripts/hooks/pre-push
 ```
 
+- **Pre-push hook:** `just bootstrap` copies the tracked
+  [`scripts/hooks/pre-push`](../scripts/hooks/pre-push) into `.git/hooks/pre-push`. The hook
+  runs `just verify` on every push, so a failing test or build blocks the push. It is
+  idempotent and will not overwrite an unrelated existing hook. Skip deliberately with
+  `git push --no-verify` (discouraged). Re-run `just bootstrap` after updating the hook
+  source; `.git/hooks/` itself is local and never committed.
 - All green: backend `Tests run: … Failures: 0`, frontend production build clean.
 - Docs-first: if your change contradicts `product.md` / `design.md`, update the doc in
   the same change or flag it — don't fork the truth in code.
@@ -136,7 +145,9 @@ just verify   # = just test + just build; run before every push / on a fresh clo
   `docs(docs): …`; types `feat|fix|docs|refactor|test|chore|build|ci` (full rule in
   [`AGENTS.md`](../AGENTS.md#conventions)).
 - Nothing generated gets committed: `backend/target/`, `frontend/.output/`, `dist/`,
-  `node_modules/`, `src/routeTree.gen.ts` (regenerated on dev/build) are all ignored.
+  `node_modules/` are all ignored. Exception: `frontend/src/routeTree.gen.ts` is generated
+  but **committed** — never hand-edit it; commit the regenerated file so type-safe routes
+  work on a fresh clone.
 
 ## 8. Common pitfalls
 

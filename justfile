@@ -17,6 +17,29 @@ default:
 # Install backend and frontend dependencies
 install: backend::install frontend::install
 
+# Install local git hooks (run once after cloning)
+# The hook source is tracked in scripts/hooks/; this copies it into .git/hooks/.
+bootstrap:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    hooks_dir="$(git rev-parse --git-path hooks)"
+    src="{{justfile_directory()}}/scripts/hooks/pre-push"
+    dest="$hooks_dir/pre-push"
+    mkdir -p "$hooks_dir"
+    if [ -e "$dest" ]; then
+      if cmp -s "$src" "$dest"; then
+        echo "pre-push: already installed"
+      else
+        echo "pre-push: $dest exists and differs from the repo hook; not overwriting" >&2
+        echo "         resolve it manually, then re-run 'just bootstrap'" >&2
+        exit 1
+      fi
+    else
+      install -m 755 "$src" "$dest"
+      echo "pre-push: installed -> $dest"
+    fi
+    echo "bootstrap complete — 'just verify' runs before every push"
+
 # Check local toolchain (JDK 21, Node, npm, Docker, ffmpeg)
 doctor:
     #!/usr/bin/env bash
