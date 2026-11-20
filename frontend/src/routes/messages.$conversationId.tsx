@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import Avatar from '../components/Avatar'
+import AppShell from '../components/AppShell'
 
 export const Route = createFileRoute('/messages/$conversationId')({
   component: MessageThread,
@@ -15,7 +16,8 @@ const MESSAGES = [
 
 function MessageThread() {
   return (
-    <main className="page-wrap px-4 pb-8 pt-14">
+    <AppShell>
+    <div className="page-wrap px-4 pb-8 pt-6">
       <header className="mb-6 flex items-center gap-3">
         <Link to="/messages" className="text-[var(--sea-ink-soft)] no-underline transition hover:text-[var(--sea-ink)]">
           <svg viewBox="0 0 16 16" className="h-5 w-5" aria-hidden="true"><path fill="currentColor" d="M11.25 4.75l-4 4 4 4 1.06-1.06L7.81 8.5l4.5-4.5-1.06-1.06z"/></svg>
@@ -67,6 +69,7 @@ function MessageThread() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
+    </AppShell>
   )
 }

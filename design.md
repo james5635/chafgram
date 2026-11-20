@@ -279,20 +279,26 @@ Per-component what/where/how detail lives in [`docs/web-ui.md`](docs/web-ui.md) 
 The member-facing UI is implemented in `frontend/src/` as UI-only screens (mock data, no
 backend connection). It follows this system as follows:
 
-1. **Shell → app shell (done).** Sticky header + fixed left rail + content column + right
-   rail on web; bottom tab bar on mobile. The rail-vs-tabs IA question is resolved for web;
-   mobile keeps the bottom bar.
+1. **Shell → app shell (done).** Sticky header + fixed left rail + content column + optional
+   right rail on web; bottom tab bar on mobile. `AppShell` provides the shared rail/offset.
+   The left rail ends with a user chip; the header and footer are hidden on public pages.
+   The rail-vs-tabs IA question is resolved for web; mobile keeps the bottom bar.
 2. **Feed (done).** Composer + reverse-chronological post cards in `.island-shell` cards;
    media is locally generated SVG; video posts will open an immersive watch view later.
-3. **Compose (done).** Dedicated `/compose` route (mobile: bottom sheet); one primary
-   "Post"; video upload shows progress inline when wired to the backend.
-4. **Auth (done).** `/welcome` and `/login` use the ambient hero treatment scoped to those
-   pages; passkey-first with password fallback.
-5. **Admin console (not yet implemented).** Same tokens, denser layout, `.demo-table`
+3. **Explore / Profile / Notifications / Messages (done).** Explore has a Suggested Topics
+   panel; Profile has a cover banner with About/Skills panels; Notifications has type tabs;
+   Messages is a two-pane list + thread.
+4. **Compose (done).** Dedicated `/compose` route (mobile: bottom sheet); two-column card
+   with a dashed drag-and-drop upload area; one primary "Post"; video upload shows progress
+   inline when wired to the backend.
+5. **Auth / landing (done).** `/welcome` is a full-viewport marketing card with its own nav,
+   hero, and illustration; `/login` is passkey-first with password fallback. Both use the
+   ambient hero treatment scoped to those pages (app chrome hidden).
+6. **Admin console (not yet implemented).** Same tokens, denser layout, `.demo-table`
    patterns; clearly separated from member surfaces.
-6. **Empty/loading/error states** follow §8; skeletons use `sand`/`foam` shimmer, never
+7. **Empty/loading/error states** follow §8; skeletons use `sand`/`foam` shimmer, never
    spinners for content regions.
-7. **What stays:** the token set, the flat canvas, `island-shell`, `rise-in`, theme toggle,
+8. **What stays:** the token set, the flat canvas, `island-shell`, `rise-in`, theme toggle,
    Fraunces/Manrope pairing — these are the brand.
 
 Screen contracts: [`docs/web-ui.md`](docs/web-ui.md) and [`docs/mobile-ui.md`](docs/mobile-ui.md).

@@ -1,11 +1,12 @@
 import { Link, useLocation } from '@tanstack/react-router'
+import Avatar from './Avatar'
 
 const navLinks = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/explore', label: 'Explore', icon: 'compass' },
   { to: '/messages', label: 'Messages', icon: 'message', badge: 3 },
   { to: '/notifications', label: 'Notifications', icon: 'bell', badge: 5 },
-  { to: '/profile/me', label: 'Profile', icon: 'user' },
+  { to: '/profile/$username', label: 'Profile', icon: 'user' },
   { to: '/more', label: 'More', icon: 'more' },
 ]
 
@@ -35,11 +36,14 @@ export default function LeftRail() {
 
       <nav className="flex-1 space-y-1">
         {navLinks.map((link) => {
-          const isActive = location.pathname === link.to
+          const isActive = link.to === '/profile/$username'
+            ? location.pathname.startsWith('/profile/')
+            : location.pathname === link.to
           return (
             <Link
               key={link.label}
               to={link.to}
+              params={link.to === '/profile/$username' ? { username: 'me' } : undefined}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition no-underline ${
                 isActive
                   ? '!bg-[var(--brand-light)] !text-[var(--brand-dark)] font-semibold'
@@ -73,9 +77,21 @@ export default function LeftRail() {
           </svg>
           Create Post
         </Link>
-        <p className="mt-8 text-[0.6875rem] text-[var(--sea-ink-soft)] text-center leading-relaxed">
-          Connect. Share. Belong.
-        </p>
+        <Link
+          to="/profile/$username"
+          params={{ username: 'me' }}
+          className="mt-5 flex items-center gap-2 rounded-xl px-2 py-2 no-underline transition hover:bg-[var(--brand-light)]/50"
+          aria-label="Your profile"
+        >
+          <Avatar initials="RJ" label="Rojame" size={32} />
+          <span className="flex-1 min-w-0 leading-none">
+            <span className="block text-sm font-semibold text-[var(--sea-ink)]">Rojame</span>
+            <span className="block text-[0.7rem] text-[var(--sea-ink-soft)]">@rojame</span>
+          </span>
+          <svg viewBox="0 0 16 16" className="h-4 w-4 text-[var(--sea-ink-soft)]" aria-hidden="true">
+            <path fill="currentColor" d="M11.83 4.93A.75.75 0 0010.5 4.5h-3a.75.75 0 000 1.5h.17l.443.589a1.259 1.259 0 011.106 1.106l.589-.443a.75.75 0 001.106-1.106l-.443-.589A.75.75 0 0011.057 5h1.172a.75.75 0 00.653-1.071zM7.5 1a5.5 5.5 0 110 11 5.5 5.5 0 010-11z" />
+          </svg>
+        </Link>
       </div>
     </aside>
   )

@@ -21,6 +21,27 @@
 
 ---
 
+## 0. Reference update — 7-screen set
+
+The reference image (`.tmp/web-ui.webp`) was expanded to seven screens. The earlier
+single-feed reference is still accurate for the home feed; everything below is **new or
+changed** and is implemented in `frontend/src/`.
+
+| Screen | What changed / added |
+|--------|----------------------|
+| **Landing** (`/welcome`) | Full-viewport marketing card with its own nav (Home · Explore · About anchor), "Sign In" + "Get Started" buttons, hero "Connect. Share. Belong.", subtitle, "Get Started →" + "Learn More ↓", and a blue chat-bubble/people illustration. The app Header/Footer are hidden on `/welcome` and `/login`. |
+| **Home feed** (`/`) | Unchanged layout; left rail now ends with a **user chip** (avatar + name + `@handle` + chevron) instead of the tagline. |
+| **Explore** (`/explore`) | Added a **Suggested Topics** panel (Technology 234K, Travel 156K, Lifestyle 108K, Education 142K, Gaming 128K) with per-topic `+` buttons. Active tab is a solid brand pill. |
+| **Profile** (`/profile/:username`) | Added a **cover photo** banner with an overlapping avatar, Edit Profile + settings buttons below the cover, stats row, Posts/Replies/Media/Likes tabs; right rail has **About** (location, GitHub link, joined date) and **Skills** panels. |
+| **Messages** (`/messages`) | Now a **two-pane** screen: conversation list with search on the left, chat thread with header, message bubbles, and composer on the right. The standalone thread route still works but is secondary. |
+| **Notifications** (`/notifications`) | Added **tabs** (All · Likes · Comments · Follows · Mentions); items show actor avatars, action text, a Follow button or thumbnail, and unread dots. |
+| **Create Post** (`/compose`) | Two-column card: text + Photo/Video/Feeling/Poll chips on the left, a dashed **drag-and-drop upload area** ("Upload Image / or drag and drop") on the right, Cancel/Post in a bottom action bar. |
+
+New shared component: **`AppShell`** (`src/components/AppShell.tsx`) wraps every authenticated
+screen with `LeftRail` + the `lg:pl-64` content offset, optionally with a right rail.
+
+---
+
 ## 1. Design tokens (web)
 
 All values are CSS custom properties from `design.md` §5 plus brand blue added in
@@ -413,9 +434,15 @@ This section lists every reusable component type used across web screens. Each e
 
 | Spec section | Screen/component | Frontend file |
 |--------------|------------------|---------------|
-| §3 Global shell | Header | `src/components/Header.tsx` |
-| §3 Global shell | LeftRail | `src/components/LeftRail.tsx` |
+| §0/§3 Global shell | AppShell | `src/components/AppShell.tsx` |
+| §3 Global shell | Header | `src/components/Header.tsx` (hidden on `/welcome`, `/login`) |
+| §3 Global shell | LeftRail | `src/components/LeftRail.tsx` (includes user chip) |
 | §3 Global shell | RightRail | `src/components/RightRail.tsx` |
+| §0 Explore | Suggested Topics panel | `src/routes/explore.tsx` |
+| §0 Profile | Cover + About/Skills panels | `src/routes/profile.$username.tsx` |
+| §0 Notifications | Tabs + items | `src/routes/notifications.tsx` |
+| §0 Compose | Drag-drop upload area | `src/routes/compose.tsx` |
+| §0 Messages | Two-pane list + thread | `src/routes/messages.tsx` |
 | §4.1 Welcome | Welcome page | `src/routes/welcome.tsx` |
 | §4.2 Login | Login page | `src/routes/login.tsx` |
 | §5.1 Home feed | Home page | `src/routes/index.tsx` |

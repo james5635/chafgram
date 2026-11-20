@@ -6,49 +6,99 @@ export const Route = createFileRoute('/welcome')({
 
 function Welcome() {
   return (
-    <main className="min-h-[calc(100vh-13rem)] flex items-center justify-center px-4 pb-8 pt-14">
-      <section className="island-shell rise-in rounded-2xl p-8 sm:p-12 max-w-2xl w-full text-center">
-        <div className="flex flex-col items-center gap-4 mb-6">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow-[0_8px_24px_rgba(30,90,72,0.08)]">
-            <span className="h-2 w-2 rounded-full bg-[linear-gradient(90deg,#56c6be,#7ed3bf)]" />
-            Chafgram
-          </span>
-          <p className="island-kicker mb-1">Private social for your company</p>
-          <h1 className="display-title mb-4 text-4xl font-bold text-[var(--sea-ink)] leading-[1.02] sm:text-6xl">
-            Connect. Share. Belong.
-          </h1>
-          <p className="m-0 max-w-lg text-base leading-8 text-[var(--sea-ink-soft)] sm:text-lg">
-            Your company's internal social space — short video, posts, comments,
-            follows, and direct messages — running on your own servers.
-          </p>
-        </div>
+    <main className="min-h-screen px-4 py-4 sm:py-6 bg-[#eaf1ff]">
+      <section className="island-shell rise-in relative overflow-hidden rounded-[2rem] mx-auto max-w-[1500px] min-h-[calc(100vh-4rem)]">
+        <div className="pointer-events-none absolute -right-10 top-20 h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(147,197,253,0.55),transparent_65%)]" />
+        <div className="pointer-events-none absolute bottom-0 left-1/4 h-64 w-[60%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(191,219,254,0.65),transparent_70%)]" />
 
-        <div className="relative h-64 sm:h-80 rounded-xl overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)80%,white_20%)] mb-8">
-          <div className="inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(79,184,178,0.16),transparent_70%)]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--sea-ink-soft)]">
-            <svg viewBox="0 0 64 64" className="h-32 w-32" aria-hidden="true"><path fill="currentColor" d="M32 2c-3.2 0-6.3.4-9.3 1.2-5.6 1.5-10.8 5.6-14.2 11.2-2.1 3.4-3.3 7.3-3.3 11.3s1.2 7.8 3.3 11.3c3.4 5.6 8.6 9.7 14.2 11.2 3 0.8 6.1 1.2 9.3 1.2s6.3-.4 9.3-1.2c5.6-1.5 10.8-5.6 14.2-11.2 2.1-3.4 3.3-7.3 3.3-11.3s-1.2-7.8-3.3-11.3c-3.4-5.6-8.6-9.7-14.2-11.2-3-0.8-6.1-1.2-9.3-1.2zm0 58c-1.7 0-3.3-.2-4.8-.6-2.8-.8-5.4-2.8-7.1-5.6-1-1.7-1.6-3.6-1.6-5.6s.6-3.9 1.6-5.6c1.7-2.8 4.3-4.8 7.1-5.6 1.5-.4 3.1-.6 4.8-.6s3.3.2 4.8.6c2.8.8 5.4 2.8 7.1 5.6 1 1.7 1.6 3.6 1.6 5.6s-.6 3.9-1.6 5.6c-1.7 2.8-4.3 4.8-7.1 5.6-1.5.4-3.1.6-4.8.6z"/></svg>
+        <nav className="relative z-10 flex items-center justify-between gap-4 px-6 py-5 sm:px-12">
+          <Link to="/welcome" className="flex items-center gap-2 no-underline">
+            <span className="h-7 w-7 rounded-full bg-[var(--brand)] flex items-center justify-center text-white font-bold text-base shadow-lg shadow-[var(--brand)]/30">
+              C
+            </span>
+            <span className="text-lg font-bold tracking-tight text-[var(--sea-ink)]">Chafgram</span>
+          </Link>
+
+          <div className="hidden items-center gap-7 text-sm font-medium text-[var(--sea-ink-soft)] md:flex">
+            <Link to="/" className="no-underline transition hover:text-[var(--brand-dark)]">Home</Link>
+            <Link to="/explore" className="no-underline transition hover:text-[var(--brand-dark)]">Explore</Link>
+            <a href="#about" className="no-underline transition hover:text-[var(--brand-dark)]">About</a>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/login"
+              className="rounded-full border border-[var(--line)] bg-white px-4 py-1.5 text-xs font-semibold text-[var(--brand-dark)] no-underline transition hover:bg-[var(--brand-light)] sm:px-5 sm:py-2 sm:text-sm"
+            >
+              Sign In
+            </Link>
+            <Link
+              to="/login"
+              className="rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 py-1.5 text-xs font-bold text-white no-underline shadow-lg shadow-[var(--brand)]/30 transition hover:bg-[var(--brand-dark)] sm:px-5 sm:py-2 sm:text-sm"
+            >
+              Get Started
+            </Link>
+          </div>
+        </nav>
+
+        <div className="relative z-10 grid items-center gap-8 px-6 pb-16 pt-8 sm:px-12 lg:grid-cols-2 lg:gap-4 lg:pt-12">
+          <div className="max-w-xl">
+            <h1 className="display-title m-0 text-5xl font-bold leading-[1.02] tracking-tight text-[var(--sea-ink)] sm:text-6xl lg:text-7xl">
+              Connect. Share.<br />Belong.
+            </h1>
+            <p className="mt-6 max-w-md text-lg leading-8 text-[var(--sea-ink-soft)]">
+              Join Chafgram and be part of a vibrant community.
+            </p>
+            <div className="mt-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--brand)] bg-[var(--brand)] px-7 py-3 text-sm font-bold text-white no-underline shadow-lg shadow-[var(--brand)]/30 transition hover:bg-[var(--brand-dark)]"
+              >
+                Get Started <span aria-hidden="true">→</span>
+              </Link>
+              <a href="#about" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--sea-ink-soft)] no-underline transition hover:text-[var(--brand-dark)]">
+                Learn More <span aria-hidden="true">↓</span>
+              </a>
+            </div>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-lg" aria-hidden="true">
+            <svg viewBox="0 0 520 380" className="h-auto w-full">
+              <path d="M40 300c30-70 120-110 220-100s160 60 200 130" fill="none" stroke="#dbeafe" strokeWidth="60" strokeLinecap="round" opacity="0.7" />
+              <circle cx="300" cy="120" r="90" fill="#dbeafe" opacity="0.5" />
+              <circle cx="120" cy="200" r="46" fill="#bfdbfe" opacity="0.6" />
+
+              <g>
+                <rect x="80" y="120" width="170" height="92" rx="22" fill="#3b82f6" />
+                <rect x="104" y="146" width="92" height="9" rx="4.5" fill="#ffffff" opacity="0.9" />
+                <rect x="104" y="168" width="122" height="9" rx="4.5" fill="#ffffff" opacity="0.7" />
+                <path d="M100 212l-16 30 44-30z" fill="#3b82f6" />
+              </g>
+
+              <g>
+                <rect x="250" y="210" width="180" height="96" rx="22" fill="#60a5fa" />
+                <rect x="276" y="238" width="100" height="9" rx="4.5" fill="#ffffff" opacity="0.9" />
+                <rect x="276" y="260" width="132" height="9" rx="4.5" fill="#ffffff" opacity="0.7" />
+                <path d="M404 306l30 26-4-40z" fill="#60a5fa" />
+              </g>
+
+              <g>
+                <circle cx="356" cy="96" r="30" fill="#3b82f6" />
+                <path d="M314 172c0-23 19-42 42-42s42 19 42 42z" fill="#3b82f6" />
+                <circle cx="418" cy="112" r="22" fill="#60a5fa" />
+                <path d="M386 172c0-18 14-32 32-32s32 14 32 32z" fill="#60a5fa" />
+              </g>
+            </svg>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link
-            to="/login"
-            className="flex-1 rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--lagoon)22%,var(--surface-strong))] px-6 py-3 text-sm font-semibold text-[var(--sea-ink)] no-underline transition hover:bg-[color-mix(in_oklab,var(--lagoon)30%,var(--surface-strong))] sm:flex-none sm:w-48"
-          >
-            Sign in
-          </Link>
-          <Link
-            to="/welcome"
-            className="flex-1 rounded-full border border-[var(--line)] bg-transparent px-6 py-3 text-sm font-semibold text-[var(--sea-ink-soft)] no-underline transition hover:bg-[var(--link-bg-hover)] sm:flex-none sm:w-48"
-          >
-            Contact your admin
-          </Link>
+        <div id="about" className="relative z-10 px-6 pb-10 sm:px-12">
+          <p className="m-0 max-w-2xl text-sm leading-7 text-[var(--sea-ink-soft)]">
+            Chafgram is the private social space for your company — short video, posts,
+            comments, follows, and direct messages, running entirely on infrastructure you
+            control. Familiar to use, private by design.
+          </p>
         </div>
-
-        <p className="mt-8 text-[0.75rem] text-[var(--sea-ink-soft)]">
-          New to Chafgram? Your admin creates your account via invite. Signup is
-          invite-only by default.
-        </p>
       </section>
     </main>
   )

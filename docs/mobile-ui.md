@@ -352,7 +352,8 @@ Traceability: FR-1.6, FR-1.7, FR-7.3, design.md §6.
 
 | Spec section | Screen/component | Frontend file |
 |--------------|------------------|---------------|
-| §3 Global shell | Header | `src/components/Header.tsx` |
+| §0/§3 Global shell | AppShell | `src/components/AppShell.tsx` |
+| §3 Global shell | Header | `src/components/Header.tsx` (hidden on `/welcome`, `/login`) |
 | §3 Global shell | Bottom tab bar + FAB | `src/components/Footer.tsx` |
 | §4.1 Welcome | Welcome page | `src/routes/welcome.tsx` |
 | §4.2 Login | Login page | `src/routes/login.tsx` |
