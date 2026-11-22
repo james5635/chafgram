@@ -159,16 +159,26 @@ npm run preview    # serve the production build
 
 ### Using the app (dev)
 
-The frontend is still the TanStack Start template (two placeholder routes) — no
-Chafgram screens yet. The backend is fully built, so the app is usable today over
-HTTP. Every step below was verified against a fresh `just seed` on a local MySQL.
+The frontend now has Chafgram screens wired to the backend via GraphQL (Apollo + BFF).
+Every step below was verified against a fresh `just seed` on a local MySQL.
 
 1. **Sign in.** Make sure the dev fixtures are loaded (`just seed`), start the backend,
-   and open the default login page at http://localhost:8080/login. Form sign-in:
-   `admin` (admin role) or `maya` / `tao` / `lena` (members), password
-   `chafgram-dev-password` — a successful sign-in redirects to `/`. If you land on
-   `/login?error`, the dev database was wiped (the test suite wipes it) — run
-   `just seed` and try again.
+   and open the frontend login page at **http://localhost:3000/login**.
+
+   **Dev credentials (all use the same password):**
+
+   | Role | Username | Email | Password |
+   |------|----------|-------|----------|
+   | Admin | `admin` | `admin@chafgram.test` | `chafgram-dev-password` |
+   | Member | `maya` | `maya@chafgram.test` | `chafgram-dev-password` |
+   | Member | `tao` | `tao@chafgram.test` | `chafgram-dev-password` |
+   | Member | `lena` | `lena@chafgram.test` | `chafgram-dev-password` |
+
+   You can sign in with **either the username or the email**. A successful sign-in
+   redirects to `/` (the feed). If sign-in fails, run `just seed` and try again.
+
+   There's also a reusable demo invite token: `demo-invite-token` (use at
+   `/join?token=demo-invite-token`).
 2. **Query the API after sign-in.** GraphiQL is served at
    http://localhost:8080/graphiql (dev only). The page loads, but its requests need
    the CSRF double-submit pair: Spring renders a hidden `_csrf` input on the
@@ -189,6 +199,9 @@ HTTP. Every step below was verified against a fresh `just seed` on a local MySQL
    query { unreadNotifications }                       # → 4 for the seeded admin
    query { followingFeed(first: 2) { posts { body } } }  # seeded fixture posts
    ```
+
+   **Note:** The frontend handles CSRF automatically via the BFF proxy — you only
+   need the `_csrf` token when calling GraphiQL or the backend directly.
 
 3. **Public, no sign-in:** `{ workspace { name slug } }` returns the workspace
    branding. Everything else is `isFullyAuthenticated()` — anonymous callers get
