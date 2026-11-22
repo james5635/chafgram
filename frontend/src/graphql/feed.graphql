@@ -1,0 +1,56 @@
+query FollowingFeed($first: Int = 20, $cursor: String) {
+  followingFeed(first: $first, cursor: $cursor) {
+    posts {
+      id
+      type
+      body
+      editedAt
+      createdAt
+      commentCount
+      reactionCount
+      myReaction
+      isSaved
+      author {
+        id
+        username
+        displayName
+        avatarMediaId
+      }
+    }
+    nextCursor
+  }
+}
+
+query DiscoverFeed($first: Int = 20, $cursor: String) {
+  discoverFeed(first: $first, cursor: $cursor) {
+    posts {
+      id
+      type
+      body
+      createdAt
+      commentCount
+      reactionCount
+      author {
+        id
+        username
+        displayName
+        avatarMediaId
+      }
+    }
+    nextCursor
+  }
+}
+
+mutation CreatePost($type: PostType!, $body: String, $mediaIds: [ID!]) {
+  createPost(type: $type, body: $body, mediaIds: $mediaIds) {
+    id
+    type
+    body
+    createdAt
+    author {
+      id
+      username
+      displayName
+    }
+  }
+}

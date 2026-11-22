@@ -1,21 +1,14 @@
+import { useQuery } from '@apollo/client/react'
 import { createFileRoute } from '@tanstack/react-router'
 import { gradientPlaceholder } from '../lib/placeholders'
 import AppShell from '../components/AppShell'
+import { DiscoverFeedDocument } from '../generated/graphql'
 
 export const Route = createFileRoute('/explore')({
   component: Explore,
 })
 
 const TABS = ['For You', 'Following', 'Trending', 'Nearby'] as const
-
-const CARDS = [
-  { title: 'Better Together', likes: '12.5K', img: gradientPlaceholder({ colors: ['#4f7fc4', '#9fc6ef'] }) },
-  { title: 'Good Morning ☀️', likes: '24.1K', img: gradientPlaceholder({ colors: ['#7ec8e3', '#cdeaf5'] }) },
-  { title: 'City Architecture', likes: '11.3K', img: gradientPlaceholder({ colors: ['#4a6f8c', '#9db8c9'] }) },
-  { title: 'Coffee Break', likes: '15.6K', img: gradientPlaceholder({ colors: ['#9c7b64', '#d9bda6'] }) },
-  { title: 'Ocean View', likes: '8.9K', img: gradientPlaceholder({ colors: ['#3d9bc4', '#9fd8ea'] }) },
-  { title: 'Morning Light', likes: '7.2K', img: gradientPlaceholder({ colors: ['#e0a45c', '#f6dcae'] }) },
-]
 
 const TOPICS = [
   { name: 'Technology', posts: '234K posts', icon: 'M12 2a2 2 0 012 2v2a2 2 0 01-2 2 2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a2 2 0 00-2-2h-2' },
@@ -42,9 +35,7 @@ function SuggestedTopics() {
                 <span className="block text-sm font-semibold text-[var(--sea-ink)]">{topic.name}</span>
                 <span className="block text-[0.7rem] text-[var(--sea-ink-soft)]">{topic.posts}</span>
               </span>
-              <button type="button" className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-[var(--line)] text-[var(--brand-dark)] transition hover:bg-[var(--brand)] hover:text-white" aria-label={`Follow ${topic.name}`}>
-                +
-              </button>
+              <button type="button" className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-[var(--line)] text-[var(--brand-dark)] transition hover:bg-[var(--brand)] hover:text-white" aria-label={`Follow ${topic.name}`}>+</button>
             </div>
           ))}
         </div>
@@ -54,6 +45,9 @@ function SuggestedTopics() {
 }
 
 export function Explore() {
+  const { data, loading, error } = useQuery(DiscoverFeedDocument, { variables: { first: 18 } })
+  const posts = data?.discoverFeed?.posts ?? []
+
   return (
     <AppShell rightRail={<SuggestedTopics />}>
       <div className="page-wrap px-4 pb-8 pt-6">
@@ -82,20 +76,31 @@ export function Explore() {
           ))}
         </div>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {CARDS.map((card, i) => (
-            <article key={i} className="island-shell feature-card rise-in overflow-hidden rounded-xl" style={{ animationDelay: `${i * 90}ms` }}>
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy={loading}>
+          {error && <p className="col-span-full text-sm text-[#9f3030]">Could not load the feed: {error.message}</p>}
+          {loading && !data && [0, 1, 2].map((n) => <div key={n} className="h-48 animate-pulse rounded-xl" />)}
+          {!loading && !error && posts.length === 0 && (
+            <p className="col-span-full text-center text-sm text-[var(--sea-ink-soft)]">Nothing to explore yet.</p>
+          )}
+          {posts.map((post, i) => (
+            <article key={post.id} className="island-shell feature-card rise-in overflow-hidden rounded-xl" style={{ animationDelay: `${i * 90}ms` }}>
               <div className="relative h-48 overflow-hidden">
-                <img src={card.img} alt={card.title} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                <img
+                  src={gradientPlaceholder({ colors: ['#6ba8e0', '#bcdcf5'] })}
+                  alt={post.body ?? 'Post'}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <h3 className="m-0 text-white font-semibold text-lg shadow-sm">{card.title}</h3>
+                  <h3 className="m-0 text-white font-semibold text-lg shadow-sm">{post.body ?? post.author.displayName}</h3>
                 </div>
               </div>
               <div className="p-3 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[var(--lagoon-deep)]">♥</span>
-                  <span className="text-sm font-semibold text-[var(--sea-ink)]">{card.likes}</span>
+                  <span className="text-sm font-semibold text-[var(--sea-ink)]">{post.reactionCount}</span>
                 </div>
               </div>
             </article>

@@ -1,4 +1,5 @@
 import LeftRail from './LeftRail'
+import { useSessionGuard } from '../hooks/useSessionGuard'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -7,6 +8,8 @@ interface AppShellProps {
 
 /** Shared shell for authenticated screens: fixed left rail + offset content. */
 export default function AppShell({ children, rightRail }: AppShellProps) {
+  useSessionGuard()
+
   return (
     <>
       <LeftRail />

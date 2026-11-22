@@ -69,6 +69,18 @@
   `src/routes/`; generated `routeTree.gen.ts` (never hand-edited).
 - **Server functions** (`createServerFn`) act as the BFF for all backend calls:
   typed, server-only credential handling, single egress point to the Spring Boot API.
+  `src/lib/backend-proxy.ts` is the only module that talks to the backend; it
+  forwards the browser's cookies, echoes the CSRF token, and copies the backend's
+  `Set-Cookie` headers back to the browser.
+- **Apollo Client** — the browser-side GraphQL client. Its `bffLink`
+  (`src/lib/apollo.ts`) sends every operation through the `graphqlRequest` server
+  function, so the browser never learns the backend URL. One `ApolloClient` with
+  an `InMemoryCache` is provided by `ApolloProvider` in `src/routes/__root.tsx`.
+- **GraphQL codegen** — `just generate` (root) runs `frontend::generate`, which
+  reads the backend's committed `*.graphqls` files and regenerates
+  `frontend/src/generated/graphql.ts` (git-ignored, never hand-edited).
+  Operations live in `frontend/src/graphql/*.graphql`; `npm run pretest`/`prebuild`
+  regenerate the types so a fresh clone needs no extra step.
 - **Rendering strategy** — SSR for shell and public surface; client interactivity for
   feed/compose/watch/messages; route loaders for data.
 - **Styling** — Tailwind v4 (CSS-first via `@tailwindcss/vite`) + token system in
@@ -77,11 +89,20 @@
 - **Structure** — `src/components/` (shell: Header, Footer, ThemeToggle),
   `src/routes/` (file routes), feature modules land as sibling folders later
   (`feed/`, `watch/`, `messages/`, `admin/`) rather than route-local code.
-- **Data fetching** — TanStack Router loaders for page data; TanStack Query may be
-  introduced for mutations/optimistic UI once features land (not yet installed).
-- **Auth flow (proposal)** — browser authenticates against the backend
-  (passkey ceremonies are REST); the BFF carries the session cookie; no tokens in
-  `localStorage`. If OIDC SSO lands, the same BFF shape holds.
+- **Data fetching** — Apollo `useQuery`/`useMutation` for reads and writes; TanStack
+  Router loaders remain an option for route-level data.
+- **Auth flow** — the browser posts credentials to the `loginRequest` server
+  function, which performs the backend's form login and forwards the resulting
+  `JSESSIONID` cookie to the browser. No tokens in `localStorage`; the session
+  cookie and the double-submit `XSRF-TOKEN` cookie live in the browser jar and are
+  relayed by the BFF on every request. `useSessionGuard` (`src/hooks/`) redirects
+  to `/login` when the backend answers an operation with an `UNAUTHORIZED`
+  classification. If OIDC SSO lands, the same BFF shape holds.
+- **CSRF** — the backend issues `XSRF-TOKEN` (JavaScript-readable) and expects the
+  same value in `X-XSRF-TOKEN`. Spring defers issuing that cookie until a request
+  needs it, so the first mutation is rejected once with a fresh token; the BFF
+  retries that call with the token and forwards the cookie to the browser.
+
 
 ## 4. Backend architecture
 

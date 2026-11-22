@@ -11,3 +11,6 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+# GraphQL codegen output — regenerate with `just generate`
+src/generated/

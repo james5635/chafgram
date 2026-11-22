@@ -1,5 +1,9 @@
 # Frontend tasks — run as `just frontend::<recipe>`
 
+# Generate GraphQL types/documents from the backend schema (never hand-edit output)
+generate:
+    npm run generate
+
 # Install frontend dependencies from the lockfile
 install:
     npm ci

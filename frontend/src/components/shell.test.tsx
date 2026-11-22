@@ -1,12 +1,17 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { MockedProvider } from '@apollo/client/testing/react'
+import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import type { ReactNode } from 'react'
+
+const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
     ...actual,
     useLocation: () => ({ pathname: '/' }),
+    useNavigate: () => navigate,
     Link: ({ to, children, ...rest }: { to: string; children: ReactNode; [key: string]: unknown }) => (
       <a href={String(to)} {...rest}>{children}</a>
     ),
@@ -15,6 +20,33 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 
 import LeftRail from './LeftRail'
 import AppShell from './AppShell'
+import { MeDocument } from '../generated/graphql'
+
+const MEMBER = {
+  __typename: 'Member' as const,
+  id: '1',
+  username: 'rojame',
+  displayName: 'Rojame',
+  bio: null,
+  avatarMediaId: null,
+  role: 'MEMBER',
+  status: 'ACTIVE',
+  followerCount: 1,
+  followingCount: 2,
+  isFollowing: false,
+}
+
+const sessionMocks = [
+  { request: { query: MeDocument }, result: { data: { me: MEMBER } } },
+]
+
+function renderShell(ui: ReactNode) {
+  return render(<MockedProvider mocks={sessionMocks}>{ui}</MockedProvider>)
+}
+
+beforeEach(() => {
+  navigate.mockClear()
+})
 
 describe('LeftRail', () => {
   it('renders the brand and all nav links', () => {
@@ -45,7 +77,7 @@ describe('LeftRail', () => {
 
 describe('AppShell', () => {
   it('renders children alongside the rail and optional right rail', () => {
-    render(
+    renderShell(
       <AppShell rightRail={<aside data-testid="right-rail">Right</aside>}>
         <p data-testid="content">Content</p>
       </AppShell>
@@ -57,7 +89,7 @@ describe('AppShell', () => {
   })
 
   it('works without a right rail', () => {
-    render(
+    renderShell(
       <AppShell>
         <p data-testid="content">Only content</p>
       </AppShell>
@@ -65,5 +97,27 @@ describe('AppShell', () => {
 
     expect(screen.getByTestId('content')).toBeInTheDocument()
     expect(screen.queryByTestId('right-rail')).not.toBeInTheDocument()
+  })
+
+  it('sends the visitor to the sign-in screen when the session is missing', async () => {
+    render(
+      <MockedProvider
+        mocks={[
+          {
+            request: { query: MeDocument },
+            error: new CombinedGraphQLErrors({
+              data: null,
+              errors: [{ message: 'Unauthorized', extensions: { classification: 'UNAUTHORIZED' } }],
+            }),
+          },
+        ]}
+      >
+        <AppShell>
+          <p data-testid="content">Content</p>
+        </AppShell>
+      </MockedProvider>
+    )
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/login' }))
   })
 })

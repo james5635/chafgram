@@ -14,6 +14,9 @@ mod frontend "frontend/justfile"
 default:
     @just --list --list-submodules
 
+# Generate GraphQL types/documents from the backend schema (frontend codegen)
+generate: frontend::generate
+
 # Install backend and frontend dependencies
 install: backend::install frontend::install
 

@@ -1,0 +1,23 @@
+query Workspace {
+  workspace {
+    name
+    slug
+    primaryColor
+    signupMode
+    logoMediaId
+  }
+}
+
+query Member($username: String!) {
+  member(username: $username) {
+    id
+    username
+    displayName
+    bio
+    avatarMediaId
+    followerCount
+    followingCount
+    isFollowing
+    createdAt
+  }
+}

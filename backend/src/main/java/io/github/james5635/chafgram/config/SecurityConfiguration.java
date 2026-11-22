@@ -14,6 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.security.web.webauthn.management.JdbcPublicKeyCredentialUserEntityRepository;
 import org.springframework.security.web.webauthn.management.JdbcUserCredentialRepository;
@@ -59,11 +60,26 @@ public class SecurityConfiguration {
 		return http.build();
 	}
 
+	/**
+	 * Double-submit CSRF for API/BFF clients.
+	 *
+	 * <p>{@link CookieCsrfTokenRepository} issues the {@code XSRF-TOKEN} cookie
+	 * (JavaScript-readable) and Spring compares it with the {@code X-XSRF-TOKEN}
+	 * header. The default request handler is
+	 * {@code XorCsrfTokenRequestAttributeHandler}, which only accepts a
+	 * server-side XOR-masked token — a value a BFF or browser client can never
+	 * obtain from the cookie — so the plain {@link CsrfTokenRequestAttributeHandler}
+	 * is used instead: the cookie value is accepted verbatim. Chafgram serves
+	 * JSON APIs only (no HTML forms reflecting the token), so BREACH masking
+	 * buys nothing here.</p>
+	 */
 	@Bean
 	@Order(2)
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
-			.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+			.csrf(csrf -> csrf
+				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+				.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(HttpMethod.GET, "/api/v1/workspace").permitAll()
 				.requestMatchers("/api/v1/bootstrap", "/api/v1/register", "/api/v1/invites/accept")

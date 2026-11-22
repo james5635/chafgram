@@ -1,25 +1,61 @@
+import { useMutation, useQuery } from '@apollo/client/react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import Avatar from '../components/Avatar'
 import AppShell from '../components/AppShell'
+import {
+  ConversationsDocument,
+  MarkConversationReadDocument,
+  MessagesDocument,
+  SendMessageDocument,
+} from '../generated/graphql'
 
 export const Route = createFileRoute('/messages')({
   component: Messages,
 })
 
-const CONVERSATIONS = [
-  { id: 'c1', name: 'Sokha', preview: 'Hey! How are you? 😊', time: '2m', initials: 'SK', unread: 2 },
-  { id: 'c2', name: 'Dara Chan', preview: 'Sounds great!', time: '1h', initials: 'DR', unread: 0 },
-  { id: 'c3', name: 'Vichea', preview: 'See you there! ❤️', time: '3h', initials: 'VC', unread: 0 },
-  { id: 'c4', name: 'Mey Sokha', preview: 'Alright, thank!', time: '1d', initials: 'MY', unread: 0 },
-]
-
-const MESSAGES = [
-  { from: 'them', text: 'Hey! How are you? 😊', time: '9:14 AM' },
-  { from: 'me', text: "I'm good! How about you?", time: '9:16 AM' },
-  { from: 'them', text: "Great! Let's catch up soon.", time: '10:26 AM' },
-]
-
 export function Messages() {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const { data: conversationsData, loading: conversationsLoading } = useQuery(ConversationsDocument)
+  const conversations = conversationsData?.conversations ?? []
+
+  const activeId = selectedId ?? conversations[0]?.id ?? null
+  const { data: messagesData, loading: messagesLoading } = useQuery(MessagesDocument, {
+    variables: { conversationId: activeId ?? '', first: 50 },
+    skip: !activeId,
+  })
+  const messages = messagesData?.messages ?? []
+
+  const [sendMessage] = useMutation(SendMessageDocument, {
+    refetchQueries: [MessagesDocument],
+  })
+  const [markRead] = useMutation(MarkConversationReadDocument)
+
+  useEffect(() => {
+    if (!activeId) return
+    void markRead({ variables: { id: activeId } })
+  }, [activeId, markRead])
+
+  async function send() {
+    const body = draft.trim()
+    if (!body || !activeId || sending) return
+
+    setSending(true)
+    setError(null)
+    try {
+      await sendMessage({ variables: { conversationId: activeId, body } })
+      setDraft('')
+    } catch {
+      setError('Could not send that message.')
+    } finally {
+      setSending(false)
+    }
+  }
+
   return (
     <AppShell>
       <div className="page-wrap px-4 pb-8 pt-6">
@@ -31,59 +67,92 @@ export function Messages() {
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--sea-ink-soft)]">
                   <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true"><path fill="currentColor" d="M11.742 10.344a6.5 6.5 0 1 0 0-9.188 6.5 6.5 0 0 0 0 9.188zm3.156-4.188L9.375 11.25l-.563-.563a4.485 4.485 0 0 1-6.343 0L3.375 6.156l.563-.563a4.484 4.484 0 0 1 6.344 0l.875.876z"/></svg>
                 </span>
-                <input type="search" placeholder="Search conversations..." className="w-full rounded-full border border-[var(--line)] bg-white/80 py-1.5 pl-8 pr-3 text-xs text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none focus:border-[var(--brand)]" />
+                <input type="search" placeholder="Search conversations..." aria-label="Search conversations" className="w-full rounded-full border border-[var(--line)] bg-white/80 py-1.5 pl-8 pr-3 text-xs text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none focus:border-[var(--brand)]" />
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
-              {CONVERSATIONS.map((conv, i) => (
-                <button key={conv.id} type="button" className={`flex w-full items-center gap-3 border-b border-[var(--line)] px-3 py-3 text-left transition ${i === 0 ? 'bg-[var(--brand-light)]/70' : 'hover:bg-[var(--brand-light)]/40'}`}>
-                  <Avatar initials={conv.initials} label={conv.name} size={32} />
-                  <span className="flex-1 min-w-0">
-                    <span className="flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-[var(--sea-ink)]">{conv.name}</span>
-                      <span className="ml-auto text-[0.65rem] text-[var(--sea-ink-soft)]">{conv.time}</span>
+            <ul className="flex-1 overflow-y-auto" aria-label="Conversations" aria-busy={conversationsLoading}>
+              {conversationsLoading && <li className="m-3 h-20 animate-pulse rounded-xl" />}
+              {!conversationsLoading && conversations.length === 0 && (
+                <li className="px-4 py-6 text-center text-xs text-[var(--sea-ink-soft)]">No conversations yet.</li>
+              )}
+              {conversations.map((conversation, i) => (
+                <li key={conversation.id} className="border-b border-[var(--line)]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(conversation.id)}
+                    aria-current={conversation.id === activeId ? 'true' : undefined}
+                    className={`flex w-full items-center gap-3 px-3 py-3 text-left transition ${conversation.id === activeId ? 'bg-[var(--brand-light)]/70' : 'hover:bg-[var(--brand-light)]/40'}`}
+                  >
+                    <Avatar initials={(conversation.title ?? 'C').slice(0, 2).toUpperCase()} label={conversation.title ?? 'Conversation'} size={32} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate text-sm font-semibold text-[var(--sea-ink)]">
+                        {conversation.title ?? (conversation.type === 'direct' ? 'Direct message' : 'Group')}
+                      </span>
+                      <span className="block truncate text-xs text-[var(--sea-ink-soft)]">
+                        {conversation.updatedAt}
+                      </span>
                     </span>
-                    <span className="block truncate text-xs text-[var(--sea-ink-soft)]">{conv.preview}</span>
-                  </span>
-                  {conv.unread > 0 && (
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white bg-[var(--brand)] px-1 text-[0.625rem] font-bold text-white shadow-sm">{conv.unread}</span>
-                  )}
-                </button>
+                    {i === 0 && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[var(--brand)]" aria-hidden="true" />}
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
           <div className="hidden flex-1 flex-col sm:flex">
             <div className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3">
-              <Avatar initials="SK" label="Sokha" size={32} />
               <div className="flex-1">
-                <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">Sokha</p>
-                <p className="m-0 text-[0.7rem] text-[var(--sea-ink-soft)]">2m ago</p>
+                <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+                  {conversations.find((conversation) => conversation.id === activeId)?.title ?? 'Select a conversation'}
+                </p>
+                <p className="m-0 text-[0.7rem] text-[var(--sea-ink-soft)]">Direct message</p>
               </div>
-              <button type="button" className="p-1.5 text-[var(--sea-ink-soft)] transition hover:text-[var(--sea-ink)]" aria-label="Video call">
-                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.5-3v10L15 14m-10 4h9a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-              </button>
-              <button type="button" className="p-1.5 text-[var(--sea-ink-soft)] transition hover:text-[var(--sea-ink)]" aria-label="Message info">
-                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.8"/><path fill="currentColor" d="M11 11h2v6h-2zm0-4h2v2h-2z"/></svg>
-              </button>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto bg-[var(--foam)]/40 p-4">
-              {MESSAGES.map((m, i) => (
-                <div key={i} className={`flex ${m.from === 'me' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${m.from === 'me' ? 'bg-[var(--brand)] text-white' : 'border border-[var(--line)] bg-white text-[var(--sea-ink)]'}`}>
-                    <p className="m-0 leading-6">{m.text}</p>
-                    <p className={`m-0 mt-0.5 text-right text-[0.65rem] ${m.from === 'me' ? 'text-white/80' : 'text-[var(--sea-ink-soft)]'}`}>{m.time}</p>
+            <div className="flex-1 space-y-3 overflow-y-auto bg-[var(--foam)]/40 p-4" aria-busy={messagesLoading}>
+              {!activeId && <p className="text-center text-sm text-[var(--sea-ink-soft)]">Choose a conversation to start reading.</p>}
+              {messagesLoading && <div className="h-20 animate-pulse rounded-xl" />}
+              {!messagesLoading && activeId && messages.length === 0 && (
+                <p className="text-center text-sm text-[var(--sea-ink-soft)]">No messages yet.</p>
+              )}
+              {messages.map((message) => (
+                <div key={message.id} className="flex justify-start">
+                  <div className="max-w-[75%] rounded-2xl border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--sea-ink)]">
+                    <p className="m-0 leading-6">{message.body}</p>
+                    <p className="m-0 mt-0.5 text-right text-[0.65rem] text-[var(--sea-ink-soft)]">{message.createdAt}</p>
                   </div>
                 </div>
               ))}
             </div>
 
+            {error && (
+              <p className="m-0 px-4 pb-2 text-sm text-[#9f3030]" role="alert">
+                {error}
+              </p>
+            )}
+
             <div className="border-t border-[var(--line)] p-3">
               <div className="relative flex items-center gap-2">
-                <input type="text" placeholder="Type a message..." className="flex-1 rounded-full border border-[var(--line)] bg-white py-2 pl-4 pr-10 text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none focus:border-[var(--brand)]" />
-                <button type="button" className="absolute right-2 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand)] text-white transition hover:bg-[var(--brand-dark)]" aria-label="Send message">
+                <input
+                  type="text"
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') void send()
+                  }}
+                  placeholder="Type a message..."
+                  aria-label="Type a message"
+                  disabled={!activeId}
+                  className="flex-1 rounded-full border border-[var(--line)] bg-white py-2 pl-4 pr-10 text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none focus:border-[var(--brand)] disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={() => void send()}
+                  disabled={!activeId || !draft.trim() || sending}
+                  aria-label="Send message"
+                  className="absolute right-2 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand)] text-white transition hover:bg-[var(--brand-dark)] disabled:opacity-50"
+                >
                   <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true"><path fill="currentColor" d="M2 2l12 6-12 6 2-6-2-6z"/></svg>
                 </button>
               </div>

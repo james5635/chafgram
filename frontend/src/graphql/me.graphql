@@ -1,0 +1,14 @@
+query Me {
+  me {
+    id
+    username
+    displayName
+    bio
+    avatarMediaId
+    role
+    status
+    followerCount
+    followingCount
+    isFollowing
+  }
+}

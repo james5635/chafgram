@@ -94,7 +94,9 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
   `/webauthn/register/*` (authenticated) and `/login/webauthn` +
   `/webauthn/authenticate/options` (unauthenticated). CSRF: double-submit cookie,
   readable JS header `X-XSRF-TOKEN` (CookieCsrfTokenRepository) — BFF clients must
-  send it on mutating requests.
+  send it on mutating requests. The cookie value is accepted verbatim: the config
+  uses `CsrfTokenRequestAttributeHandler` instead of Spring's default XOR-masked
+  handler, because a masked token cannot be obtained from the cookie.
 - Public endpoints by design: `GET /api/v1/workspace`, `POST /api/v1/bootstrap`
   (first admin only, no members yet), `POST /api/v1/register` (only when
   `signup_mode=open`), `POST /api/v1/invites/accept`. Admin-only: member role/status
@@ -116,12 +118,25 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 ```bash
 npm install
 npm run dev                # dev server on port 3000
+npm run generate           # GraphQL codegen (also run by `just generate`)
 npm run build              # production build (also regenerates the route tree)
 npm run preview            # serve the production build
 ```
 
 - Routes are files in `src/routes/`; `src/routeTree.gen.ts` is **generated — never edit
   it**. Add a route by adding a file; the tree regenerates on dev/build.
+- **Backend access goes through the BFF.** `src/lib/backend-proxy.ts` is the only module
+  that talks to the Spring Boot API; server functions (`graphqlRequest`,
+  `loginRequest`, `logoutRequest`, `uploadMedia`) wrap it. Never `fetch` the backend
+  from a component, and never expose the backend URL to the browser.
+- **Cookies and CSRF are relayed by the BFF.** The browser holds the session cookie
+  (`JSESSIONID`) and the double-submit `XSRF-TOKEN`; the proxy forwards them and copies
+  the backend's `Set-Cookie` headers back. A 403 that carries a freshly issued CSRF
+  token is retried once — do not bypass that retry.
+- **GraphQL:** operations live in `src/graphql/*.graphql`; `just generate` regenerates
+  `src/generated/graphql.ts` from the backend schema (git-ignored — never hand-edit).
+  Read with Apollo `useQuery`, write with `useMutation`; the client is provided once in
+  `src/routes/__root.tsx`.
 - Styling is Tailwind v4 (CSS-first, via `@tailwindcss/vite`) plus design tokens in
   `src/styles.css`. Use the tokens (`--lagoon`, `--sea-ink`, …), not raw hex; see
   `design.md`.

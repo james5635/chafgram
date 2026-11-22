@@ -1,0 +1,38 @@
+query Conversations($first: Int = 50) {
+  conversations(first: $first) {
+    id
+    type
+    title
+    updatedAt
+  }
+}
+
+query Messages($conversationId: ID!, $first: Int = 50, $cursor: String) {
+  messages(conversationId: $conversationId, first: $first, cursor: $cursor) {
+    id
+    conversationId
+    senderId
+    type
+    body
+    createdAt
+    media {
+      id
+      kind
+      status
+    }
+  }
+}
+
+mutation SendMessage($conversationId: ID!, $body: String, $mediaIds: [ID!]) {
+  sendMessage(conversationId: $conversationId, body: $body, mediaIds: $mediaIds) {
+    id
+    conversationId
+    senderId
+    body
+    createdAt
+  }
+}
+
+mutation MarkConversationRead($id: ID!) {
+  markConversationRead(id: $id)
+}

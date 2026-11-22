@@ -1,37 +1,13 @@
-import { createFileRoute } from '@tanstack/react-router'
-import PostCard from '../components/PostCard'
+import { useQuery } from '@apollo/client/react'
+import { createFileRoute, useParams } from '@tanstack/react-router'
 import Avatar from '../components/Avatar'
 import AppShell from '../components/AppShell'
 import { gradientPlaceholder } from '../lib/placeholders'
+import { MemberDocument } from '../generated/graphql'
 
 export const Route = createFileRoute('/profile/$username')({
   component: Profile,
 })
-
-const POSTS = [
-  {
-    id: 'p1',
-    author: { name: 'Rojame', username: 'rojame', avatar: undefined, initials: 'RJ' },
-    createdAt: '1d ago',
-    body: 'Keep going! 💙',
-    media: [{ url: gradientPlaceholder({ colors: ['#5b8dd6', '#9ec8f0'] }), alt: 'Mountain landscape' }],
-    reactions: { count: 45 },
-    comments: 8,
-    shares: 3,
-    edited: false,
-  },
-  {
-    id: 'p2',
-    author: { name: 'Rojame', username: 'rojame', avatar: undefined, initials: 'RJ' },
-    createdAt: '3d ago',
-    body: 'Always exploring new things.',
-    media: [],
-    reactions: { count: 32 },
-    comments: 5,
-    shares: 2,
-    edited: true,
-  },
-]
 
 const COVER = gradientPlaceholder({ colors: ['#6ba8e0', '#bcdcf5'], width: 1200, height: 320 })
 
@@ -42,36 +18,26 @@ function ProfilePanels() {
         <h3 className="m-0 mb-4 text-base font-bold text-[var(--sea-ink)]">About</h3>
         <ul className="m-0 space-y-3 p-0 list-none">
           <li className="flex items-center gap-2.5 text-sm text-[var(--sea-ink-soft)]">
-            <span aria-hidden="true">📍</span> Phnom Penh, Cambodia
-          </li>
-          <li className="flex items-center gap-2.5 text-sm">
-            <span aria-hidden="true">🔗</span>
-            <a href="https://github.com/james5655" target="_blank" rel="noreferrer" className="text-[var(--brand-dark)] no-underline transition hover:underline">
-              github.com/james5655
-            </a>
+            <span aria-hidden="true">📍</span> Your company workspace
           </li>
           <li className="flex items-center gap-2.5 text-sm text-[var(--sea-ink-soft)]">
-            <span aria-hidden="true">📅</span> Joined March 2024
+            <span aria-hidden="true">📅</span> Member of Chafgram
           </li>
         </ul>
-      </section>
-
-      <section className="island-shell rounded-2xl p-5">
-        <h3 className="m-0 mb-4 text-base font-bold text-[var(--sea-ink)]">Skills</h3>
-        <div className="flex flex-wrap gap-2">
-          {['Python', 'TypeScript', 'Java', 'React'].map((skill) => (
-            <span key={skill} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white px-3 py-1 text-xs font-semibold text-[var(--sea-ink)]">
-              {skill}
-              <button type="button" className="text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]" aria-label={`Follow ${skill} skill`}>+</button>
-            </span>
-          ))}
-        </div>
       </section>
     </aside>
   )
 }
 
 export function Profile() {
+  const params = useParams({ from: '/profile/$username' })
+  const username = params.username
+  const { data, loading, error } = useQuery(MemberDocument, {
+    variables: { username },
+    skip: !username || username === 'me',
+  })
+  const member = data?.member
+
   return (
     <AppShell rightRail={<ProfilePanels />}>
       <div className="page-wrap px-4 pb-8 pt-6">
@@ -82,21 +48,25 @@ export function Profile() {
 
           <div className="px-6 pb-4 sm:px-8">
             <div className="-mt-8 mb-1 inline-block rounded-full border-4 border-white bg-white shadow-md">
-              <Avatar initials="RJ" label="Rojame" size={56} />
+              <Avatar
+                initials={(member?.displayName ?? username ?? '?').slice(0, 2).toUpperCase()}
+                label={member?.displayName ?? username ?? 'Member'}
+                size={56}
+              />
             </div>
 
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <h1 className="m-0 text-2xl font-bold text-[var(--sea-ink)] sm:text-3xl">Rojame</h1>
-                <span className="text-sm font-medium text-[var(--sea-ink-soft)]">@rojame</span>
+                <h1 className="m-0 text-2xl font-bold text-[var(--sea-ink)] sm:text-3xl">
+                  {member?.displayName ?? (username === 'me' ? 'Your profile' : username)}
+                </h1>
+                <span className="text-sm font-medium text-[var(--sea-ink-soft)]">@{member?.username ?? username}</span>
                 <p className="m-0 mt-2 max-w-md text-sm leading-6 text-[var(--sea-ink-soft)]">
-                  Software Engineer &amp; Tech Enthusiast 🚀<br />
-                  Always exploring new things.
+                  {member?.bio ?? 'No bio yet.'}
                 </p>
                 <div className="mt-4 flex items-center gap-5 text-sm">
-                  <span><span className="font-semibold text-[var(--sea-ink)]">128</span> <span className="text-[var(--sea-ink-soft)]">Posts</span></span>
-                  <span><span className="font-semibold text-[var(--sea-ink)]">2.4K</span> <span className="text-[var(--sea-ink-soft)]">Followers</span></span>
-                  <span><span className="font-semibold text-[var(--sea-ink)]">320</span> <span className="text-[var(--sea-ink-soft)]">Following</span></span>
+                  <span><span className="font-semibold text-[var(--sea-ink)]">{member?.followerCount ?? 0}</span> <span className="text-[var(--sea-ink-soft)]">Followers</span></span>
+                  <span><span className="font-semibold text-[var(--sea-ink)]">{member?.followingCount ?? 0}</span> <span className="text-[var(--sea-ink-soft)]">Following</span></span>
                 </div>
               </div>
               <div className="flex flex-shrink-0 gap-2">
@@ -110,6 +80,12 @@ export function Profile() {
                 </button>
               </div>
             </div>
+
+            {error && <p className="mt-4 text-sm text-[#9f3030]">Could not load profile: {error.message}</p>}
+            {loading && <div className="mt-4 h-16 animate-pulse rounded-xl" />}
+            {!loading && !error && username !== 'me' && !member && (
+              <p className="mt-4 text-sm text-[var(--sea-ink-soft)]">Member not found.</p>
+            )}
 
             <div className="mt-5 flex gap-6 border-t border-[var(--line)] pt-3">
               {['Posts', 'Replies', 'Media', 'Likes'].map((tab, i) => (
@@ -127,12 +103,6 @@ export function Profile() {
               ))}
             </div>
           </div>
-        </section>
-
-        <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {POSTS.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
         </section>
       </div>
     </AppShell>

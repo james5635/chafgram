@@ -43,6 +43,20 @@ just dev               # backend :8080 + frontend :3000 (parallel; Ctrl-C stops 
   region `garage`). Re-running is safe.
 - Optional, for video: `ffmpeg` + `ffprobe` on `PATH`. The in-app pipeline shells out
   to them; without them video uploads end in `status='failed'` (images are unaffected).
+- The frontend talks to the backend through its BFF (`src/lib/backend-proxy.ts`), which
+  reads `CHAFGRAM_API_URL` (default `http://localhost:8080`). Point it at another host by
+  exporting that variable before `just dev`.
+
+## 2.1 GraphQL codegen (frontend)
+
+```bash
+just generate          # = just frontend::generate
+```
+
+Reads the backend's committed `backend/src/main/resources/graphql/*.graphqls` and
+regenerates `frontend/src/generated/graphql.ts` (git-ignored — never hand-edit it).
+Operations live in `frontend/src/graphql/*.graphql`. `npm run test` and `npm run build`
+regenerate the types automatically, so a fresh clone needs no extra step.
 
 ## 3. The daily loop
 
@@ -128,7 +142,10 @@ pre-push hook installed with `just bootstrap`. Docs-only changes are exempt from
   re-sync `target/generated-sources` via `./mvnw generate` (DGS codegen).
 - CSRF: double-submit cookie (`XSRF-TOKEN`, readable JS) with an `X-XSRF-TOKEN` header
   required on mutating requests. BFF clients (the TanStack Start server) must send it.
-  Anonymous POSTs without a valid pair get 403 — by design, not a bug.
+  Anonymous POSTs without a valid pair get 403 — by design, not a bug. The cookie value
+  is accepted verbatim (plain `CsrfTokenRequestAttributeHandler`); Spring's default
+  XOR-masked handler is explicitly replaced because a masked token cannot be obtained
+  from the cookie.
 - GraphiQL executes queries but needs the same CSRF pair; the masked token is exposed
   as the hidden `_csrf` field on the `/login` page.
 - The operation surface lives in `backend/src/main/resources/graphql/schema.graphqls`
