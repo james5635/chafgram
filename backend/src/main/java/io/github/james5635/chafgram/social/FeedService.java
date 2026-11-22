@@ -43,10 +43,25 @@ public class FeedService {
 
 	@Transactional(readOnly = true)
 	public List<Post> discoverFeed(User actor, int first, long cursor) {
-		return posts.findDiscover(cursor, page(first)).stream()
-				.filter(p -> !isBlockedAuthor(actor.getId(), p.getAuthorId()))
-				.limit(Math.max(first, 1))
-				.toList();
+		int limit = Math.max(first, 1);
+		List<Post> allowed = new ArrayList<>();
+		long currentCursor = cursor;
+		while (allowed.size() < limit) {
+			List<Post> page = posts.findDiscover(currentCursor, page(limit));
+			if (page.isEmpty()) {
+				break;
+			}
+			currentCursor = page.get(page.size() - 1).getId();
+			for (Post post : page) {
+				if (allowed.size() >= limit) {
+					break;
+				}
+				if (!isBlockedAuthor(actor.getId(), post.getAuthorId())) {
+					allowed.add(post);
+				}
+			}
+		}
+		return allowed;
 	}
 
 	/**

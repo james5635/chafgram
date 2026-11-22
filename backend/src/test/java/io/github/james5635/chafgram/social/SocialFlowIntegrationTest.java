@@ -8,6 +8,7 @@ import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
+import io.github.james5635.chafgram.social.dto.Views;
 import io.github.james5635.chafgram.common.AuditService;
 import io.github.james5635.chafgram.common.AuditLogRepository;
 import io.github.james5635.chafgram.moderation.Report;
@@ -50,6 +51,8 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 	@Autowired PostService posts;
 	@Autowired PostRepository postRepository;
 	@Autowired CommentService comments;
+	@Autowired CommentRepository commentRepository;
+	@Autowired Views views;
 	@Autowired FollowService follows;
 	@Autowired BlockService blocks;
 	@Autowired ReactionService reactions;
@@ -163,6 +166,36 @@ class SocialFlowIntegrationTest extends AbstractIntegrationTest {
 
 		blocks.unblock(member, admin.getId());
 		assertThat(feed.discoverFeed(admin, 20, Long.MAX_VALUE)).hasSize(1);
+	}
+
+	@Test
+	void discoverFeedFillsPagePastBlockedPosts() {
+		Post visible = posts.create(member, PostType.NOTE, "Visible older post", List.of());
+		posts.create(admin, PostType.NOTE, "Hidden newer post", List.of());
+		blocks.block(member, admin.getId());
+
+		assertThat(feed.discoverFeed(member, 1, Long.MAX_VALUE))
+				.extracting(Post::getId)
+				.containsExactly(visible.getId());
+	}
+
+	@Test
+	void editingANoteCannotRemoveItsRequiredBody() {
+		Post note = posts.create(member, PostType.NOTE, "A note needs text", List.of());
+
+		assertThatThrownBy(() -> posts.update(member, note.getId(), "  "))
+				.isInstanceOf(ApiException.class);
+		assertThat(posts.get(note.getId()).getBody()).isEqualTo("A note needs text");
+	}
+
+	@Test
+	void deletedCommentsRenderAsRemoved() {
+		Post post = posts.create(member, PostType.NOTE, "A post with a comment", List.of());
+		Comment comment = comments.add(member, post.getId(), null, "This should be hidden");
+		comments.delete(member, comment.getId());
+
+		Comment deleted = commentRepository.findById(comment.getId()).orElseThrow();
+		assertThat(views.comment(deleted, admin).body()).isEqualTo("[removed]");
 	}
 
 	@Test

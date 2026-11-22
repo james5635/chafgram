@@ -66,6 +66,9 @@ public class PostService {
 		if (!post.getAuthorId().equals(actor.getId())) {
 			throw new ApiException(HttpStatus.FORBIDDEN, "Only the author can edit this post"); // BR-3.5
 		}
+		if (post.getType() == PostType.NOTE && (body == null || body.isBlank())) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, "A note needs text");
+		}
 		validate(actor, null, body, List.of());
 		post.setBody(body == null || body.isBlank() ? null : body.trim());
 		return posts.save(post);

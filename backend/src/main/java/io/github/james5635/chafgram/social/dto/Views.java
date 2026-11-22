@@ -81,7 +81,8 @@ public class Views {
 		User author = requireUser(c.getAuthorId());
 		boolean edited = c.getEditedAt() != null;
 		return new CommentDto(
-				c.getId(), member(author, viewer), c.getPostId(), c.getParentId(), c.getBody(),
+				c.getId(), member(author, viewer), c.getPostId(), c.getParentId(),
+				c.getDeletedAt() == null ? c.getBody() : "[removed]",
 				edited ? c.getEditedAt() : null, c.getCreatedAt(),
 				reactions.commentReactionCount(c.getId()),
 				reactions.myCommentReaction(viewer, c.getId()).orElse(null));

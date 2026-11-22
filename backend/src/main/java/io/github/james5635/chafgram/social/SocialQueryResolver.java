@@ -66,6 +66,7 @@ public class SocialQueryResolver {
 	public MemberDto member(@Argument String username) {
 		User viewer = current.require();
 		User target = findByUsername(username);
+		requireVisible(viewer, target.getId(), "Member");
 		return views.member(target, viewer);
 	}
 
@@ -73,7 +74,9 @@ public class SocialQueryResolver {
 	public List<MemberDto> followers(@Argument String username, @Argument int first) {
 		User viewer = current.require();
 		User target = findByUsername(username);
+		requireVisible(viewer, target.getId(), "Member");
 		return follows.followers(target.getId(), PageRequest.of(0, Math.min(Math.max(first, 1), 100))).stream()
+				.filter(u -> !feed.isBlockedAuthor(viewer.getId(), u.getId()))
 				.map(u -> views.member(u, viewer))
 				.toList();
 	}
@@ -82,7 +85,9 @@ public class SocialQueryResolver {
 	public List<MemberDto> following(@Argument String username, @Argument int first) {
 		User viewer = current.require();
 		User target = findByUsername(username);
+		requireVisible(viewer, target.getId(), "Member");
 		return follows.followees(target.getId(), PageRequest.of(0, Math.min(Math.max(first, 1), 100))).stream()
+				.filter(u -> !feed.isBlockedAuthor(viewer.getId(), u.getId()))
 				.map(u -> views.member(u, viewer))
 				.toList();
 	}
@@ -118,6 +123,7 @@ public class SocialQueryResolver {
 	public PostDto post(@Argument Long id) {
 		User actor = current.require();
 		Post post = posts.get(id);
+		requireVisible(actor, post.getAuthorId(), "Post");
 		return views.post(post, actor);
 	}
 
@@ -125,7 +131,11 @@ public class SocialQueryResolver {
 	public List<CommentDto> postComments(@Argument Long postId, @Argument Integer first) {
 		User actor = current.require();
 		int limit = first == null ? 50 : Math.min(Math.max(first, 1), 200);
-		return views.comments(comments.listByPost(postId, limit), actor);
+		Post post = posts.get(postId);
+		requireVisible(actor, post.getAuthorId(), "Post");
+		return views.comments(comments.listByPost(postId, limit).stream()
+				.filter(comment -> !feed.isBlockedAuthor(actor.getId(), comment.getAuthorId()))
+				.toList(), actor);
 	}
 
 	@QueryMapping
@@ -165,5 +175,11 @@ public class SocialQueryResolver {
 	private User findByUsername(String username) {
 		return users.findByUsername(username)
 				.orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Member not found"));
+	}
+
+	private void requireVisible(User viewer, Long authorId, String label) {
+		if (feed.isBlockedAuthor(viewer.getId(), authorId)) {
+			throw new ApiException(HttpStatus.NOT_FOUND, label + " not found");
+		}
 	}
 }

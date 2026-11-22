@@ -2,13 +2,17 @@ package io.github.james5635.chafgram.social;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
 import io.github.james5635.chafgram.identity.MemberService;
+import io.github.james5635.chafgram.identity.UserRepository;
 import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
+import io.github.james5635.chafgram.identity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
 
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -30,6 +34,9 @@ class GraphqlApiTest extends AbstractIntegrationTest {
 
 	@Autowired
 	private WorkspaceSettingsRepository settings;
+	@Autowired private UserRepository users;
+	@Autowired private PostService posts;
+	@Autowired private BlockService blocks;
 
 	@BeforeEach
 	void setUp() {
@@ -96,6 +103,31 @@ class GraphqlApiTest extends AbstractIntegrationTest {
 						.content("{\"query\":\"{ discoverFeed(first: 20) { posts { id } } }\"}"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.discoverFeed.posts").isArray());
+	}
+
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void blockedMemberCannotReadPostById() throws Exception {
+		jdbc.update("INSERT INTO users (username, display_name, email) VALUES ('bob', 'Bob', 'bob@example.com')");
+		User bob = users.findByUsername("bob").orElseThrow();
+		Post blockedPost = posts.create(bob, PostType.NOTE, "Private after block", List.of());
+		blocks.block(bob, users.findByUsername("alice").orElseThrow().getId());
+
+		mockMvc.perform(post("/graphql")
+					.with(csrf())
+					.contentType("application/json")
+					.content("{\"query\":\"{ post(id: " + blockedPost.getId() + ") { body } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.errors[0]").exists())
+				.andExpect(jsonPath("$.data.post").doesNotExist());
+
+		mockMvc.perform(post("/graphql")
+					.with(csrf())
+					.contentType("application/json")
+					.content("{\"query\":\"{ member(username: \\\"bob\\\") { username } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.errors[0]").exists())
+				.andExpect(jsonPath("$.data.member").doesNotExist());
 	}
 
 	@Test
