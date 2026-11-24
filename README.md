@@ -46,7 +46,7 @@ see [`docs/functional-requirements.md`](docs/functional-requirements.md) and
 ## Repository layout
 
 ```
-backend/      Spring Boot service (Maven wrapper)
+backend/      Spring Boot service (Gradle wrapper)
 frontend/     TanStack Start web app
 compose.yaml  Local dev MySQL 8.0
 docs/functional-requirements.md  Functional requirements (FR, MoSCoW-prioritized)
@@ -71,13 +71,13 @@ runs `backend::install` and `frontend::install`). The raw commands:
 ```bash
 just mysql          # start local MySQL 8.0 and wait until healthy, or: docker compose up -d --wait mysql
 cd backend
-./mvnw spring-boot:run
+./gradlew bootRun
 ```
 
 Run `just mysql` first if the backend needs the database (it is not auto-started).
 
 ```bash
-./mvnw test        # hermetic — Testcontainers starts a throwaway MySQL 8; the dev DB is untouched
+./gradlew test        # hermetic — Testcontainers starts a throwaway MySQL 8; the dev DB is untouched
 just seed           # reset dev DB: wipe, Flyway-migrate, insert full fixtures
 just migrate        # apply Flyway migrations only (data untouched)
 just unseed         # empty dev DB: wipe, Flyway-migrate, no fixtures

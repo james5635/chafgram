@@ -23,7 +23,7 @@ Package-specific recipes live in `backend/justfile` (`just backend::<recipe>`) a
 ```bash
 git clone <remote> chafgram && cd chafgram
 cp .env.example .env   # optional — compose/just load it; dev defaults work as-is
-just install           # backend (maven go-offline) + frontend (npm ci)
+just install           # backend (gradle dependencies) + frontend (npm ci)
 just bootstrap         # install local git hooks (pre-push → just verify)
 just mysql             # start local MySQL 8.0, wait for healthy
 just seed              # WIPES dev DB, migrates, inserts full demo fixtures
@@ -92,7 +92,7 @@ touched, so no `just seed` is needed afterwards. Docker must be running:
 
 ```bash
 cd backend
-./mvnw test                # no `just mysql` needed — Testcontainers starts its own DB
+./gradlew test                # no `just mysql` needed — Testcontainers starts its own DB
 ```
 
 Test-only configuration lives in `backend/src/test/resources/application-test.properties`
@@ -139,7 +139,7 @@ pre-push hook installed with `just bootstrap`. Docs-only changes are exempt from
   upload/`bytes`, multipart message sends, Actuator) is documented in
   [`architecture.md`](architecture.md).
 - Adding an API: new/extended `.graphqls` (one file per DTO) + resolver + DTO, then
-  re-sync `target/generated-sources` via `./mvnw generate` (DGS codegen).
+  re-sync `build/generated-sources` via `./gradlew generateJava` (DGS codegen).
 - CSRF: double-submit cookie (`XSRF-TOKEN`, readable JS) with an `X-XSRF-TOKEN` header
   required on mutating requests. BFF clients (the TanStack Start server) must send it.
   Anonymous POSTs without a valid pair get 403 — by design, not a bug. The cookie value
@@ -176,7 +176,7 @@ just bootstrap  # one-time: install the pre-push hook from scripts/hooks/pre-pus
 - Commits: `<type>(<scope>): <subject>` — e.g. `feat(backend): …`, `fix(db): …`,
   `docs(docs): …`; types `feat|fix|docs|refactor|test|chore|build|ci` (full rule in
   [`AGENTS.md`](../AGENTS.md#conventions)).
-- Nothing generated gets committed: `backend/target/`, `frontend/.output/`, `dist/`,
+- Nothing generated gets committed: `backend/build/`, `frontend/.output/`, `dist/`,
   `node_modules/` are all ignored. Exception: `frontend/src/routeTree.gen.ts` is generated
   but **committed** — never hand-edit it; commit the regenerated file so type-safe routes
   work on a fresh clone.
@@ -188,7 +188,7 @@ just bootstrap  # one-time: install the pre-push hook from scripts/hooks/pre-pus
 | Port 8080 already in use | A stray `spring-boot:run`/devtools instance; kill it (`pgrep -af ChafgramApplication`). |
 | Port 3000 already in use | Another Vite instance; stop it or change port. |
 | App fails with `SchemaManagementException … position` | Applied DB drifted from mappings; align with a new migration (see §4), never by editing applied files. |
-| `./mvnw test` fails with "Could not find a valid Docker environment" | Testcontainers needs a running Docker daemon — start Docker (or Podman) and retry. |
+| `./gradlew test` fails with "Could not find a valid Docker environment" | Testcontainers needs a running Docker daemon — start Docker (or Podman) and retry. |
 | Tests hit the dev database / the dev DB looks wiped by a test run | They don't: the suite uses its own throwaway container. A test-scoped `application.properties` is the usual culprit for a *misconfigured* run — rename it to `application-test.properties` (see §5). |
 | GraphQL returns 403 from curl | Missing CSRF double-submit pair (cookie + `X-XSRF-TOKEN`) — see §6. |
 | `.env` changes ignored by the JVM | The JVM doesn't read `.env`; export the variables or rely on `application.properties` defaults. |
