@@ -1,8 +1,0 @@
-type CreateInvite {
-  id: ID!
-  email: String
-  role: String!
-  token: String!
-  acceptPath: String!
-  expiresAt: String!
-}

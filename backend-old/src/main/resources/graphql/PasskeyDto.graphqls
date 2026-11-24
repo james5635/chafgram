@@ -1,6 +1,0 @@
-type Passkey {
-  credentialId: ID!
-  label: String!
-  createdAt: String!
-  lastUsedAt: String
-}

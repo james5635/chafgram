@@ -1,4 +1,0 @@
-type FeedPage {
-  posts: [Post!]!
-  nextCursor: String
-}
