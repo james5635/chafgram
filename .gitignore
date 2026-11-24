@@ -5,7 +5,7 @@ docs/superpowers/
 .env
 
 # Test artifacts
-backend/media-data/
+media-data/
 
 # OS junk
 .DS_Store
