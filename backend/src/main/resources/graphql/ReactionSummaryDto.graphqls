@@ -1,0 +1,4 @@
+type ReactionSummary {
+  count: Int!
+  myReaction: ReactionType
+}

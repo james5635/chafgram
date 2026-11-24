@@ -1,0 +1,113 @@
+# Chafgram — GraphQL schema roots (Query, Mutation) and enums.
+# Object types live in one .graphqls file per DTO (MemberDto.graphqls, PostDto.graphqls, …).
+# REST is only used for what cannot be a GraphQL operation (see architecture.md):
+# session ceremonies, OAuth-callback-style flows, file upload/download, Actuator.
+
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  # social (see MemberDto.graphqls, PostDto.graphqls, …)
+  me: Member!
+  member(username: String!): Member
+  memberById(id: ID!): Member
+  members(first: Int = 50, query: String): [MemberDetail!]!
+  followers(username: String!, first: Int = 50): [Member!]!
+  following(username: String!, first: Int = 50): [Member!]!
+  followingFeed(first: Int = 20, cursor: String): FeedPage!
+  discoverFeed(first: Int = 20, cursor: String): FeedPage!
+  watchFeed(first: Int = 20, cursor: String): FeedPage!
+  post(id: ID!): Post
+  postComments(postId: ID!, first: Int = 50): [Comment!]!
+  searchPosts(query: String!, first: Int = 20, kind: PostType): [Post!]!
+  savedPosts(first: Int = 20): [Post!]!
+  myNotifications(first: Int = 30): [Notification!]!
+  unreadNotifications: Int!
+  blockedMembers: [Member!]!
+  myPasskeys: [Passkey!]!
+
+  # workspace & invites (see WorkspaceDto.graphqls, InviteDto.graphqls)
+  workspace: Workspace!
+  invites: [Invite!]!
+
+  # messaging (see ConversationDto.graphqls, MessageDto.graphqls)
+  conversations(first: Int = 50): [Conversation!]!
+  messages(conversationId: ID!, first: Int = 50, cursor: String): [Message!]!
+  unreadMessageCount(conversationId: ID!): Int!
+
+  # moderation (see ReportDto.graphqls, AuditLogDto.graphqls) — staff only
+  reportQueue(first: Int = 100): [Report!]!
+  auditLog(first: Int = 100, actorId: ID, action: String, targetType: String, from: String, to: String): [AuditLogEntry!]!
+
+  # media metadata (see MediaAssetDto.graphqls) — bytes stay on REST
+  mediaAsset(id: ID!): MediaAsset!
+}
+
+type Mutation {
+  # social ------------------------------------------------------------------
+  createPost(type: PostType!, body: String, mediaIds: [ID!]): Post!
+  updatePost(id: ID!, body: String): Post!
+  deletePost(id: ID!): Boolean!
+  createComment(postId: ID!, parentId: ID, body: String!): Comment!
+  editComment(id: ID!, body: String!): Comment!
+  deleteComment(id: ID!): Boolean!
+  follow(id: ID!): Boolean!
+  unfollow(id: ID!): Boolean!
+  blockMember(id: ID!): Boolean!
+  unblockMember(id: ID!): Boolean!
+  reactToPost(id: ID!, type: ReactionType!): ReactionSummary!
+  unreactToPost(id: ID!): Boolean!
+  reactToComment(id: ID!, type: ReactionType!): ReactionSummary!
+  unreactToComment(id: ID!): Boolean!
+  savePost(id: ID!): Boolean!
+  unsavePost(id: ID!): Boolean!
+  markNotificationsRead: Boolean!
+  markNotificationRead(id: ID!): Boolean!
+  muteNotificationType(type: NotificationType!): Boolean!
+  unmuteNotificationType(type: NotificationType!): Boolean!
+
+  # workspace & members ------------------------------------------------------
+  updateWorkspace(name: String, slug: String, primaryColor: String, signupMode: String, logoMediaId: ID): Workspace!
+  updateProfile(displayName: String, bio: String, avatarMediaId: ID): Member!
+  setMemberRole(id: ID!, role: String!): MemberDetail!
+  suspendMember(id: ID!): MemberDetail!
+  deactivateMember(id: ID!): MemberDetail!
+  reactivateMember(id: ID!): MemberDetail!
+
+  # invites -------------------------------------------------------------------
+  createInvite(email: String, role: String): CreateInvite!
+  revokeInvite(id: ID!): Boolean!
+
+  # account flows (FR-1.7) ----------------------------------------------------
+  requestEmailVerification: Boolean!
+  requestPasswordReset(email: String!): Boolean!
+  resetPassword(token: String!, password: String!): Boolean!
+  verifyEmail(token: String!): Boolean!
+
+  # messaging -----------------------------------------------------------------
+  sendDirectMessage(userId: ID!, body: String, mediaIds: [ID!]): Message!
+  sendMessage(conversationId: ID!, body: String, mediaIds: [ID!]): Message!
+  createGroupConversation(title: String!, memberIds: [ID!]): Conversation!
+  addGroupMember(id: ID!, userId: ID!, role: String): Conversation!
+  removeGroupMember(id: ID!, userId: ID!): Conversation!
+  leaveConversation(id: ID!): Boolean!
+  muteConversation(id: ID!, until: String): Boolean!
+  markConversationRead(id: ID!): Boolean!
+
+  # moderation ----------------------------------------------------------------
+  fileReport(targetType: String!, targetId: ID!, reason: String!, details: String): Report!
+  resolveReport(id: ID!, resolution: String!, note: String): Report!
+
+  # passkeys ------------------------------------------------------------------
+  renamePasskey(credentialId: ID!, label: String!): Passkey!
+  revokePasskey(credentialId: ID!): Boolean!
+
+  # media (admin moderation, BR-5.3) -------------------------------------------
+  deleteMedia(id: ID!): Boolean!
+}
+
+enum PostType { NOTE PHOTO VIDEO }
+enum ReactionType { LIKE LOVE HAHA WOW SAD ANGRY }
+enum NotificationType { FOLLOW LIKE COMMENT REPLY MENTION MESSAGE SYSTEM }

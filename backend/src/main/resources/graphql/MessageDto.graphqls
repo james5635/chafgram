@@ -1,0 +1,9 @@
+type Message {
+  id: ID!
+  conversationId: ID!
+  senderId: ID!
+  type: String!
+  body: String
+  media: [MediaAsset!]!
+  createdAt: String!
+}

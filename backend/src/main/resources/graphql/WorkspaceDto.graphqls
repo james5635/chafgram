@@ -1,0 +1,7 @@
+type Workspace {
+  name: String!
+  slug: String!
+  primaryColor: String
+  signupMode: String!
+  logoMediaId: ID
+}
