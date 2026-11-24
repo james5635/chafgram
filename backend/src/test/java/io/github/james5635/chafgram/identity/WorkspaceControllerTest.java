@@ -1,6 +1,7 @@
 package io.github.james5635.chafgram.identity;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
+import io.github.james5635.chafgram.identity.dto.UpdateWorkspaceRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,9 @@ class WorkspaceControllerTest extends AbstractIntegrationTest {
 	private MemberService memberService;
 
 	@Autowired
+	private WorkspaceService workspaceService;
+
+	@Autowired
 	private InviteRepository invites;
 
 	@Autowired
@@ -37,6 +41,7 @@ class WorkspaceControllerTest extends AbstractIntegrationTest {
 		invites.deleteAll();
 		users.deleteAll();
 		memberService.bootstrap("alice", "Alice", "alice@example.com", "a-very-strong-password");
+		workspaceService.update("alice", new UpdateWorkspaceRequest(null, null, null, "invite_only", null));
 	}
 
 	@Test
