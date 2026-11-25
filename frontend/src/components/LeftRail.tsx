@@ -1,5 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router'
+import { useQuery } from '@apollo/client/react'
 import { Home, Compass, MessageSquare, Bell, User, Plus, ChevronRight, MoreHorizontal } from 'lucide-react'
+import { MeDocument } from '@/generated/graphql'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 
@@ -14,6 +16,11 @@ const navLinks = [
 
 export default function LeftRail() {
   const location = useLocation()
+  // The signed-in member is the only source for the user chip — never a
+  // hardcoded name, or it disagrees with /profile/me.
+  const { data } = useQuery(MeDocument)
+  const displayName = data?.me.displayName ?? 'You'
+  const username = data?.me.username ?? ''
 
   return (
     <aside
@@ -58,16 +65,18 @@ export default function LeftRail() {
         </Button>
         <Link
           to="/profile/$username"
-          params={{ username: 'me' }}
+          params={{ username: username || 'me' }}
           className="flex items-center gap-2 rounded-xl px-2 py-2 no-underline transition hover:bg-[var(--brand-light)]/50"
           aria-label="Your profile"
         >
-          <Avatar className="h-8 w-8">
-            <AvatarFallback name="Rojame" />
+          <Avatar className="h-8 w-8" aria-label={displayName}>
+            <AvatarFallback name={displayName} />
           </Avatar>
           <span className="flex-1 min-w-0 leading-none">
-            <span className="block text-sm font-semibold text-[var(--sea-ink)]">Rojame</span>
-            <span className="block text-[0.7rem] text-[var(--sea-ink-soft)]">@rojame</span>
+            <span className="block text-sm font-semibold text-[var(--sea-ink)]">{displayName}</span>
+            <span className="block text-[0.7rem] text-[var(--sea-ink-soft)]">
+              {username ? `@${username}` : '…'}
+            </span>
           </span>
           <ChevronRight className="h-4 w-4 text-[var(--sea-ink-soft)]" aria-hidden="true" />
         </Link>

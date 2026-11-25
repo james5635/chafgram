@@ -128,9 +128,9 @@ Three-column layout: **left rail / content column / right rail**. Content column
 └──────────┴──────────────────────────────────────────────┴──────────────────┘
 ```
 
-**Header** (sticky, `design.md` §7): brand chip + "Chafgram" wordmark (Manrope bold), centered search input (`.demo-input`), theme toggle, avatar (32px, circular, `--line` ring, name-initial fallback). No nav links here — nav lives in LeftRail.
+**Header** (sticky, `design.md` §7): brand chip + "Chafgram" wordmark (Manrope bold), centered search input (`.demo-input`), theme toggle, avatar (32px, circular, `--line` ring, name-initial fallback from the signed-in `me` member). No nav links here — nav lives in LeftRail.
 
-**Left rail** (`LeftRail` component): fixed `w-64`, `top-14 bottom-0`, `border-r`, `bg-white/60 backdrop-blur-md`. Brand chip + wordmark at top. Nav links: Home, Explore, Messages (badge 3), Notifications (badge 5), Profile, More. Active link: `bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold`. Inactive: `text-[var(--sea-ink-soft)] hover:bg-[var(--brand-light)]/50`. Bottom: blue "Create Post" pill (rounded-full, `border-[var(--brand)] bg-[var(--brand)] text-white`, hover `bg-[var(--brand-dark)] shadow-lg shadow-[var(--brand)]/40`) + kicker "Connect. Share. Belong."
+**Left rail** (`LeftRail` component): fixed `w-64`, `top-14 bottom-0`, `border-r`, `bg-white/60 backdrop-blur-md`. Brand chip + wordmark at top. Nav links: Home, Explore, Messages (badge 3), Notifications (badge 5), Profile, More. Active link: `bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold`. Inactive: `text-[var(--sea-ink-soft)] hover:bg-[var(--brand-light)]/50`. Bottom: blue "Create Post" pill (rounded-full, `border-[var(--brand)] bg-[var(--brand)] text-white`, hover `bg-[var(--brand-dark)] shadow-lg shadow-[var(--brand)]/40`) + user chip with the signed-in member's display name and `@username` from `me`, with a name-initial avatar fallback. No hardcoded member names in the shell.
 
 **Right rail** (`RightRail` component): `w-80`, hidden below `lg` breakpoint. "Who to follow" (kicker + member list + "See all →"), "Trending" (numbered list + external arrows), "Join Chafgram Today" card (kicker + line + blue "Sign Up" pill). **Note:** private/invite-only default (BR-1.5) — copy confirmed with owner.
 

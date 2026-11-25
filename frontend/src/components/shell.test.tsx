@@ -50,7 +50,7 @@ beforeEach(() => {
 
 describe('LeftRail', () => {
   it('renders the navigation rail and all nav links', () => {
-    render(<LeftRail />)
+    renderShell(<LeftRail />)
 
     expect(screen.getByRole('complementary', { name: 'Main navigation' })).toBeInTheDocument()
     for (const label of ['Home', 'Explore', 'Messages', 'Notifications', 'Profile']) {
@@ -59,19 +59,41 @@ describe('LeftRail', () => {
   })
 
   it('shows unread badges for messages and notifications', () => {
-    render(<LeftRail />)
+    renderShell(<LeftRail />)
 
     expect(screen.getByText('3')).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
   })
 
-  it('renders the Create Post action and the user chip', () => {
-    render(<LeftRail />)
+  it('renders the Create Post action and the user chip', async () => {
+    renderShell(<LeftRail />)
 
     expect(screen.getByRole('button', { name: 'Create post' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Your profile' })).toBeInTheDocument()
-    expect(screen.getByText('Rojame')).toBeInTheDocument()
+    expect(await screen.findByText('Rojame')).toBeInTheDocument()
     expect(screen.getByText('@rojame')).toBeInTheDocument()
+  })
+
+  it('shows the signed-in member instead of a hardcoded name', async () => {
+    render(
+      <MockedProvider
+        mocks={[
+          {
+            request: { query: MeDocument },
+            result: {
+              data: { me: { ...MEMBER, displayName: 'Dev Admin', username: 'devadmin' } },
+            },
+          },
+        ]}
+      >
+        <LeftRail />
+      </MockedProvider>,
+    )
+
+    expect(await screen.findByText('Dev Admin')).toBeInTheDocument()
+    expect(screen.getByText('@devadmin')).toBeInTheDocument()
+    expect(screen.getByLabelText('Dev Admin')).toBeInTheDocument()
+    expect(screen.queryByText('Rojame')).not.toBeInTheDocument()
   })
 })
 
