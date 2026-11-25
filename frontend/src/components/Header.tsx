@@ -26,7 +26,7 @@ export default function Header() {
           <ThemeToggle />
           <div className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-white/80 px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow-sm">
             <Avatar className="h-8 w-8" aria-label="Your profile">
-              <AvatarFallback>R</AvatarFallback>
+              <AvatarFallback name="Rojame" />
             </Avatar>
             <ChevronDown className="h-4 w-4 text-[var(--sea-ink-soft)]" aria-hidden="true" />
           </div>

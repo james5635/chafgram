@@ -69,6 +69,10 @@ harbor, not a public square* — with brand blue as the signal of "you can act h
 | Body / UI | **Manrope** (400–800) | Google Fonts | Everything else: nav, body, buttons, labels, captions |
 | Code | system monospace stack | — | Inline `code`, only inside docs-like contexts |
 
+Geist Variable is installed via `@fontsource-variable/geist` for shadcn-style
+primitives in `src/components/ui/`; it is not the UI typeface — Manrope remains
+the default (`--font-sans` in `styles.css`).
+
 Rules:
 
 - Display (`Fraunces`) is for short, high-impact lines only. Never body text, never UI
@@ -246,9 +250,10 @@ Per-component what/where/how detail lives in [`docs/web-ui.md`](docs/web-ui.md) 
 
 - Stroke icons, 1.5px, round caps/joins; 16–24px grid; currentColor. (X/GitHub brand glyphs
   in header/footer are filled exceptions.)
-- Avatars: circular, `--line` ring, initials fallback on `shell`-toned fill; sizes
-  24/32/40/56. Do not point `src` at a placeholder file that does not exist — omit `src`
-  so the initials fallback renders.
+- Avatars: circular, `--line` ring; without an image, show **one** uppercase initial of
+  the name on a stable tint derived from that name (`--avatar-tint-1`…`--avatar-tint-6`
+  in `styles.css`, computed in `src/lib/avatar.ts`). Sizes 24/32/40/56. Do not point `src`
+  at a placeholder file that does not exist — omit `src` so the initial renders.
 - Imagery (video thumbnails, post media) is always user content; the UI never fabricates
   stock photography. Placeholders are inline SVG gradients or tonal lagoon/sand fills with
   a centred glyph (`src/lib/placeholders.ts`), never remote URLs that render blank offline.

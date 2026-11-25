@@ -63,7 +63,7 @@ export default function LeftRail() {
           aria-label="Your profile"
         >
           <Avatar className="h-8 w-8">
-            <AvatarFallback>RJ</AvatarFallback>
+            <AvatarFallback name="Rojame" />
           </Avatar>
           <span className="flex-1 min-w-0 leading-none">
             <span className="block text-sm font-semibold text-[var(--sea-ink)]">Rojame</span>

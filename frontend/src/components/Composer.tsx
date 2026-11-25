@@ -38,7 +38,7 @@ export default function Composer({ member, onSubmit }: ComposerProps) {
       <div className="flex items-center gap-3 px-5 py-4 sm:px-6 sm:py-5">
         <Avatar className="h-8 w-8" aria-label={member.name}>
           {member.avatar && <AvatarImage src={member.avatar} alt={member.name} />}
-          <AvatarFallback>{member.initials}</AvatarFallback>
+          <AvatarFallback name={member.name} />
         </Avatar>
         <Textarea
           value={body}

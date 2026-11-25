@@ -93,7 +93,7 @@ export function Messages() {
                     className={`flex w-full items-center gap-3 px-3 py-3 text-left transition ${conversation.id === activeId ? 'bg-[var(--brand-light)]/70' : 'hover:bg-[var(--brand-light)]/40'}`}
                   >
                     <Avatar className="h-8 w-8" aria-label={conversation.title ?? 'Conversation'}>
-                      <AvatarFallback>{(conversation.title ?? 'C').slice(0, 2).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback name={conversation.title ?? 'Conversation'} />
                     </Avatar>
                     <span className="flex-1 min-w-0">
                       <span className="block truncate text-sm font-semibold text-[var(--sea-ink)]">

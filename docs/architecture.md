@@ -65,17 +65,20 @@
 
 ## 3. Frontend architecture
 
-- **TanStack Start (React 19)** — SSR with streaming; file-based routing under
-  `src/routes/`; generated `routeTree.gen.ts` (never hand-edited).
+- **TanStack Start + TanStack Router (React 19, TypeScript 6, Vite 8)** — SSR with
+  streaming; file-based routing under `src/routes/`; generated `routeTree.gen.ts`
+  (never hand-edited). Dev-only TanStack Devtools/Router Devtools render in the corner.
 - **Server functions** (`createServerFn`) act as the BFF for all backend calls:
   typed, server-only credential handling, single egress point to the Spring Boot API.
   `src/lib/backend-proxy.ts` is the only module that talks to the backend; it
   forwards the browser's cookies, echoes the CSRF token, and copies the backend's
   `Set-Cookie` headers back to the browser.
-- **Apollo Client** — the browser-side GraphQL client. Its `bffLink`
+- **Apollo Client 4** — the browser-side GraphQL client. Its `bffLink`
   (`src/lib/apollo.ts`) sends every operation through the `graphqlRequest` server
   function, so the browser never learns the backend URL. One `ApolloClient` with
   an `InMemoryCache` is provided by `ApolloProvider` in `src/routes/__root.tsx`.
+  Reads use `useQuery`, writes use `useMutation`; cache updates target normalized
+  entities so all cached queries refresh together.
 - **GraphQL codegen** — `just generate` (root) runs `frontend::generate`, which
   reads the backend's committed `*.graphqls` files and regenerates
   `frontend/src/generated/graphql.ts` (git-ignored, never hand-edited).
@@ -84,11 +87,21 @@
 - **Rendering strategy** — SSR for shell and public surface; client interactivity for
   feed/compose/watch/messages; route loaders for data.
 - **Styling** — Tailwind v4 (CSS-first via `@tailwindcss/vite`) + token system in
-  `styles.css` (`--sea-ink`, `--lagoon`, …); theming (light/dark/auto) resolved pre-paint
-  by the inline `THEME_INIT_SCRIPT`; see [`design.md`](../design.md).
-- **Structure** — `src/components/` (shell: Header, Footer, ThemeToggle),
-  `src/routes/` (file routes), feature modules land as sibling folders later
-  (`feed/`, `watch/`, `messages/`, `admin/`) rather than route-local code.
+  `styles.css` (`--sea-ink`, `--lagoon`, `--avatar-tint-*`, …); theming
+  (light/dark/auto) resolved pre-paint by the inline `THEME_INIT_SCRIPT`; see
+  [`design.md`](../design.md). `tw-animate-css` supplies Tailwind animations.
+- **UI primitives** — shadcn-style components in `src/components/ui/` built on
+  Base UI (`@base-ui/react`), with `class-variance-authority` for variants,
+  `cn` for class merging, and `lucide-react` for stroke icons. Geist Variable is
+  installed via `@fontsource-variable/geist` for the primitives; the UI font
+  remains Manrope per `design.md`.
+- **Structure** — `src/components/` (shell: Header, LeftRail, RightRail,
+  ThemeToggle; `ui/` primitives), `src/routes/` (file routes), feature modules
+  land as sibling folders later (`feed/`, `watch/`, `messages/`, `admin/`) rather
+  than route-local code.
+- **Testing** — frontend: Vitest 5 + React Testing Library (`jsdom`), colocated
+  `*.test.ts(x)`; backend: JUnit + MockMvc against Testcontainers MySQL (hermetic).
+  `just verify` runs both suites and both builds.
 - **Data fetching** — Apollo `useQuery`/`useMutation` for reads and writes; TanStack
   Router loaders remain an option for route-level data.
 - **Auth flow** — the browser posts credentials to the `loginRequest` server

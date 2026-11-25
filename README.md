@@ -39,9 +39,11 @@ see [`docs/functional-requirements.md`](docs/functional-requirements.md) and
 | Layer    | Technology |
 |----------|------------|
 | Backend  | Spring Boot 4 (Java 21), Spring Security + WebAuthn (passkeys), Spring Data JPA + MySQL, Flyway migrations, Spring GraphQL (GraphQL-first; REST only for the keep-list in `docs/architecture.md`), Actuator |
-| Frontend | TanStack Start (React 19), TanStack Router (file-based), Vite, Tailwind CSS v4, TypeScript |
+| Frontend | TanStack Start + TanStack Router (file-based), React 19, TypeScript 6, Vite 8; Apollo Client 4 with GraphQL Code Generator for typed operations through the BFF |
+| UI       | Tailwind CSS v4 (CSS-first, `@tailwindcss/vite`), shadcn-style primitives in `src/components/ui/` built on Base UI (`@base-ui/react`) + `class-variance-authority`, `lucide-react` icons, `tw-animate-css`; TanStack Devtools in dev only |
+| Testing  | Backend: JUnit + MockMvc + Testcontainers MySQL (hermetic). Frontend: Vitest 5 + React Testing Library (jsdom) |
 | Media    | S3-compatible object storage — locally [Garage](https://garagehq.deuxfleurs.fr/) via `compose.yaml` (`garage`, `garage-init`), bucket `chafgram-media`, endpoint `http://localhost:3900`, region `garage` |
-| Design   | "Sea/lagoon" system — Fraunces + Manrope, token-driven light/dark/auto themes — see [design.md](design.md) |
+| Design   | "Sea/lagoon" system — Fraunces + Manrope (Google Fonts), Geist Variable via `@fontsource-variable/geist` for primitives, token-driven light/dark/auto themes — see [design.md](design.md) |
 
 ## Repository layout
 

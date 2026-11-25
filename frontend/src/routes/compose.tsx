@@ -100,7 +100,7 @@ export function Compose() {
             <div className="p-5 sm:p-6">
               <div className="flex gap-3">
                 <Avatar className="h-10 w-10" aria-label={me?.displayName ?? 'You'}>
-                  <AvatarFallback>{me?.displayName?.slice(0, 2).toUpperCase() ?? '??'}</AvatarFallback>
+                  <AvatarFallback name={me?.displayName ?? 'You'} />
                 </Avatar>
                 <Textarea
                   value={body}

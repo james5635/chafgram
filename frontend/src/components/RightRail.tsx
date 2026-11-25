@@ -36,7 +36,7 @@ export default function RightRail() {
             <div key={i} className="flex items-center gap-3">
               <Avatar className="h-8 w-8" aria-label={person.name}>
                 {person.avatar && <AvatarImage src={person.avatar} alt={person.name} />}
-                <AvatarFallback>{person.initials}</AvatarFallback>
+                <AvatarFallback name={person.name} />
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="m-0 text-sm font-semibold text-[var(--sea-ink)] leading-none">

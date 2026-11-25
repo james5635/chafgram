@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { avatarInitial, avatarTint } from '@/lib/avatar'
 
 type AvatarSize = 24 | 32 | 40 | 56
 
@@ -34,7 +35,8 @@ export default function Avatar({
   const sizeClass = SIZE_CLASSES[size]
   const textClass = TEXT_CLASSES[size]
 
-  const computedInitials = initials || (label ? label.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) : '?')
+  const name = label || initials || ''
+  const computedInitial = avatarInitial(name)
 
   return (
     <span
@@ -44,6 +46,7 @@ export default function Avatar({
         sizeClass,
         className,
       )}
+      style={src ? undefined : { backgroundColor: avatarTint(name) }}
     >
       {src ? (
         <img
@@ -56,8 +59,8 @@ export default function Avatar({
           loading="lazy"
         />
       ) : (
-        <span className={cn('text-[var(--sea-ink-soft)] font-semibold', textClass)}>
-          {computedInitials}
+        <span className={cn('font-semibold text-[var(--sea-ink)]', textClass)}>
+          {computedInitial}
         </span>
       )}
     </span>

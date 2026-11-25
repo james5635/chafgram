@@ -33,6 +33,14 @@
   --hero-a: rgba(96, 165, 250, 0.3);
   --hero-b: rgba(37, 99, 235, 0.14);
 
+  /* Deterministic avatar fallback tints (adapt with light/dark tokens). */
+  --avatar-tint-1: color-mix(in oklab, var(--lagoon) 42%, var(--surface-strong));
+  --avatar-tint-2: color-mix(in oklab, var(--palm) 32%, var(--surface-strong));
+  --avatar-tint-3: color-mix(in oklab, var(--brand) 24%, var(--surface-strong));
+  --avatar-tint-4: color-mix(in oklab, var(--lagoon-deep) 28%, var(--sand));
+  --avatar-tint-5: color-mix(in oklab, var(--palm) 24%, var(--foam));
+  --avatar-tint-6: color-mix(in oklab, var(--lagoon) 30%, var(--foam));
+
   /* Brand blue (matches web-ui.webp reference) */
   --brand: #2563eb;
   --brand-dark: #1d4ed8;

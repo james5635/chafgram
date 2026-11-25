@@ -59,6 +59,26 @@ describe('PostCard', () => {
     expect(screen.getByText('12 shares')).toBeInTheDocument()
   })
 
+  it('shows one heart reaction icon and no duplicate thumbs-up', () => {
+    renderPostCard(<PostCard post={post} />)
+
+    const reactionGroup = screen.getByText('248').parentElement
+    expect(reactionGroup).not.toBeNull()
+    expect(reactionGroup?.querySelector('.lucide-thumbs-up')).toBeNull()
+    expect(reactionGroup?.querySelectorAll('.lucide-heart')).toHaveLength(1)
+  })
+
+  it('puts the like count on the left and comment/share counts on the right', () => {
+    renderPostCard(<PostCard post={post} />)
+
+    const likeGroup = screen.getByText('248').parentElement
+    const detailsGroup = screen.getByText('32 comments').parentElement
+    expect(detailsGroup).toBe(screen.getByText('12 shares').parentElement)
+    expect(likeGroup?.parentElement).toBe(detailsGroup?.parentElement)
+    expect(detailsGroup?.previousElementSibling).toBe(likeGroup)
+    expect(likeGroup?.parentElement).toHaveClass('justify-between')
+  })
+
   it('renders the media image with alt text', () => {
     renderPostCard(<PostCard post={post} />)
 

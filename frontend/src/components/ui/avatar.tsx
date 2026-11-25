@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar"
 import { cn } from "cn"
+import { avatarInitial, avatarTint } from "../../lib/avatar"
 
 function Avatar({
   className,
@@ -39,8 +40,19 @@ function AvatarImage({ className, ...props }: AvatarPrimitive.Image.Props) {
 
 function AvatarFallback({
   className,
+  name,
+  children,
+  style,
   ...props
-}: AvatarPrimitive.Fallback.Props) {
+}: AvatarPrimitive.Fallback.Props & { name?: string }) {
+  // With a name, fallbacks always show one initial on a stable, name-based tint.
+  const content = name === undefined ? children : avatarInitial(name)
+  const tintStyle = name === undefined ? style : {
+    backgroundColor: avatarTint(name),
+    color: "var(--sea-ink)",
+    ...style,
+  }
+
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
@@ -48,8 +60,11 @@ function AvatarFallback({
         "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
         className
       )}
+      style={tintStyle}
       {...props}
-    />
+    >
+      {content}
+    </AvatarPrimitive.Fallback>
   )
 }
 

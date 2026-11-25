@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { useState } from 'react'
-import { Heart, MessageSquare, Share2, Bookmark, MoreHorizontal, ThumbsUp } from 'lucide-react'
+import { Heart, MessageSquare, Share2, Bookmark, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -182,7 +182,7 @@ export default function PostCard({ post }: PostCardProps) {
           <Link to="/profile/$username" params={{ username: post.author.username }} className="flex items-center gap-3">
             <Avatar className="h-8 w-8" aria-label={post.author.name}>
               {post.author.avatar && <AvatarImage src={post.author.avatar} alt={post.author.name} />}
-              <AvatarFallback>{post.author.initials}</AvatarFallback>
+              <AvatarFallback name={post.author.name} />
             </Avatar>
             <div className="flex flex-col leading-none">
               <span className="text-sm font-semibold text-[var(--sea-ink)] block">{post.author.name}</span>
@@ -211,14 +211,15 @@ export default function PostCard({ post }: PostCardProps) {
       )}
 
       <div className="px-4 sm:px-5 pt-4 pb-5 sm:pt-0 border-t border-[var(--line)]">
-        <div className="flex items-baseline gap-4 sm:gap-6 mb-3">
+        <div className="flex items-baseline justify-between gap-4 sm:gap-6 mb-3">
           <div className="flex items-center gap-1 text-sm font-semibold text-[var(--sea-ink)]">
-            <ThumbsUp className="h-4 w-4" aria-hidden="true" />
             <Heart className="h-4 w-4" aria-hidden="true" />
             <span className="ml-1">{post.reactions.count}</span>
           </div>
-          <span className="text-[var(--sea-ink-soft)] text-sm">{post.comments} comments</span>
-          <span className="text-[var(--sea-ink-soft)] text-sm">{post.shares} shares</span>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <span className="text-[var(--sea-ink-soft)] text-sm">{post.comments} comments</span>
+            <span className="text-[var(--sea-ink-soft)] text-sm">{post.shares} shares</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-5 sm:gap-8 pt-2">
@@ -272,9 +273,7 @@ export default function PostCard({ post }: PostCardProps) {
               {comments.map((comment) => (
                 <li key={comment.id} className="flex gap-2">
                   <Avatar size="sm" aria-label={comment.author.displayName}>
-                    <AvatarFallback>
-                      {comment.author.displayName.slice(0, 2).toUpperCase() || '?'}
-                    </AvatarFallback>
+                    <AvatarFallback name={comment.author.displayName} />
                   </Avatar>
                   <div className="min-w-0">
                     <p className="m-0 text-xs font-semibold text-[var(--sea-ink)]">

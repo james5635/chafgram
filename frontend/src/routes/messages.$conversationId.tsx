@@ -28,7 +28,7 @@ function MessageThread() {
           </Link>
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8" aria-label="Dara">
-              <AvatarFallback>DR</AvatarFallback>
+              <AvatarFallback name="Dara" />
             </Avatar>
             <span className="text-sm font-semibold text-[var(--sea-ink)]">Dara</span>
           </div>

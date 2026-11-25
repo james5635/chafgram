@@ -3,12 +3,22 @@ import { render, screen } from '@testing-library/react'
 import Avatar from './Avatar'
 
 describe('Avatar', () => {
-  it('renders initials when no image src is provided', () => {
+  it('renders only the first initial when no image src is provided', () => {
     render(<Avatar initials="JD" label="Jane Doe" size={40} />)
 
     const el = screen.getByLabelText('Jane Doe')
     expect(el).toBeInTheDocument()
-    expect(el).toHaveTextContent('JD')
+    expect(el).toHaveTextContent('J')
+    expect(el).not.toHaveTextContent('JD')
+  })
+
+  it('uses a deterministic tint for the name', () => {
+    const { rerender } = render(<Avatar label="Jane Doe" />)
+    const first = screen.getByLabelText('Jane Doe').style.backgroundColor
+
+    rerender(<Avatar label="Jane Doe" />)
+    expect(screen.getByLabelText('Jane Doe').style.backgroundColor).toBe(first)
+    expect(first).toMatch(/^var\(--avatar-tint-\d\)$/)
   })
 
   it('renders an img element when a src is provided', () => {

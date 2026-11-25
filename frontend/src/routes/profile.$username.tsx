@@ -68,9 +68,7 @@ export function Profile() {
                 className="h-14 w-14"
                 aria-label={member?.displayName ?? username ?? 'Member'}
               >
-                <AvatarFallback>
-                  {(member?.displayName ?? username ?? '?').slice(0, 2).toUpperCase()}
-                </AvatarFallback>
+                <AvatarFallback name={member?.displayName ?? username ?? 'Member'} />
               </Avatar>
             </div>
 
