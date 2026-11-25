@@ -77,6 +77,8 @@ cd backend
 ```
 
 Run `just mysql` first if the backend needs the database (it is not auto-started).
+The app no longer migrates on boot — run `just migrate` (empty schema) or `just seed`
+(demo fixtures) once before `bootRun`.
 
 ```bash
 ./gradlew :api:test   # hermetic — Testcontainers starts a throwaway MySQL 8; the dev DB is untouched

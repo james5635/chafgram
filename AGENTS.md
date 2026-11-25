@@ -51,7 +51,7 @@ just mysql                 # start local MySQL 8.0 via compose.yaml, wait for he
 just seed                  # RESET dev DB: wipe, migrate, and run the backend/seed Gradle subproject (fixtures via :api services; no seed SQL)
 docker compose up -d       # start MySQL AND Garage (S3-compatible dev object storage, bucket chafgram-media)
 docker compose up garage-init   # one-shot: layout assign, dev key import, bucket create, permissions — idempotent
-./gradlew :api:bootRun     # run dev server (default port 8080)
+./gradlew :api:bootRun     # run dev server (default port 8080; schema must exist — run just migrate/seed first)
 ./gradlew :api:test        # run tests (hermetic — Testcontainers MySQL)
 just migrate               # apply Flyway migrations only, no data wiped
 just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures

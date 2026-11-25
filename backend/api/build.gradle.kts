@@ -41,9 +41,6 @@ dependencies {
 	implementation(platform("org.testcontainers:testcontainers-bom:2.0.5"))
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-	// implementation("org.springframework.boot:spring-boot-starter-flyway")
-	// Flyway 12+ needs the database module on the application/test runtime classpath.
-	// implementation("org.flywaydb:flyway-mysql")
 	implementation("org.springframework.boot:spring-boot-starter-graphql")
 	implementation("org.springframework.boot:spring-boot-starter-mail")
 	implementation("org.springframework.boot:spring-boot-starter-restclient")
@@ -59,7 +56,9 @@ dependencies {
 	annotationProcessor("org.projectlombok:lombok")
 	testImplementation("org.springframework.boot:spring-boot-starter-actuator-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
-	// testImplementation("org.springframework.boot:spring-boot-starter-flyway-test")
+	// Integration tests boot a fresh Testcontainers DB, so they migrate it themselves.
+	testImplementation("org.springframework.boot:spring-boot-starter-flyway-test")
+	testImplementation("org.flywaydb:flyway-mysql")
 	testImplementation("org.springframework.boot:spring-boot-starter-graphql-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-mail-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-restclient-test")
