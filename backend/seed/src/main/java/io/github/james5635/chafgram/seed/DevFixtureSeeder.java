@@ -124,7 +124,7 @@ public class DevFixtureSeeder implements ApplicationRunner {
 
     private void seed() {
         if (users.count() > 0) {
-            throw new IllegalStateException("Dev database is not empty — run `just seed` to reset it first.");
+            throw new IllegalStateException("Dev database is not empty — run `just db-reset` then `just migrate` first.");
         }
 
         User admin = members.bootstrap("admin", "Dev Admin", "admin@chafgram.test", PASSWORD);

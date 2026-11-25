@@ -78,28 +78,14 @@ infra-down:
 migrate: infra-up
     cd "{{justfile_directory()}}/{{backend_dir}}" && ./gradlew -q :api:flywayMigrate
 
-# Reset the dev database to full fixtures (WIPES ALL dev data)
-# Every table seeded except user_entities/user_credentials (passkeys — register via UI) and flyway_schema_history.
+# Populate an empty, migrated dev database with fixtures. Use `just db-reset` first to reset.
 # admin / members with password `chafgram-dev-password`; reusable demo invite token: demo-invite-token
 seed: infra-up
-    #!/usr/bin/env bash
-    set -euo pipefail
-    read -r -p "This DELETES ALL DATA in the dev chafgram database. Type 'yes' to continue: " confirm
-    if [ "$confirm" != "yes" ]; then echo "aborted"; exit 1; fi
-    docker compose exec -T mysql mysql -uroot -proot -e "DROP DATABASE IF EXISTS chafgram; CREATE DATABASE chafgram CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
-    cd "{{justfile_directory()}}/{{backend_dir}}" && ./gradlew -q :api:flywayMigrate
     cd "{{justfile_directory()}}/{{backend_dir}}" && ./gradlew -q :seed:bootRun
-    echo "dev database reset and seeded (admin@chafgram.test / password: chafgram-dev-password)"
 
-# Empty the dev database and re-apply migrations (WIPES ALL dev data, no fixtures)
-unseed: infra-up
-    #!/usr/bin/env bash
-    set -euo pipefail
-    read -r -p "This DELETES ALL DATA in the dev chafgram database (leaves empty, migrated schema). Type 'yes' to continue: " confirm
-    if [ "$confirm" != "yes" ]; then echo "aborted"; exit 1; fi
-    docker compose exec -T mysql mysql -uroot -proot -e "DROP DATABASE IF EXISTS chafgram; CREATE DATABASE chafgram CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
-    cd "{{justfile_directory()}}/{{backend_dir}}" && ./gradlew -q :api:flywayMigrate
-    echo "dev database emptied and migrated"
+# Drop all objects in the dev database schema (Flyway clean; WIPES ALL dev data)
+db-reset: infra-up
+    cd "{{justfile_directory()}}/{{backend_dir}}" && ./gradlew -q :api:flywayClean
 
 # Run backend and frontend together (Ctrl-C stops both)
 # Requires infrastructure — run `just infra-up` first.

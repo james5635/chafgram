@@ -30,7 +30,8 @@ cp .env.example .env   # optional — compose/just load it; dev defaults work as
 just install           # backend (gradle dependencies) + frontend (pnpm install --frozen-lockfile)
 just bootstrap         # install local git hooks (pre-push → just verify)
 just mysql             # start local MySQL 8.0, wait for healthy
-just seed              # WIPES dev DB, migrates, inserts full demo fixtures
+just migrate           # create the schema with Flyway (app no longer migrates on boot)
+just seed              # insert full demo fixtures into the empty migrated DB
 just dev               # backend :8080 + frontend :3000 (parallel; Ctrl-C stops both)
 ```
 
@@ -82,12 +83,12 @@ Rules:
 - Migrations are **forward-only and additive**. Never edit an applied migration —
   Flyway checksums enforce this and any applied database fails validation.
   Alignments go in a new `V<n>__snake_case.sql`.
-- `just migrate` applies migrations without touching data.
-- `just seed` WIPES the dev database and re-seeds full fixtures (asks for `yes`). The
-  fixtures live in the `backend/seed` Gradle subproject (`DevFixtureSeeder`), which boots
-  a headless Spring context and calls the `:api` services with an explicit acting member;
-  `just migrate` / `just unseed` use the `:api:flywayMigrate` Gradle task instead.
-- `just unseed` WIPES and leaves an empty migrated schema (asks for `yes`).
+- `just migrate` applies Flyway migrations via `:api:flywayMigrate` without touching data.
+- `just seed` inserts full fixtures into an empty, migrated dev database. The fixtures
+  live in the `backend/seed` Gradle subproject (`DevFixtureSeeder`), which boots a
+  headless Spring context and calls the `:api` services with an explicit acting member.
+- `just db-reset` runs `:api:flywayClean`, dropping all objects in the dev schema
+  (WIPES all data). Follow it with `just migrate`, then optionally `just seed`.
 - Dev credentials (`chafgram` / `chafgram`, DB `chafgram`) are throwaway, local-only;
   override via `SPRING_DATASOURCE_*` for anything else. Never commit real credentials.
 

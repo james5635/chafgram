@@ -137,8 +137,9 @@ configuration. *(`identity`, `common`, all implemented)*
 The Gradle workspace has a second subproject, `backend/seed`, for dev fixtures.
 It boots a headless Spring context (controllers and web security excluded),
 depends on `:api`, and creates fixtures by calling the same services as the app
-with an explicit acting member. `just seed` runs it after resetting the dev DB;
-`just migrate` / `just unseed` use the `:api:flywayMigrate` Gradle task instead.
+with an explicit acting member. `just seed` runs it against an empty, migrated dev DB;
+`just migrate` uses `:api:flywayMigrate`, and `just db-reset` uses
+`:api:flywayClean` to drop all schema objects.
 No seed SQL script is shipped.
 
 ```

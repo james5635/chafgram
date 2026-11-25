@@ -77,17 +77,17 @@ cd backend
 ```
 
 Run `just mysql` first if the backend needs the database (it is not auto-started).
-The app no longer migrates on boot — run `just migrate` (empty schema) or `just seed`
-(demo fixtures) once before `bootRun`.
+The app no longer migrates on boot — run `just migrate` once before `bootRun`
+(or `just db-reset` then `just migrate`, optionally followed by `just seed`).
 
 ```bash
 ./gradlew :api:test   # hermetic — Testcontainers starts a throwaway MySQL 8; the dev DB is untouched
-just seed           # reset dev DB: wipe, Flyway-migrate, insert full fixtures
+just seed           # insert fixtures into an empty, migrated dev DB
 just migrate        # apply Flyway migrations only (data untouched)
-just unseed         # empty dev DB: wipe, Flyway-migrate, no fixtures
+just db-reset       # drop all objects in the dev DB schema (Flyway clean)
 ```
 
-`just seed` resets the dev database to a fully populated demo workspace:
+`just seed` populates an empty, migrated dev database with a demo workspace:
 users `admin` (admin) and `maya` / `tao` / `lena` (members) — all with the dev password
 `chafgram-dev-password` — plus a reusable demo invite (`/join?token=demo-invite-token`),
 a follows graph, posts (note/photo/video and one moderator-tombstoned post), comments
