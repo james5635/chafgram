@@ -62,22 +62,26 @@ doctor:
     command -v npm >/dev/null && echo "npm: $(npm -v)" || echo "npm: MISSING"
     command -v docker >/dev/null && echo "docker: $(docker --version)" || echo "docker: MISSING (needed by compose + Testcontainers)"
     command -v ffmpeg >/dev/null && echo "ffmpeg: $(ffmpeg -version 2>/dev/null | head -n1)" || echo "ffmpeg: MISSING (video processing only; images work without it)"
-    echo "backend needs local MySQL for dev — run it with: just mysql (reset with: just seed)"
+    echo "backend needs local infrastructure for dev — run it with: just infra-up (reset with: just seed)"
     echo "  (backend tests are hermetic — Testcontainers starts its own MySQL 8)"
     echo "  (compose.yaml dev defaults; override via git-ignored .env)"
 
-# Start local MySQL 8.0 and wait until it reports healthy
-mysql:
-    docker compose up -d --wait mysql
+# Start local infrastructure (MySQL 8.0 + Garage object storage) and wait until healthy
+infra-up:
+    docker compose up -d --wait mysql garage garage-init
+
+# Stop local infrastructure
+infra-down:
+    docker compose down
 
 # Apply Flyway migrations to the dev database (no data is touched)
-migrate: mysql
+migrate: infra-up
     cd {{backend_dir}} && ./gradlew -q flywayMigrate
 
 # Reset the dev database to full fixtures (WIPES ALL dev data)
 # Every table seeded except user_entities/user_credentials (passkeys — register via UI) and flyway_schema_history.
 # admin / members with password `chafgram-dev-password`; reusable demo invite token: demo-invite-token
-seed: mysql
+seed: infra-up
     #!/usr/bin/env bash
     set -euo pipefail
     read -r -p "This DELETES ALL DATA in the dev chafgram database. Type 'yes' to continue: " confirm
@@ -88,7 +92,7 @@ seed: mysql
     echo "dev database reset and seeded (admin@chafgram.test / password: chafgram-dev-password)"
 
 # Empty the dev database and re-apply migrations (WIPES ALL dev data, no fixtures)
-unseed: mysql
+unseed: infra-up
     #!/usr/bin/env bash
     set -euo pipefail
     read -r -p "This DELETES ALL DATA in the dev chafgram database (leaves empty, migrated schema). Type 'yes' to continue: " confirm
@@ -98,7 +102,7 @@ unseed: mysql
     echo "dev database emptied and migrated"
 
 # Run backend and frontend together (Ctrl-C stops both)
-# Requires MySQL — run `just mysql` first.
+# Requires infrastructure — run `just infra-up` first.
 [parallel]
 dev: backend::dev frontend::dev
 
