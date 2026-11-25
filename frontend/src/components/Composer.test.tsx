@@ -64,7 +64,8 @@ describe('Composer', () => {
 
     const photoChip = screen.getByRole('button', { name: 'Photo' })
     expect(photoChip.tagName).toBe('BUTTON')
-    expect(photoChip.querySelector('span')).not.toBeNull()
+    // Check for the SVG icon from lucide-react
+    expect(photoChip.querySelector('svg')).not.toBeNull()
   })
 
   it('renders all four media chips', () => {

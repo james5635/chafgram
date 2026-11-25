@@ -1,5 +1,7 @@
 import { useMutation, useQuery } from '@apollo/client/react'
 import { createFileRoute } from '@tanstack/react-router'
+import { Button } from '@/components/ui/button'
+import { gradientPlaceholder } from '@/lib/placeholders'
 import Avatar from '../components/Avatar'
 import AppShell from '../components/AppShell'
 import {
@@ -14,6 +16,11 @@ export const Route = createFileRoute('/notifications')({
 })
 
 const TABS = ['All', 'Likes', 'Comments', 'Follows', 'Mentions'] as const
+const THUMBNAILS = [
+  gradientPlaceholder({ colors: ['#93c5fd', '#2563eb'], width: 96, height: 64 }),
+  gradientPlaceholder({ colors: ['#bfdbfe', '#60a5fa'], width: 96, height: 64 }),
+  gradientPlaceholder({ colors: ['#dbeafe', '#3b82f6'], width: 96, height: 64 }),
+]
 
 const ACTIONS: Record<string, string> = {
   FOLLOW: 'started following you',
@@ -75,7 +82,7 @@ export function Notifications() {
           ))}
         </div>
 
-        <section className="island-shell overflow-hidden rounded-2xl" aria-busy={loading}>
+        <section className="island-shell overflow-hidden rounded-xl" aria-busy={loading}>
           {error && (
             <p className="m-0 p-5 text-sm text-[#9f3030]">Could not load notifications: {error.message}</p>
           )}
@@ -100,6 +107,11 @@ export function Notifications() {
                 </p>
                 <span className="text-[0.7rem] text-[var(--sea-ink-soft)]">{notification.createdAt}</span>
               </div>
+              {notification.type === 'FOLLOW' ? (
+                <Button variant="outline" size="sm" className="rounded-full border-[var(--brand)] px-4 text-xs text-[var(--brand-dark)]">Follow</Button>
+              ) : (
+                <img src={THUMBNAILS[i % THUMBNAILS.length]} alt="" className="h-9 w-12 shrink-0 rounded-md object-cover" />
+              )}
               {!notification.readAt && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-[var(--brand)]" aria-hidden="true" />}
             </article>
           ))}

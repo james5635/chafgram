@@ -28,7 +28,8 @@ const config: CodegenConfig = {
       config: {
         useTypeImports: true,
         scalars: { ID: 'string' },
-        importSchemaTypesFrom: './types',
+        // Resolved relative to the process cwd (frontend/), not the output file.
+        importSchemaTypesFrom: 'src/generated/types',
       },
     },
   },

@@ -1,29 +1,44 @@
 import { useQuery } from '@apollo/client/react'
 import { createFileRoute, useParams } from '@tanstack/react-router'
-import Avatar from '../components/Avatar'
-import AppShell from '../components/AppShell'
-import { gradientPlaceholder } from '../lib/placeholders'
-import { MemberDocument } from '../generated/graphql'
+import { MapPin, Calendar, Settings, Link as LinkIcon, Code2 } from 'lucide-react'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import AppShell from '@/components/AppShell'
+import { profileCoverPlaceholder } from '@/lib/placeholders'
+import { MemberDocument, MeDocument } from '@/generated/graphql'
 
 export const Route = createFileRoute('/profile/$username')({
   component: Profile,
 })
 
-const COVER = gradientPlaceholder({ colors: ['#6ba8e0', '#bcdcf5'], width: 1200, height: 320 })
+const COVER = profileCoverPlaceholder()
 
 function ProfilePanels() {
   return (
     <aside className="hidden w-72 flex-shrink-0 space-y-4 py-6 pr-4 xl:block" aria-label="Profile details">
-      <section className="island-shell rounded-2xl p-5">
+      <section className="island-shell rounded-xl p-5">
         <h3 className="m-0 mb-4 text-base font-bold text-[var(--sea-ink)]">About</h3>
         <ul className="m-0 space-y-3 p-0 list-none">
           <li className="flex items-center gap-2.5 text-sm text-[var(--sea-ink-soft)]">
-            <span aria-hidden="true">📍</span> Your company workspace
+            <MapPin className="h-4 w-4" aria-hidden="true" /> Phnom Penh, Cambodia
           </li>
           <li className="flex items-center gap-2.5 text-sm text-[var(--sea-ink-soft)]">
-            <span aria-hidden="true">📅</span> Member of Chafgram
+            <LinkIcon className="h-4 w-4" aria-hidden="true" /> <span className="text-[var(--brand-dark)]">github.com/james5635</span>
+          </li>
+          <li className="flex items-center gap-2.5 text-sm text-[var(--sea-ink-soft)]">
+            <Calendar className="h-4 w-4" aria-hidden="true" /> Joined March 2024
           </li>
         </ul>
+      </section>
+      <section className="island-shell rounded-xl p-5">
+        <h3 className="m-0 mb-4 flex items-center gap-2 text-base font-bold text-[var(--sea-ink)]">
+          <Code2 className="h-4 w-4 text-[var(--brand)]" aria-hidden="true" /> Skills
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {['Python', 'TypeScript', 'Java', 'React'].map((skill) => (
+            <span key={skill} className="rounded-full bg-[var(--brand-light)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-dark)]">{skill}</span>
+          ))}
+        </div>
       </section>
     </aside>
   )
@@ -36,23 +51,27 @@ export function Profile() {
     variables: { username },
     skip: !username || username === 'me',
   })
-  const member = data?.member
+  const { data: meData } = useQuery(MeDocument, { skip: username !== 'me' })
+  const member = data?.member ?? meData?.me
 
   return (
     <AppShell rightRail={<ProfilePanels />}>
       <div className="page-wrap px-4 pb-8 pt-6">
-        <section className="island-shell rise-in overflow-hidden rounded-2xl">
-          <div className="relative h-36 sm:h-44">
+        <section className="island-shell rise-in overflow-hidden rounded-xl">
+          <div className="relative h-28 sm:h-32">
             <img src={COVER} alt="Profile cover" className="h-full w-full object-cover" />
           </div>
 
           <div className="px-6 pb-4 sm:px-8">
             <div className="-mt-8 mb-1 inline-block rounded-full border-4 border-white bg-white shadow-md">
               <Avatar
-                initials={(member?.displayName ?? username ?? '?').slice(0, 2).toUpperCase()}
-                label={member?.displayName ?? username ?? 'Member'}
-                size={56}
-              />
+                className="h-14 w-14"
+                aria-label={member?.displayName ?? username ?? 'Member'}
+              >
+                <AvatarFallback>
+                  {(member?.displayName ?? username ?? '?').slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
             </div>
 
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -70,14 +89,12 @@ export function Profile() {
                 </div>
               </div>
               <div className="flex flex-shrink-0 gap-2">
-                <button type="button" className="rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 py-2 text-sm font-semibold !text-white shadow-lg shadow-[var(--brand)]/30 transition hover:bg-[var(--brand-dark)]">
-                  Edit Profile
-                </button>
-                <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-white text-[var(--sea-ink-soft)] transition hover:bg-[var(--brand-light)]" aria-label="Profile settings">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                    <path fill="currentColor" d="M12 8a4 4 0 100 8 4 4 0 000-8zm0 6a2 2 0 110-4 2 2 0 010 4zm8.4-2a8.4 8.4 0 00-.1-1.3l2-1.6-2-3.4-2.4 1a8 8 0 00-2.3-1.3L15.2 2H8.8l-.4 2.4A8 8 0 006.1 5.7l-2.4-1-2 3.4 2 1.6a8.4 8.4 0 000 2.6l-2 1.6 2 3.4 2.4-1a8 8 0 002.3 1.3l.4 2.4h6.4l.4-2.4a8 8 0 002.3-1.3l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.3z" />
-                  </svg>
-                </button>
+                <Button className="rounded-full bg-[var(--brand)] border border-[var(--brand)] px-4 py-2 text-sm font-semibold !text-white shadow-lg shadow-[var(--brand)]/30 transition hover:bg-[var(--brand-dark)]" asChild>
+                  <span>Edit Profile</span>
+                </Button>
+                <Button variant="ghost" size="icon" aria-label="Profile settings">
+                  <Settings className="h-4 w-4" aria-hidden="true" />
+                </Button>
               </div>
             </div>
 
@@ -89,9 +106,10 @@ export function Profile() {
 
             <div className="mt-5 flex gap-6 border-t border-[var(--line)] pt-3">
               {['Posts', 'Replies', 'Media', 'Likes'].map((tab, i) => (
-                <button
+                <Button
                   key={tab}
                   type="button"
+                  variant="ghost"
                   className={`border-b-2 pb-2 text-sm font-semibold transition ${
                     i === 0
                       ? 'border-[var(--brand)] text-[var(--brand-dark)]'
@@ -99,7 +117,7 @@ export function Profile() {
                   }`}
                 >
                   {tab}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

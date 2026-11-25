@@ -1,8 +1,8 @@
 import { MockedProvider } from '@apollo/client/testing/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { MemberDocument } from '../generated/graphql'
+import { MemberDocument, MeDocument } from '../generated/graphql'
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }))
 
@@ -50,6 +50,7 @@ const MEMBER = {
   followerCount: 128,
   followingCount: 320,
   isFollowing: false,
+  createdAt: '2024-03-01T00:00:00Z',
 }
 
 const mocks = [
@@ -57,6 +58,7 @@ const mocks = [
     request: { query: MemberDocument, variables: { username: 'rojame' } },
     result: { data: { member: { ...MEMBER } } },
   },
+  { request: { query: MeDocument }, result: { data: { me: { ...MEMBER } } } },
 ]
 
 function renderScreen(ui: ReactNode) {
@@ -83,6 +85,8 @@ describe('Profile screen', () => {
   it('renders the About panel', () => {
     renderScreen(<Profile />)
     expect(screen.getByText('About')).toBeInTheDocument()
-    expect(screen.getByText(/Your company workspace/)).toBeInTheDocument()
+    expect(screen.getByText(/Phnom Penh, Cambodia/)).toBeInTheDocument()
+    expect(screen.getByText(/github.com\/james5635/)).toBeInTheDocument()
+    expect(screen.getByText(/Joined March 2024/)).toBeInTheDocument()
   })
 })

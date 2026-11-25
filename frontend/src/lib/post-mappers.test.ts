@@ -35,9 +35,14 @@ describe('toPostCardData', () => {
     expect(data.author.initials).toBe('RS')
     expect(data.body).toBe('Hello team')
     expect(data.reactions.count).toBe(12)
+    expect(data.reactions.myReaction).toBeNull()
     expect(data.comments).toBe(3)
     expect(data.shares).toBe(0)
     expect(data.edited).toBe(false)
+  })
+
+  it('passes the viewer reaction through so Like can render as Unlike', () => {
+    expect(toPostCardData(post({ myReaction: 'LIKE' })).reactions.myReaction).toBe('LIKE')
   })
 
   it('leaves the body empty when the post has none', () => {

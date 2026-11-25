@@ -1,6 +1,6 @@
 import { MockedProvider } from '@apollo/client/testing/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { CreatePostDocument, MeDocument } from '../generated/graphql'
@@ -95,7 +95,7 @@ describe('Compose screen', () => {
 
   it('renders the action bar', () => {
     renderScreen(<Compose />)
-    expect(screen.getByRole('link', { name: 'Cancel' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Post' })).toBeInTheDocument()
   })
 

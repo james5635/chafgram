@@ -54,3 +54,44 @@ mutation CreatePost($type: PostType!, $body: String, $mediaIds: [ID!]) {
     }
   }
 }
+
+mutation ReactToPost($id: ID!, $type: ReactionType!) {
+  reactToPost(id: $id, type: $type) {
+    count
+    myReaction
+  }
+}
+
+mutation UnreactToPost($id: ID!) {
+  unreactToPost(id: $id)
+}
+
+mutation CreateComment($postId: ID!, $parentId: ID, $body: String!) {
+  createComment(postId: $postId, parentId: $parentId, body: $body) {
+    id
+    postId
+    body
+    createdAt
+    author {
+      id
+      username
+      displayName
+      avatarMediaId
+    }
+    reactionCount
+    myReaction
+  }
+}
+
+query PostComments($postId: ID!, $first: Int = 50) {
+  postComments(postId: $postId, first: $first) {
+    id
+    body
+    createdAt
+    author {
+      id
+      username
+      displayName
+    }
+  }
+}

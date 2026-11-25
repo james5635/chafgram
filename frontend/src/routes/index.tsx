@@ -62,13 +62,13 @@ function Home() {
             {loading && !data && (
               <>
                 {[0, 1, 2].map((n) => (
-                  <div key={n} className="island-shell h-48 animate-pulse rounded-[1.5rem]" />
+                  <div key={n} className="island-shell h-48 animate-pulse rounded-xl" />
                 ))}
               </>
             )}
 
             {!loading && !error && posts.length === 0 && (
-              <div className="island-shell rounded-[1.5rem] p-8 text-center">
+              <div className="island-shell rounded-xl p-8 text-center">
                 <p className="island-kicker mb-2">Nothing here yet</p>
                 <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
                   Follow a few colleagues or be the first to share something with your workspace.

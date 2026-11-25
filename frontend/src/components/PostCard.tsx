@@ -1,5 +1,20 @@
 import { Link } from '@tanstack/react-router'
-import Avatar from './Avatar'
+import { useMutation, useQuery } from '@apollo/client/react'
+import { useState } from 'react'
+import { Heart, MessageSquare, Share2, Bookmark, MoreHorizontal, ThumbsUp } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  CreateCommentDocument,
+  PostCommentsDocument,
+  ReactToPostDocument,
+  UnreactToPostDocument,
+} from '@/generated/graphql'
+import type { PostCommentsQuery, ReactToPostMutation } from '@/generated/graphql'
+import { formatCreatedAt } from '../lib/post-mappers'
+
+type ThreadComment = PostCommentsQuery['postComments'][number]
 
 interface PostCardProps {
   post: {
@@ -8,7 +23,7 @@ interface PostCardProps {
     createdAt: string
     body: string
     media?: { url: string; alt: string }[]
-    reactions: { count: number }
+    reactions: { count: number; myReaction?: string | null }
     comments: number
     shares: number
     edited?: boolean
@@ -16,45 +31,169 @@ interface PostCardProps {
 }
 
 export default function PostCard({ post }: PostCardProps) {
+  const postRef = { __typename: 'Post' as const, id: post.id }
+  const isLiked = post.reactions.myReaction === 'LIKE'
+
+  // reactToPost only upserts/changes a reaction. Removing it is a separate
+  // mutation, so the Like button has to choose based on the viewer's reaction.
+  const [reactToPost] = useMutation(ReactToPostDocument, {
+    // The generated mutation type omits __typename, but Apollo needs it to
+    // normalize the optimistic ReactionSummary in the cache.
+    optimisticResponse: {
+      reactToPost: {
+        __typename: 'ReactionSummary',
+        count: post.reactions.count + (post.reactions.myReaction ? 0 : 1),
+        myReaction: 'LIKE',
+      },
+    } as ReactToPostMutation,
+    update(cache, { data }) {
+      const result = data?.reactToPost
+      if (!result) return
+      // Update the normalized Post, so every feed query sees the new count.
+      cache.modify({
+        id: cache.identify(postRef),
+        fields: {
+          reactionCount() { return result.count },
+          myReaction() { return result.myReaction },
+        },
+      })
+    },
+  })
+  const [unreactToPost] = useMutation(UnreactToPostDocument, {
+    optimisticResponse: { unreactToPost: true },
+    update(cache) {
+      cache.modify({
+        id: cache.identify(postRef),
+        fields: {
+          reactionCount(count: number) { return Math.max(0, count - 1) },
+          myReaction() { return null },
+        },
+      })
+    },
+  })
+  const [createComment] = useMutation(CreateCommentDocument, {
+    optimisticResponse: (vars) => ({
+      createComment: {
+        id: `temp-${Date.now()}`,
+        postId: vars.postId,
+        body: vars.body,
+        createdAt: new Date().toISOString(),
+        author: {
+          id: 'me',
+          username: 'me',
+          displayName: 'You',
+          avatarMediaId: null,
+          __typename: 'Member',
+        },
+        reactionCount: 0,
+        myReaction: null,
+        __typename: 'Comment',
+      },
+    }),
+    update(cache, { data }) {
+      const comment = data?.createComment
+      if (!comment) return
+      cache.modify({
+        id: cache.identify(postRef),
+        fields: {
+          commentCount(count: number) { return count + 1 },
+        },
+      })
+      cache.updateQuery(
+        { query: PostCommentsDocument, variables: { postId: post.id, first: 50 } },
+        (existing) => {
+          if (!existing || existing.postComments.some((c) => c.id === comment.id)) return existing
+          const added = {
+            __typename: 'Comment',
+            id: comment.id,
+            body: comment.body,
+            createdAt: comment.createdAt,
+            author: comment.author,
+          }
+          return {
+            ...existing,
+            postComments: [...existing.postComments, added as (typeof existing.postComments)[number]],
+          }
+        },
+      )
+    },
+  })
+  const [showComments, setShowComments] = useState(false)
+  const [showCommentInput, setShowCommentInput] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [postedComments, setPostedComments] = useState<ThreadComment[]>([])
+  const { data: commentsData, loading: commentsLoading } = useQuery(PostCommentsDocument, {
+    variables: { postId: post.id, first: 50 },
+    skip: !showComments,
+  })
+  // Keep just-posted comments in local state as well as the cache: the cache
+  // write can race the in-flight PostComments query and be overwritten by its
+  // older result, which would make the new comment disappear from the thread.
+  const comments = [...(commentsData?.postComments ?? []), ...postedComments].filter(
+    (comment, index, all) => all.findIndex((other) => other.id === comment.id) === index,
+  )
+
+  const handleLike = async () => {
+    try {
+      if (isLiked) {
+        await unreactToPost({ variables: { id: post.id } })
+      } else {
+        await reactToPost({ variables: { id: post.id, type: 'LIKE' } })
+      }
+    } catch (error) {
+      console.error('Failed to update reaction:', error)
+    }
+  }
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!commentText.trim()) return
+    try {
+      const { data } = await createComment({
+        variables: { postId: post.id, body: commentText.trim() },
+      })
+      const created = data?.createComment
+      if (created) {
+        setPostedComments((current) => [
+          ...current,
+          {
+            id: created.id,
+            body: created.body,
+            createdAt: created.createdAt,
+            author: {
+              id: created.author.id,
+              username: created.author.username,
+              displayName: created.author.displayName,
+            },
+          },
+        ])
+      }
+      setCommentText('')
+      setShowCommentInput(false)
+    } catch (error) {
+      console.error('Failed to create comment:', error)
+    }
+  }
+
   return (
-    <article
-      className="island-shell rise-in rounded-[1.5rem] overflow-hidden border border-[var(--line)] bg-white shadow-sm"
-      style={{ animationDelay: '80ms' }}
-    >
+    <article className="island-shell rise-in rounded-xl overflow-hidden border border-[var(--line)] bg-white shadow-sm" style={{ animationDelay: '80ms' }}>
       <div className="flex gap-3 p-4 sm:p-5">
         <div className="flex-shrink-0">
-          <Link
-            to="/profile/$username"
-            params={{ username: post.author.username }}
-            className="flex items-center gap-3"
-          >
-            <Avatar
-              src={post.author.avatar}
-              initials={post.author.initials}
-              label={post.author.name}
-              size={32}
-            />
+          <Link to="/profile/$username" params={{ username: post.author.username }} className="flex items-center gap-3">
+            <Avatar className="h-8 w-8" aria-label={post.author.name}>
+              {post.author.avatar && <AvatarImage src={post.author.avatar} alt={post.author.name} />}
+              <AvatarFallback>{post.author.initials}</AvatarFallback>
+            </Avatar>
             <div className="flex flex-col leading-none">
-              <span className="text-sm font-semibold text-[var(--sea-ink)] block">
-                {post.author.name}
-              </span>
-              <span className="text-[0.75rem] text-[var(--sea-ink-soft)] block">
-                {post.createdAt} · public
-              </span>
+              <span className="text-sm font-semibold text-[var(--sea-ink)] block">{post.author.name}</span>
+              <span className="text-[0.75rem] text-[var(--sea-ink-soft)] block">{post.createdAt} · public</span>
             </div>
           </Link>
         </div>
 
-        <button
-          type="button"
-          className="ml-auto p-1.5 text-[var(--sea-ink-soft)] transition hover:text-[var(--sea-ink)]" aria-label="More options"
-        >
-          <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
-            <circle cx="8" cy="8" r="1" fill="currentColor" />
-            <circle cx="13" cy="8" r="1" fill="currentColor" />
-            <circle cx="3" cy="8" r="1" fill="currentColor" />
-          </svg>
-        </button>
+        <Button variant="ghost" size="icon" className="ml-auto text-[var(--sea-ink-soft)]" aria-label="More options">
+          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+        </Button>
       </div>
 
       {post.body && (
@@ -65,7 +204,7 @@ export default function PostCard({ post }: PostCardProps) {
 
       {post.media && post.media.length > 0 && (
         <div className="px-4 sm:px-5 pb-5 sm:pb-0">
-          <div className="aspect-video rounded-xl overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]">
+          <div className="aspect-video rounded-lg overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]">
             <img src={post.media[0].url} alt={post.media[0].alt} className="h-full w-full object-cover" loading="lazy" decoding="async" />
           </div>
         </div>
@@ -74,8 +213,8 @@ export default function PostCard({ post }: PostCardProps) {
       <div className="px-4 sm:px-5 pt-4 pb-5 sm:pt-0 border-t border-[var(--line)]">
         <div className="flex items-baseline gap-4 sm:gap-6 mb-3">
           <div className="flex items-center gap-1 text-sm font-semibold text-[var(--sea-ink)]">
-            <span>👍</span>
-            <span>❤️</span>
+            <ThumbsUp className="h-4 w-4" aria-hidden="true" />
+            <Heart className="h-4 w-4" aria-hidden="true" />
             <span className="ml-1">{post.reactions.count}</span>
           </div>
           <span className="text-[var(--sea-ink-soft)] text-sm">{post.comments} comments</span>
@@ -83,24 +222,93 @@ export default function PostCard({ post }: PostCardProps) {
         </div>
 
         <div className="flex items-center gap-5 sm:gap-8 pt-2">
-          <button type="button" className="flex items-center gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]" aria-label="Like">
-            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            Like
-          </button>
-          <button type="button" className="flex items-center gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]" aria-label="Comment">
-            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="currentColor" d="M21 5c-1.1 0-2 .9-2 2v14l-4-4h-6c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 14h-4v-4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v4H4V7c0-2.21 1.79-4 4-4h12c2.21 0 4 1.79 4 4v12c0 1.1-.9 2-2 2z"/></svg>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`gap-1.5 text-sm font-medium transition hover:text-[var(--brand-dark)] ${isLiked ? 'text-[var(--brand-dark)]' : 'text-[var(--sea-ink-soft)]'}`}
+            onClick={handleLike}
+            aria-label={isLiked ? 'Unlike' : 'Like'}
+            aria-pressed={isLiked}
+          >
+            <Heart className="h-4 w-4" aria-hidden="true" />
+            {isLiked ? 'Unlike' : 'Like'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]"
+            onClick={() => {
+              setShowComments(true)
+              setShowCommentInput(true)
+            }}
+            aria-label="Comment"
+          >
+            <MessageSquare className="h-4 w-4" aria-hidden="true" />
             Comment
-          </button>
-          <button type="button" className="flex items-center gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]" aria-label="Share">
-            <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.52.5 1.2.78 1.96.77.76 0 1.44-.3 1.96-.77l7.05 4.11c.05.03.09.09.09.15s-.04.12-.09.15l-7.05 4.11c-.52.5-1.24.81-2.05.81z"/></svg>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]"
+            aria-label="Share"
+          >
+            <Share2 className="h-4 w-4" aria-hidden="true" />
             Share
-          </button>
-          <button className="ml-auto p-1.5 text-[var(--sea-ink-soft)] transition hover:text-[var(--sea-ink)]" aria-label="Save">
-            <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
-              <path fill="currentColor" d="M5.5 10.75V5.818l2.5-2.1L8.5 5.818v4.932l2.5-2.177V2.818C11 2.045 9.955 1 8.5 1S6 2.045 6 2.818z" />
-            </svg>
-          </button>
+          </Button>
+          <Button variant="ghost" size="icon" className="ml-auto text-[var(--sea-ink-soft)]" aria-label="Save">
+            <Bookmark className="h-4 w-4" aria-hidden="true" />
+          </Button>
         </div>
+
+        {showComments && (
+          <div className="mt-4 border-t border-[var(--line)] pt-4" aria-label="Comments">
+            {commentsLoading && comments.length === 0 && (
+              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Loading comments…</p>
+            )}
+            {!commentsLoading && comments.length === 0 && (
+              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">No comments yet.</p>
+            )}
+            <ul className="m-0 list-none space-y-3 p-0">
+              {comments.map((comment) => (
+                <li key={comment.id} className="flex gap-2">
+                  <Avatar size="sm" aria-label={comment.author.displayName}>
+                    <AvatarFallback>
+                      {comment.author.displayName.slice(0, 2).toUpperCase() || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="m-0 text-xs font-semibold text-[var(--sea-ink)]">
+                      {comment.author.displayName}
+                      <span className="ml-2 font-normal text-[var(--sea-ink-soft)]">
+                        {formatCreatedAt(comment.createdAt)}
+                      </span>
+                    </p>
+                    <p className="m-0 text-sm leading-6 text-[var(--sea-ink)]">{comment.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {showCommentInput && (
+          <form onSubmit={handleCommentSubmit} className="mt-4 flex gap-2">
+            <Input
+              type="text"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write a comment…"
+              className="flex-1"
+              autoFocus
+            />
+            <Button type="submit" className="gap-1.5" disabled={!commentText.trim()}>
+              Post
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setShowCommentInput(false)} aria-label="Cancel">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </Button>
+          </form>
+        )}
       </div>
     </article>
   )

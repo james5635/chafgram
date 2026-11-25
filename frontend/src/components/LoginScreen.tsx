@@ -34,7 +34,7 @@ export default function LoginScreen() {
 
   return (
     <main className="min-h-[calc(100vh-13rem)] flex items-center justify-center px-4 pb-8 pt-14">
-      <section className="island-shell rise-in rounded-2xl p-8 sm:p-12 max-w-md w-full">
+      <section className="island-shell rise-in rounded-xl p-8 sm:p-12 max-w-md w-full">
         <div className="flex flex-col items-center gap-4 mb-6">
           <span className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow-[0_8px_24px_rgba(30,90,72,0.08)]">
             <span className="h-2 w-2 rounded-full bg-[linear-gradient(90deg,#56c6be,#7ed3bf)]" />

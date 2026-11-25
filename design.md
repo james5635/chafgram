@@ -21,11 +21,10 @@ Chafgram is a private social platform for companies. Its design must do two jobs
 2. **Reassure the buyer** — companies trust what looks deliberate, stable, and under
    control. No gimmicks, no dark patterns, no growth-hack chrome.
 
-The original identity was a deep-sea, lagoon-and-palm palette with editorial serif display
-type. The shipped member UI (following the `web-ui.webp` / `mobile-ui.webp` references) keeps
-that calm, human character but promotes a **clear brand blue** as the primary interactive
-colour. Lagoon and palm remain as supporting accents and in the atmospheric moments — they
-are not discarded, but they no longer carry primary actions.
+The member UI follows the supplied web references: a pale blue canvas, white surfaces,
+navy text, and clear brand blue for actions. Fraunces display type and Manrope UI type keep
+the interface calm and human; subtle blue shadows and soft corners provide depth without
+making every surface feel like a floating card.
 
 **One line:** *calm, clear, human — the internal social space that feels like a well-kept
 harbor, not a public square* — with brand blue as the signal of "you can act here."
@@ -96,21 +95,21 @@ raw hex, in components.
 | `--brand` | `#2563eb` | **Primary interactive** — filled buttons, active nav, unread badges, focus |
 | `--brand-dark` | `#1d4ed8` | Brand hover/active state; link text |
 | `--brand-light` | `#eff6ff` | Active nav wash, subtle brand surfaces |
-| `--sea-ink` | `#173a40` | Primary text (deep sea slate) |
-| `--sea-ink-soft` | `#416166` | Secondary text, icons |
-| `--lagoon` | `#4fb8b2` | Supporting accent — focus washes, secondary highlights |
-| `--lagoon-deep` | `#328f97` | Supporting accent strong; legacy focus ring on `.demo-input` |
-| `--palm` | `#2f6a4a` | Deep green — kickers, brand gradient end |
-| `--sand` | `#e7f0e8` | Warm neutral base |
-| `--foam` | `#f3faf5` | Near-white green-tinted surface |
-| `--bg-base` | `#e7f3ec` | Page background base |
+| `--sea-ink` | `#14213d` | Primary navy text |
+| `--sea-ink-soft` | `#51617d` | Secondary text, icons |
+| `--lagoon` | `#78a9ff` | Supporting blue — focus washes and highlights |
+| `--lagoon-deep` | `#2563eb` | Strong supporting blue |
+| `--palm` | `#31558e` | Deep blue for kickers |
+| `--sand` | `#e8eef9` | Pale blue neutral |
+| `--foam` | `#f7f9fe` | Near-white cool surface |
+| `--bg-base` | `#f4f6fb` | Page background base |
 | `--surface` | `rgba(255,255,255,0.74)` | Card fill (translucent) |
 | `--surface-strong` | `rgba(255,255,255,0.9)` | Elevated card fill |
-| `--line` | `rgba(23,58,64,0.14)` | Hairline borders |
-| `--kicker` | `rgba(47,106,74,0.9)` | Eyebrow text |
-| `--header-bg` | `rgba(251,255,248,0.84)` | Sticky header (backdrop-blur) |
-| `--chip-bg` / `--chip-line` | `rgba(255,255,255,0.8)` / `rgba(47,106,74,0.18)` | Pills, brand chip |
-| `--hero-a` / `--hero-b` | `rgba(79,184,178,0.36)` / `rgba(47,106,74,0.2)` | Background washes (marketing/welcome only — see below) |
+| `--line` | `rgba(61,91,148,0.15)` | Hairline borders |
+| `--kicker` | `#31558e` | Eyebrow text |
+| `--header-bg` | `rgba(255,255,255,0.86)` | Sticky header (backdrop-blur) |
+| `--chip-bg` / `--chip-line` | `rgba(255,255,255,0.8)` / `rgba(61,91,148,0.18)` | Pills, brand chip |
+| `--hero-a` / `--hero-b` | `rgba(96,165,250,0.3)` / `rgba(37,99,235,0.14)` | Background washes (marketing/welcome only — see below) |
 | `--inset-glint` | `rgba(255,255,255,0.82)` | Inner top highlight on shells |
 
 ### Dark
@@ -118,20 +117,20 @@ raw hex, in components.
 | Token | Value | Role |
 |-------|-------|------|
 | `--brand` / `--brand-dark` / `--brand-light` | *inherited from light* (`#2563eb` / `#1d4ed8` / `#eff6ff`) | Brand tokens are currently mode-agnostic; see §14 for the dark link-contrast follow-up |
-| `--sea-ink` | `#d7ece8` | Primary text |
-| `--sea-ink-soft` | `#afcdc8` | Secondary text |
-| `--lagoon` | `#60d7cf` | Supporting accent (lifted for dark) |
-| `--lagoon-deep` | `#8de5db` | Supporting accent strong |
-| `--palm` | `#6ec89a` | Lifted palm |
-| `--sand` / `--foam` | `#0f1a1e` / `#101d22` | Neutrals (near-black green) |
-| `--bg-base` | `#0a1418` | Page background |
-| `--surface` / `--surface-strong` | `rgba(16,30,34,0.8)` / `rgba(15,27,31,0.92)` | Cards |
-| `--line` | `rgba(141,229,219,0.18)` | Hairline |
-| `--kicker` | `#b8efe5` | Eyebrow text |
-| `--header-bg` | `rgba(10,20,24,0.8)` | Sticky header |
-| `--chip-bg` / `--chip-line` | `rgba(13,28,32,0.9)` / `rgba(141,229,219,0.24)` | Pills |
-| `--hero-a` / `--hero-b` | `rgba(96,215,207,0.18)` / `rgba(110,200,154,0.12)` | Background washes |
-| `--inset-glint` | `rgba(194,247,238,0.14)` | Inner highlight |
+| `--sea-ink` | `#e3ebff` | Primary text |
+| `--sea-ink-soft` | `#b2c2e2` | Secondary text |
+| `--lagoon` | `#78a9ff` | Supporting blue |
+| `--lagoon-deep` | `#8db6ff` | Strong supporting blue |
+| `--palm` | `#a6c4ff` | Lifted blue for kickers |
+| `--sand` / `--foam` | `#111c31` / `#14213a` | Cool, near-black surfaces |
+| `--bg-base` | `#091221` | Page background |
+| `--surface` / `--surface-strong` | `rgba(20,34,58,0.82)` / `rgba(17,29,50,0.94)` | Cards |
+| `--line` | `rgba(166,192,255,0.18)` | Hairline |
+| `--kicker` | `#a6c4ff` | Eyebrow text |
+| `--header-bg` | `rgba(9,18,33,0.86)` | Sticky header |
+| `--chip-bg` / `--chip-line` | `rgba(20,34,58,0.9)` / `rgba(166,192,255,0.24)` | Pills |
+| `--hero-a` / `--hero-b` | `rgba(96,165,250,0.18)` / `rgba(37,99,235,0.12)` | Background washes |
+| `--inset-glint` | `rgba(206,222,255,0.12)` | Inner highlight |
 
 ### Background construction
 
@@ -185,8 +184,7 @@ use blue for static text or decoration.
   Messages · Profile), 44px+ targets and safe-area insets. See `docs/mobile-ui.md` §3.
 - **Shells:** `.island-shell` — 1px `--line` border, `165deg` gradient from
   `--surface-strong` to `--surface`, inner `--inset-glint` top highlight, two-layer soft
-  shadow (`0 22px 44px rgba(30,90,72,0.1)` + `0 6px 18px rgba(23,58,64,0.08)`), `blur(4px)`.
-  Corner radii: shells `1rem–2rem`; cards `0.9–1rem`.
+  blue shadow, `blur(4px)`. Corner radii: screen shells `0.75rem`; nested cards `0.75rem`.
 - **Spacing rhythm:** 4/8 base; section gaps 2rem (`mt-8`); shell padding 1.5rem → 2.5rem
   responsive; page gutters 1rem.
 - **Hero pattern:** eyebrow kicker → display-title (max ~3xl lines) → lead paragraph →
@@ -204,8 +202,8 @@ use blue for static text or decoration.
 | Nav link (rail) | `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium`; active `bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold`; inactive `--sea-ink-soft`; badge is a brand-filled circle |
 | Button (primary) | `rounded-full border border-[var(--brand)] bg-[var(--brand)] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[var(--brand)]/30`; hover `--brand-dark`. `.demo-button` (tonal lagoon) remains for legacy form contexts |
 | Button (secondary) | transparent/ghost, `--sea-ink`, hover `--link-bg-hover` |
-| Card / post | `.island-shell rounded-[1.5rem] overflow-hidden border border-[var(--line)] bg-white shadow-sm`; header, body, media, interaction bar, action row |
-| Composer | `.island-shell rounded-[1.5rem]`; prompt row → `--line` divider → icon chips [Photo][Video][Feeling][Poll] + solid brand Post button |
+| Card / post | `.island-shell rounded-xl overflow-hidden border border-[var(--line)] bg-white shadow-sm`; header, body, media, interaction bar, action row |
+| Composer | `.island-shell rounded-xl`; prompt row → `--line` divider → icon chips [Photo][Video][Feeling][Poll] + solid brand Post button |
 | Pill / tag | `.demo-pill` — rounded-full, chip tokens, 0.75rem 700 |
 | Input | `.demo-input` — 0.75rem radius, `--line` border, focus `--lagoon-deep` border + 3px `--lagoon` 24% ring *(legacy; new inputs use `--brand` focus — migrate on touch)* |
 | Alert | `.demo-alert` tinted amber/red variants, 1rem radius |

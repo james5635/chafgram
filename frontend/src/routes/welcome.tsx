@@ -6,10 +6,14 @@ export const Route = createFileRoute('/welcome')({
 
 export function Welcome() {
   return (
-    <main className="min-h-screen px-4 py-4 sm:py-6 bg-[#eaf1ff]">
-      <section className="island-shell rise-in relative overflow-hidden rounded-[2rem] mx-auto max-w-[1500px] min-h-[calc(100vh-4rem)]">
+    <main className="min-h-screen bg-[var(--bg-base)] px-4 py-4 sm:py-6">
+      <section className="island-shell rise-in relative mx-auto min-h-[calc(100vh-4rem)] max-w-[1500px] overflow-hidden rounded-xl">
         <div className="pointer-events-none absolute -right-10 top-20 h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(147,197,253,0.55),transparent_65%)]" />
-        <div className="pointer-events-none absolute bottom-0 left-1/4 h-64 w-[60%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(191,219,254,0.65),transparent_70%)]" />
+        <svg className="pointer-events-none absolute inset-x-0 bottom-0 h-56 w-full" viewBox="0 0 1600 300" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 170c190-68 300 13 475-10s237-111 429-82 265 62 395 28 212-86 301-41v235H0Z" fill="#dbeafe" opacity=".62" />
+          <path d="M0 229c210-53 325-22 498-38s286-72 470-45 276 52 408 31 170-47 224-32v155H0Z" fill="#bfdbfe" opacity=".54" />
+          <path d="M0 270c236-30 369-15 583-29s311-35 496-20 340 35 521 12v67H0Z" fill="#eff6ff" opacity=".8" />
+        </svg>
 
         <nav className="relative z-10 flex items-center justify-between gap-4 px-6 py-5 sm:px-12">
           <Link to="/welcome" className="flex items-center gap-2 no-underline">
@@ -41,7 +45,7 @@ export function Welcome() {
           </div>
         </nav>
 
-        <div className="relative z-10 grid items-center gap-8 px-6 pb-16 pt-8 sm:px-12 lg:grid-cols-2 lg:gap-4 lg:pt-12">
+        <div id="about" className="relative z-10 grid items-center gap-8 px-6 pb-16 pt-8 sm:px-12 lg:grid-cols-2 lg:gap-4 lg:pt-12">
           <div className="max-w-xl">
             <h1 className="display-title m-0 text-5xl font-bold leading-[1.02] tracking-tight text-[var(--sea-ink)] sm:text-6xl lg:text-7xl">
               Connect. Share.<br />Belong.
@@ -92,13 +96,6 @@ export function Welcome() {
           </div>
         </div>
 
-        <div id="about" className="relative z-10 px-6 pb-10 sm:px-12">
-          <p className="m-0 max-w-2xl text-sm leading-7 text-[var(--sea-ink-soft)]">
-            Chafgram is the private social space for your company — short video, posts,
-            comments, follows, and direct messages, running entirely on infrastructure you
-            control. Familiar to use, private by design.
-          </p>
-        </div>
       </section>
     </main>
   )

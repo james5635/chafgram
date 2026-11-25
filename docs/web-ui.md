@@ -49,18 +49,18 @@ All values are CSS custom properties from `design.md` §5 plus brand blue added 
 
 | Role | Token | Value | Use |
 |------|-------|-------|-----|
-| Primary text | `--sea-ink` | `#173a40` (light) / `#d7ece8` (dark) | Body, headings, labels |
-| Secondary text | `--sea-ink-soft` | `#416166` / `#afcdc8` | Captions, metadata, inactive nav |
+| Primary text | `--sea-ink` | `#14213d` (light) / `#e3ebff` (dark) | Body, headings, labels |
+| Secondary text | `--sea-ink-soft` | `#51617d` / `#b2c2e2` | Captions, metadata, inactive nav |
 | Brand | `--brand` | `#2563eb` | Primary buttons, active nav, links, focus |
 | Brand dark | `--brand-dark` | `#1d4ed8` | Hover/active brand states |
 | Brand light | `--brand-light` | `#eff6ff` | Active nav bg, subtle brand surfaces |
-| Accent | `--lagoon` | `#4fb8b2` / `#60d7cf` | Secondary accents |
-| Brand kicker | `--palm` | `#2f6a4a` / `#6ec89a` | Eyebrow text |
-| Base bg | `--bg-base` | `#e7f3ec` / `#0a1418` | Page background |
-| Card fill | `--surface` | `rgba(255,255,255,0.74)` / `rgba(16,30,34,0.8)` | `.island-shell` cards |
-| Card fill strong | `--surface-strong` | `rgba(255,255,255,0.9)` / `rgba(15,27,31,0.92)` | Elevated cards |
-| Hairline | `--line` | `rgba(23,58,64,0.14)` / `rgba(141,229,219,0.18)` | Dividers, input borders |
-| Header bg | `--header-bg` | `rgba(251,255,248,0.84)` / `rgba(10,20,24,0.8)` | Sticky header (backdrop-blur) |
+| Accent | `--lagoon` | `#78a9ff` / `#78a9ff` | Secondary accents |
+| Brand kicker | `--palm` | `#31558e` / `#a6c4ff` | Eyebrow text |
+| Base bg | `--bg-base` | `#f4f6fb` / `#091221` | Page background |
+| Card fill | `--surface` | `rgba(255,255,255,0.74)` / `rgba(20,34,58,0.82)` | `.island-shell` cards |
+| Card fill strong | `--surface-strong` | `rgba(255,255,255,0.9)` / `rgba(17,29,50,0.94)` | Elevated cards |
+| Hairline | `--line` | `rgba(61,91,148,0.15)` / `rgba(166,192,255,0.18)` | Dividers, input borders |
+| Header bg | `--header-bg` | `rgba(255,255,255,0.86)` / `rgba(9,18,33,0.86)` | Sticky header (backdrop-blur) |
 | Chip | `--chip-bg` / `--chip-line` | — | Pills, brand chip |
 | Link bg hover | `--link-bg-hover` | `rgba(255,255,255,0.9)` / `rgba(24,44,49,0.8)` | Ghost button hover |
 
@@ -213,12 +213,13 @@ Traceability: FR-1.3, BR-1.3, BR-1.5, architecture.md §4.1.
 | More menu | Header right | 3-dot circle SVG (`h-4 w-4`) |
 | Body | Below header (if present) | `px-4 sm:px-5 pt-1 sm:pt-0 pb-3`: `m-0 text-base text-[var(--sea-ink)] leading-7` |
 | Media | Below body (if present) | `px-4 sm:px-5 pb-5 sm:pb-0`: `aspect-video rounded-xl overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]` + `img h-full w-full object-cover` |
-| Interaction bar | Below media/body | `px-4 sm:px-5 pt-4 pb-5 sm:pt-0 border-t border-[var(--line)]`: reactions `👍❤️ {count}` `text-sm font-semibold text-[var(--sea-ink)]`; `{comments} comments` and `{shares} shares` `text-[var(--sea-ink-soft)] text-sm` |
-| Action row | Below interaction bar | `flex items-center gap-5 sm:gap-8 pt-2`: [Like] [Comment] [Share] `flex items-center gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]` with SVG icons; [Save] `ml-auto p-1.5 text-[var(--sea-ink-soft)] transition hover:text-[var(--sea-ink)]` bookmark SVG |
+| Interaction bar | Below media/body | `px-4 sm:px-5 pt-4 pb-5 sm:pt-0 border-t border-[var(--line)]`: reactions `👍❤️ {count}` `text-sm font-semibold text-[var(--sea-ink)]`; `{comments} comments` and `{shares} shares` `text-[var(--sea-ink-soft)] text-sm`. Counts and the viewer's reaction state come from the normalized `Post` cache entity, so they update in every feed query after a like/unlike or comment — not just the query that happened to be active |
+| Action row | Below interaction bar | `flex items-center gap-5 sm:gap-8 pt-2`: [Like]/[Unlike] (`reactToPost`/`unreactToPost`), [Comment] (toggles thread), [Share] `flex items-center gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]` with SVG icons; liked state uses `text-[var(--brand-dark)]`; [Save] `ml-auto p-1.5 text-[var(--sea-ink-soft)] transition hover:text-[var(--sea-ink)]` bookmark SVG |
+| Comment thread | Below action row when [Comment] is active | `mt-4 border-t border-[var(--line)] pt-4`: comments loaded by the `PostComments` query (oldest-first, up to 50) and rendered as rows with avatar + name + relative time + body. Composer below the list: text `Input` + [Post] button (disabled while empty). Submitting appends the returned comment to the visible thread and to the `postComments` cache, and increments the post's `commentCount`, so the new comment is visible immediately without a manual refresh. Empty list → `No comments yet.` |
 
-**States:** loading → `sand`/`foam` shimmer skeletons; empty → empty-state pattern (kicker + one line + one action); error → `.demo-alert`. Tombstoned posts invisible everywhere (BR-3.1); edited posts show `edited` marker (FR-3.2).
+**States:** loading → `sand`/`foam` shimmer skeletons for feed content; the comment thread shows a `Loading comments…` label until `PostComments` resolves. Empty → empty-state pattern (kicker + one line + one action); error → `.demo-alert`. Tombstoned posts invisible everywhere (BR-3.1); edited posts show `edited` marker (FR-3.2). Optimistic reactions/comments are rolled back on failure (FR-3.8, FR-4.1).
 
-Traceability: FR-3.1, FR-3.2, FR-3.4, FR-3.7, FR-3.8, FR-5.1, FR-5.3, BR-2.4, BR-3.1–BR-3.5.
+Traceability: FR-3.1, FR-3.2, FR-3.4, FR-3.7, FR-3.8, FR-4.1, FR-4.3, FR-5.1, FR-5.3, BR-2.4, BR-3.1–BR-3.5.
 
 ### 5.2 Explore / Watch (`/explore`)
 
@@ -367,11 +368,11 @@ This section lists every reusable component type used across web screens. Each e
 | Nav link | Rail navigation item | LeftRail | `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition`; active `bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold`; inactive `text-[var(--sea-ink-soft)] hover:bg-[var(--brand-light)]/50`; badge `ml-auto inline-flex h-5 w-5 ... bg-[var(--brand)] text-white` |
 | Create Post pill | Primary CTA | LeftRail bottom | `w-full flex items-center justify-center gap-2 rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:bg-[var(--brand-dark)] hover:shadow-lg hover:shadow-[var(--brand)]/40` |
 | Search input | Header search | Header | `w-full pl-9 pr-3 py-1.5 rounded-full border border-[var(--line)] bg-white/80 text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none transition focus:border-[var(--brand)] focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--brand)24%,transparent)]` |
-| Theme toggle | Mode switcher | Header, Settings | `rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow shadow-[0_8px_22px_rgba(30,90,72,0.08)] transition hover:-translate-y-0.5` |
+| Theme toggle | Mode switcher | Header, Settings | `rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow shadow-[0_8px_22px_rgba(57,91,158,0.08)] transition hover:-translate-y-0.5` |
 | Avatar | Circular profile image | Everywhere | `relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-[var(--line)] rounded-full bg-[color-mix(in_oklab,var(--surface-strong)88%,white_12%)]`; sizes 24/32/40/56; `img h-full w-full object-cover` or initials `text-[var(--sea-ink-soft)] font-semibold` |
-| Island shell | Card container | Every card | `.island-shell`: 1px `--line`, `165deg` `--surface-strong`→`--surface`, `--inset-glint`, two-layer shadow, `blur(4px)`, radius `1rem–2rem` |
-| Composer | Post creation | Home, Compose | `.island-shell rise-in relative overflow-hidden rounded-[2rem] p-6 sm:p-8`; textarea + chips + blue Post button |
-| Post card | Feed item | Home, Explore, Profile | `.island-shell rounded-[1.5rem] overflow-hidden border border-[var(--line)] bg-white shadow-sm`; header, body, media, interaction bar, action row |
+| Island shell | Card container | Every card | `.island-shell`: 1px `--line`, `165deg` `--surface-strong`→`--surface`, `--inset-glint`, soft blue shadow, `blur(4px)`, radius `0.75rem` |
+| Composer | Post creation | Home, Compose | `.island-shell rise-in relative overflow-hidden rounded-xl p-6 sm:p-8`; textarea + chips + blue Post button |
+| Post card | Feed item | Home, Explore, Profile | `.island-shell rounded-xl overflow-hidden border border-[var(--line)] bg-white shadow-sm`; header, body, media, interaction bar, action row, optional comment thread |
 | Pill / tag | Small label | RightRail, chips | `.demo-pill`: `inline-flex items-center gap-0.35 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-0.35 py-0.65 text-[0.75rem] font-weight-700 text-[var(--sea-ink-soft)]` |
 | Button primary | Main action | Login, Welcome, Composer | `rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--brand)22%,var(--surface-strong))] px-6 py-3 text-sm font-semibold text-[var(--sea-ink)]` active; disabled variants |
 | Button secondary | Ghost action | Login, Welcome | `rounded-full border border-[var(--line)] bg-transparent px-6 py-3 text-sm font-semibold text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)]` |

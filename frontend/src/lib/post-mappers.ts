@@ -1,5 +1,7 @@
-import type { FollowingFeedQuery, Post } from '../generated/graphql'
+import type { FollowingFeedQuery } from '../generated/graphql'
 import { gradientPlaceholder } from './placeholders'
+
+type FeedPost = FollowingFeedQuery['followingFeed']['posts'][number]
 
 export interface PostCardData {
   id: string
@@ -7,15 +9,15 @@ export interface PostCardData {
   createdAt: string
   body: string
   media?: { url: string; alt: string }[]
-  reactions: { count: number }
+  reactions: { count: number; myReaction: FeedPost['myReaction'] }
   comments: number
   shares: number
   edited?: boolean
 }
 
 /** Map a backend Post to the presentational shape PostCard expects. */
-export function toPostCardData(post: FollowingFeedQuery['followingFeed']['posts'][number]): PostCardData {
-  const type = post.type as Post['type']
+export function toPostCardData(post: FeedPost): PostCardData {
+  const type = post.type
   const initials = post.author.displayName
     .split(' ')
     .map((part) => part[0])
@@ -40,7 +42,7 @@ export function toPostCardData(post: FollowingFeedQuery['followingFeed']['posts'
         alt: 'Post media',
       },
     ],
-    reactions: { count: post.reactionCount },
+    reactions: { count: post.reactionCount, myReaction: post.myReaction },
     comments: post.commentCount,
     shares: 0,
     edited: Boolean(post.editedAt),

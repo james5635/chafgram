@@ -49,11 +49,11 @@ beforeEach(() => {
 })
 
 describe('LeftRail', () => {
-  it('renders the brand and all nav links', () => {
+  it('renders the navigation rail and all nav links', () => {
     render(<LeftRail />)
 
-    expect(screen.getByText('Chafgram')).toBeInTheDocument()
-    for (const label of ['Home', 'Explore', 'Messages', 'Notifications', 'Profile', 'More']) {
+    expect(screen.getByRole('complementary', { name: 'Main navigation' })).toBeInTheDocument()
+    for (const label of ['Home', 'Explore', 'Messages', 'Notifications', 'Profile']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
   })
@@ -68,7 +68,7 @@ describe('LeftRail', () => {
   it('renders the Create Post action and the user chip', () => {
     render(<LeftRail />)
 
-    expect(screen.getByRole('link', { name: 'Create post' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create post' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Your profile' })).toBeInTheDocument()
     expect(screen.getByText('Rojame')).toBeInTheDocument()
     expect(screen.getByText('@rojame')).toBeInTheDocument()
@@ -85,7 +85,7 @@ describe('AppShell', () => {
 
     expect(screen.getByTestId('content')).toBeInTheDocument()
     expect(screen.getByTestId('right-rail')).toBeInTheDocument()
-    expect(screen.getByText('Chafgram')).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'Main navigation' })).toBeInTheDocument()
   })
 
   it('works without a right rail', () => {

@@ -1,5 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import Avatar from './Avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { TrendingUp, ChevronRight } from 'lucide-react'
 
 const FOLLOW_SUGGESTIONS = [
   { name: 'Mey Sokka', handle: 'mey', followers: '12.5K followers', avatar: undefined, initials: 'MS' },
@@ -18,20 +20,24 @@ const TRENDING = [
 export default function RightRail() {
   return (
     <aside className="hidden w-80 flex-col gap-6 lg:block">
-      <section className="island-shell rounded-2xl p-5">
+      <section className="island-shell rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="m-0 text-lg font-bold text-[var(--sea-ink)]">Who to follow</h3>
           <Link
             to="/explore"
             className="text-[0.75rem] font-semibold text-[var(--brand-dark)] no-underline transition hover:underline"
           >
-            See all →
+            See all
+            <ChevronRight className="h-3.5 w-3.5 ml-0.5 inline" aria-hidden="true" />
           </Link>
         </div>
         <div className="space-y-3">
           {FOLLOW_SUGGESTIONS.map((person, i) => (
             <div key={i} className="flex items-center gap-3">
-              <Avatar src={person.avatar} initials={person.initials} label={person.name} size={32} />
+              <Avatar className="h-8 w-8" aria-label={person.name}>
+                {person.avatar && <AvatarImage src={person.avatar} alt={person.name} />}
+                <AvatarFallback>{person.initials}</AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="m-0 text-sm font-semibold text-[var(--sea-ink)] leading-none">
                   {person.name}
@@ -40,21 +46,19 @@ export default function RightRail() {
                   {person.followers}
                 </p>
               </div>
-              <button
-                type="button"
-                className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-xs font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--brand-light)] hover:text-[var(--brand-dark)]"
-              >
+              <Button variant="outline" size="sm" className="rounded-full text-xs font-semibold">
                 Follow
-              </button>
+              </Button>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="island-shell rounded-2xl p-5">
+      <section className="island-shell rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <h3 className="m-0 flex items-center gap-1.5 text-lg font-bold text-[var(--sea-ink)]">
-            <span aria-hidden="true">🔥</span> Trending
+            <TrendingUp className="h-5 w-5 text-amber-500" aria-hidden="true" />
+            Trending
           </h3>
         </div>
         <ol className="list-none m-0 p-0 space-y-3">
@@ -71,15 +75,13 @@ export default function RightRail() {
                   {item.posts}
                 </p>
               </div>
-              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 text-[var(--sea-ink-soft)]" aria-hidden="true">
-                <path fill="currentColor" d="m12 4-3 3m0 0-3-3m3 3-1.172 1.172a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414-1.414L9.828 7H16a1 1 0 001-1V4a1 1 0 00-1-1h-6.172z" />
-              </svg>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--sea-ink-soft)]" aria-hidden="true" />
             </li>
           ))}
         </ol>
       </section>
 
-      <section className="island-shell rounded-2xl p-5 text-center">
+      <section className="island-shell rounded-xl p-5 text-center">
         <div className="flex flex-col items-center gap-3">
           <div className="relative w-full">
             <svg viewBox="0 0 200 90" className="w-full h-24" aria-hidden="true">
@@ -94,10 +96,7 @@ export default function RightRail() {
           <p className="m-0 text-sm text-[var(--sea-ink-soft)] leading-6 max-w-xs mx-auto">
             Be part of our growing company community!
           </p>
-          <Link
-            to="/welcome"
-            className="rounded-full border border-[var(--brand)] bg-[var(--brand)] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--brand-dark)]"
-          >
+          <Link to="/welcome" className="rounded-full border border-[var(--brand)] bg-[var(--brand)] px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--brand-dark)]">
             Sign Up
           </Link>
         </div>

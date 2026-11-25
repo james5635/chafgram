@@ -1,6 +1,6 @@
 import { MockedProvider } from '@apollo/client/testing/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { DiscoverFeedDocument } from '../generated/graphql'
 
