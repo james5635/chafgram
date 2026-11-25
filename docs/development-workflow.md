@@ -9,7 +9,7 @@
 | Tool | Version | Check |
 |------|---------|-------|
 | JDK | 21 | `just doctor` |
-| Node.js + npm | any current LTS | `just doctor` |
+| Node.js + pnpm | any current LTS; pnpm 10+ | `just doctor` |
 | Docker + Docker Compose | — | `docker compose version` |
 | just | latest | `just --version` |
 | ffmpeg + ffprobe | any recent | `ffmpeg -version` (video pipeline; images work without it) |
@@ -18,12 +18,16 @@
 Package-specific recipes live in `backend/justfile` (`just backend::<recipe>`) and
 `frontend/justfile` (`just frontend::<recipe>`); the root justfile delegates.
 
+`backend/` is the Gradle **workspace root**: the wrapper and `settings.gradle.kts` live
+there, and the Spring Boot application is the `api` subproject. Run Gradle from
+`backend/` with `./gradlew :api:<task>` (the `just backend::*` recipes already do this).
+
 ## 2. First-time setup (fresh clone)
 
 ```bash
 git clone <remote> chafgram && cd chafgram
 cp .env.example .env   # optional — compose/just load it; dev defaults work as-is
-just install           # backend (gradle dependencies) + frontend (npm ci)
+just install           # backend (gradle dependencies) + frontend (pnpm install --frozen-lockfile)
 just bootstrap         # install local git hooks (pre-push → just verify)
 just mysql             # start local MySQL 8.0, wait for healthy
 just seed              # WIPES dev DB, migrates, inserts full demo fixtures
@@ -53,9 +57,9 @@ just dev               # backend :8080 + frontend :3000 (parallel; Ctrl-C stops 
 just generate          # = just frontend::generate
 ```
 
-Reads the backend's committed `backend/src/main/resources/graphql/*.graphqls` and
+Reads the backend's committed `backend/api/src/main/resources/graphql/*.graphqls` and
 regenerates `frontend/src/generated/graphql.ts` (git-ignored — never hand-edit it).
-Operations live in `frontend/src/graphql/*.graphql`. `npm run test` and `npm run build`
+Operations live in `frontend/src/graphql/*.graphql`. `pnpm run test` and `pnpm run build`
 regenerate the types automatically, so a fresh clone needs no extra step.
 
 ## 3. The daily loop
@@ -71,7 +75,7 @@ regenerate the types automatically, so a fresh clone needs no extra step.
 ## 4. Database & migrations
 
 Flyway owns the schema; Hibernate only validates (`ddl-auto=validate`). The migration
-files under `backend/src/main/resources/db/migration/` are the **schema of record**.
+files under `backend/api/src/main/resources/db/migration/` are the **schema of record**.
 
 Rules:
 
@@ -92,10 +96,10 @@ touched, so no `just seed` is needed afterwards. Docker must be running:
 
 ```bash
 cd backend
-./gradlew test                # no `just mysql` needed — Testcontainers starts its own DB
+./gradlew :api:test                # no `just mysql` needed — Testcontainers starts its own DB
 ```
 
-Test-only configuration lives in `backend/src/test/resources/application-test.properties`
+Test-only configuration lives in `backend/api/src/test/resources/application-test.properties`
 and is activated by the `test` profile (`AbstractIntegrationTest`). Do **not** add a
 test-scoped `application.properties`: it shadows the main one on the classpath and
 silently drops every real configuration value.
@@ -126,7 +130,7 @@ components in isolation (see `src/components/PostCard.test.tsx` and
 
 ```bash
 cd frontend
-npm run test
+pnpm run test
 ```
 
 Root `just test` runs both suites; `just verify` runs tests + builds and is enforced by the
@@ -139,7 +143,7 @@ pre-push hook installed with `just bootstrap`. Docs-only changes are exempt from
   upload/`bytes`, multipart message sends, Actuator) is documented in
   [`architecture.md`](architecture.md).
 - Adding an API: new/extended `.graphqls` (one file per DTO) + resolver + DTO, then
-  re-sync `build/generated-sources` via `./gradlew generateJava` (DGS codegen).
+  re-sync `build/generated-sources` via `./gradlew :api:generateJava` (DGS codegen).
 - CSRF: double-submit cookie (`XSRF-TOKEN`, readable JS) with an `X-XSRF-TOKEN` header
   required on mutating requests. BFF clients (the TanStack Start server) must send it.
   Anonymous POSTs without a valid pair get 403 — by design, not a bug. The cookie value
@@ -148,7 +152,7 @@ pre-push hook installed with `just bootstrap`. Docs-only changes are exempt from
   from the cookie.
 - GraphiQL executes queries but needs the same CSRF pair; the masked token is exposed
   as the hidden `_csrf` field on the `/login` page.
-- The operation surface lives in `backend/src/main/resources/graphql/schema.graphqls`
+- The operation surface lives in `backend/api/src/main/resources/graphql/schema.graphqls`
   (Query/Mutation roots) with one `.graphqls` file per DTO. Notable groups:
   profile (`updateProfile`), passkeys (`myPasskeys`/`renamePasskey`/`revokePasskey`),
   account flows (`requestEmailVerification`, `requestPasswordReset`, `resetPassword`,
@@ -188,7 +192,7 @@ just bootstrap  # one-time: install the pre-push hook from scripts/hooks/pre-pus
 | Port 8080 already in use | A stray `spring-boot:run`/devtools instance; kill it (`pgrep -af ChafgramApplication`). |
 | Port 3000 already in use | Another Vite instance; stop it or change port. |
 | App fails with `SchemaManagementException … position` | Applied DB drifted from mappings; align with a new migration (see §4), never by editing applied files. |
-| `./gradlew test` fails with "Could not find a valid Docker environment" | Testcontainers needs a running Docker daemon — start Docker (or Podman) and retry. |
+| `./gradlew :api:test` fails with "Could not find a valid Docker environment" | Testcontainers needs a running Docker daemon — start Docker (or Podman) and retry. |
 | Tests hit the dev database / the dev DB looks wiped by a test run | They don't: the suite uses its own throwaway container. A test-scoped `application.properties` is the usual culprit for a *misconfigured* run — rename it to `application-test.properties` (see §5). |
 | GraphQL returns 403 from curl | Missing CSRF double-submit pair (cookie + `X-XSRF-TOKEN`) — see §6. |
 | `.env` changes ignored by the JVM | The JVM doesn't read `.env`; export the variables or rely on `application.properties` defaults. |

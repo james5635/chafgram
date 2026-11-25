@@ -1,16 +1,17 @@
 # Backend tasks — run as `just backend::<recipe>`
+# `backend/` is the Gradle workspace root; `api` is the Spring Boot subproject.
 
 # Start the backend dev server (port 8080)
 dev:
-    ./gradlew bootRun
+    ./gradlew :api:bootRun
 
 # Run backend tests (hermetic — Testcontainers MySQL)
 test:
-    ./gradlew test
+    ./gradlew :api:test
 
 # Build the backend production jar
 build:
-    ./gradlew bootJar
+    ./gradlew :api:bootJar
 
 # Install backend dependencies (downloads Gradle wrapper + dependencies)
 install:

@@ -43,7 +43,7 @@ bootstrap:
     fi
     echo "bootstrap complete — 'just verify' runs before every push"
 
-# Check local toolchain (JDK 21, Node, npm, Docker, ffmpeg)
+# Check local toolchain (JDK 21, Node, pnpm, Docker, ffmpeg)
 doctor:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -53,13 +53,13 @@ doctor:
       if [ "$major" = "21" ]; then
         echo "java: OK ($raw)"
       else
-        echo "java: WARNING — $raw, but backend targets Java 21 (pom.xml)"
+        echo "java: WARNING — $raw, but backend targets Java 21 (build.gradle.kts)"
       fi
     else
       echo "java: MISSING (need JDK 21)"
     fi
     command -v node >/dev/null && echo "node: $(node -v)" || echo "node: MISSING"
-    command -v npm >/dev/null && echo "npm: $(npm -v)" || echo "npm: MISSING"
+    command -v pnpm >/dev/null && echo "pnpm: $(pnpm -v)" || echo "pnpm: MISSING"
     command -v docker >/dev/null && echo "docker: $(docker --version)" || echo "docker: MISSING (needed by compose + Testcontainers)"
     command -v ffmpeg >/dev/null && echo "ffmpeg: $(ffmpeg -version 2>/dev/null | head -n1)" || echo "ffmpeg: MISSING (video processing only; images work without it)"
     echo "backend needs local infrastructure for dev — run it with: just infra-up (reset with: just seed)"
@@ -76,7 +76,7 @@ infra-down:
 
 # Apply Flyway migrations to the dev database (no data is touched)
 migrate: infra-up
-    cd {{backend_dir}} && ./gradlew -q flywayMigrate
+    cd {{backend_dir}} && ./gradlew -q :api:flywayMigrate
 
 # Reset the dev database to full fixtures (WIPES ALL dev data)
 # Every table seeded except user_entities/user_credentials (passkeys — register via UI) and flyway_schema_history.
@@ -87,7 +87,7 @@ seed: infra-up
     read -r -p "This DELETES ALL DATA in the dev chafgram database. Type 'yes' to continue: " confirm
     if [ "$confirm" != "yes" ]; then echo "aborted"; exit 1; fi
     docker compose exec -T mysql mysql -uroot -proot -e "DROP DATABASE IF EXISTS chafgram; CREATE DATABASE chafgram CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
-    cd {{backend_dir}} && ./gradlew -q flywayMigrate
+    cd {{backend_dir}} && ./gradlew -q :api:flywayMigrate
     docker compose exec -T mysql mysql -uroot -proot chafgram < "{{justfile_directory()}}/scripts/dev-seed.sql"
     echo "dev database reset and seeded (admin@chafgram.test / password: chafgram-dev-password)"
 
@@ -98,7 +98,7 @@ unseed: infra-up
     read -r -p "This DELETES ALL DATA in the dev chafgram database (leaves empty, migrated schema). Type 'yes' to continue: " confirm
     if [ "$confirm" != "yes" ]; then echo "aborted"; exit 1; fi
     docker compose exec -T mysql mysql -uroot -proot -e "DROP DATABASE IF EXISTS chafgram; CREATE DATABASE chafgram CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
-    cd {{backend_dir}} && ./gradlew -q flywayMigrate
+    cd {{backend_dir}} && ./gradlew -q :api:flywayMigrate
     echo "dev database emptied and migrated"
 
 # Run backend and frontend together (Ctrl-C stops both)
@@ -106,7 +106,7 @@ unseed: infra-up
 [parallel]
 dev: backend::dev frontend::dev
 
-# Build backend jar (target/) and frontend production bundle
+# Build backend jar (backend/api/build/libs/) and frontend production bundle
 build: backend::build frontend::build
 
 # Run backend and frontend tests (backend tests are hermetic — Testcontainers MySQL)

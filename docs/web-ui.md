@@ -193,11 +193,11 @@ Traceability: FR-1.3, BR-1.3, BR-1.5, architecture.md §4.1.
 **Components (what/where/how):**
 | Component | Where | How |
 |-----------|-------|-----|
-| Composer | Top of content column | `.island-shell rise-in relative overflow-hidden rounded-[2rem] p-6 sm:p-8` with ambient glow divs (`pointer-events-none absolute ... rounded-full bg-[radial-gradient(...)]`) |
+| Composer | Top of content column | `.island-shell rise-in rounded-xl overflow-hidden border border-[var(--line)] bg-white shadow-sm`; avatar row + textarea, attachment previews, action row |
 | Composer avatar | Left of composer | `Avatar` size 32 |
 | "What's on your mind?" | Composer header | `text-[0.875rem] font-medium text-[var(--sea-ink)] leading-none` |
 | Textarea | Below header | `w-full mt-2 text-base text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] no-underline focus:ring-0 resize-none`, `rows={3}` |
-| Chips [Photo][Video][Feeling][Poll] | Below textarea | `flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] transition hover:bg-[#f3f4f6]`; each has `h-3 w-3 shrink-0` icon SVG + label |
+| Chips [Photo][Video][Feeling][Poll] | Action row below textarea | `flex flex-wrap items-center gap-1 sm:gap-2`; icon + label. [Photo] opens a hidden `input[type=file][accept="image/*"][multiple]`, [Video] opens `accept="video/*"`; both upload through the `uploadMedia` BFF server function on [Post] and pass the resulting `mediaIds` and post type to `createPost`. Selected files show removable thumbnails before posting; upload failures appear in a `role="alert"` line. [Feeling] and [Poll] are disabled until implemented |
 | [Post] button | Right of composer | `rounded-full border px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[var(--brand)]/30`; active `bg-[var(--brand)] hover:bg-[var(--brand-dark)]`; disabled `bg-[color-mix(in_oklab,var(--brand)20%,white_80%)] border-transparent text-[var(--brand-dark)]` disabled:opacity-60 |
 | Post cards | Below composer, `mt-8 space-y-6` | See §5.1.1 |
 | "End of feed" | Bottom | `h-24 flex items-center justify-center text-[var(--sea-ink-soft)] text-sm` |

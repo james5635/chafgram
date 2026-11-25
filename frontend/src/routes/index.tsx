@@ -7,6 +7,7 @@ import RightRail from '../components/RightRail'
 import { CreatePostDocument, FollowingFeedDocument } from '../generated/graphql'
 import { useSessionGuard } from '../hooks/useSessionGuard'
 import { toPostCardData } from '../lib/post-mappers'
+import type { ComposerMedia } from '../components/Composer'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -23,9 +24,15 @@ function Home() {
 
   const posts = (data?.followingFeed?.posts ?? []).map(toPostCardData)
 
-  async function publish(body: string): Promise<boolean> {
+  async function publish(body: string, media?: ComposerMedia): Promise<boolean> {
     try {
-      await createPost({ variables: { type: 'NOTE', body } })
+      await createPost({
+        variables: {
+          type: media?.type ?? 'NOTE',
+          body,
+          mediaIds: media?.mediaIds.length ? media.mediaIds : null,
+        },
+      })
       return true
     } catch {
       return false

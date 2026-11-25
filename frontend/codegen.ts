@@ -12,7 +12,7 @@ import type { CodegenConfig } from '@graphql-codegen/cli'
  * `types.ts` instead of emitting a second copy of them.
  */
 const config: CodegenConfig = {
-  schema: '../backend/src/main/resources/graphql/*.graphqls',
+  schema: '../backend/api/src/main/resources/graphql/*.graphqls',
   documents: 'src/graphql/**/*.graphql',
   generates: {
     'src/generated/types.ts': {

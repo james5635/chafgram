@@ -2,23 +2,23 @@
 
 # Generate GraphQL types/documents from the backend schema (never hand-edit output)
 generate:
-    npm run generate
+    pnpm run generate
 
 # Install frontend dependencies from the lockfile
 install:
-    npm ci
+    pnpm install --frozen-lockfile
 
 # Start the frontend dev server (port 3000)
 dev:
-    npm run dev
+    pnpm run dev
 
 # Build the frontend production bundle
 build:
-    npm run build
+    pnpm run build
 
 # Run frontend tests with Vitest
 test:
-    npm run test
+    pnpm run test
 
 # Verify the frontend is healthy: run tests and build the production bundle
 verify: test build

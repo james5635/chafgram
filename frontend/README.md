@@ -7,14 +7,14 @@ connected to the backend yet.
 ## Getting started
 
 ```bash
-npm install
-npm run dev        # dev server on port 3000
+pnpm install
+pnpm run dev       # dev server on port 3000
 ```
 
 ```bash
-npm run build      # production build (also regenerates the route tree)
-npm run preview    # serve the production build
-npm run test       # Vitest + React Testing Library
+pnpm run build     # production build (also regenerates the route tree)
+pnpm run preview   # serve the production build
+pnpm run test      # Vitest + React Testing Library
 ```
 
 See `docs/web-ui.md` and `docs/mobile-ui.md` for the complete UI specification (wireframes
@@ -68,4 +68,4 @@ theming is resolved before paint by the inline `THEME_INIT_SCRIPT` in `__root.ts
 
 - Devtools (TanStack Router/Devtools) render in the corner in dev only — the build plugin
   strips them from production output. Don't add them to production code paths.
-- `npm run build` regenerates `src/routeTree.gen.ts`; commit the regenerated file.
+- `pnpm run build` regenerates `src/routeTree.gen.ts`; commit the regenerated file.

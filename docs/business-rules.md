@@ -5,7 +5,7 @@
 > feature area. Scope: the full product — Facebook/Instagram-inspired private social
 > platform, self-hosted per company.
 > Data-model enforcement lives in the Flyway migrations
-> (`backend/src/main/resources/db/migration/`); behavior without a schema anchor is
+> (`backend/api/src/main/resources/db/migration/`); behavior without a schema anchor is
 > stated here as a rule.
 > Items marked **(proposal)** need owner sign-off.
 >

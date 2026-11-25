@@ -82,7 +82,7 @@
 - **GraphQL codegen** — `just generate` (root) runs `frontend::generate`, which
   reads the backend's committed `*.graphqls` files and regenerates
   `frontend/src/generated/graphql.ts` (git-ignored, never hand-edited).
-  Operations live in `frontend/src/graphql/*.graphql`; `npm run pretest`/`prebuild`
+  Operations live in `frontend/src/graphql/*.graphql`; `pnpm run pretest`/`prebuild`
   regenerate the types so a fresh clone needs no extra step.
 - **Rendering strategy** — SSR for shell and public surface; client interactivity for
   feed/compose/watch/messages; route loaders for data.
@@ -310,7 +310,7 @@ upload (REST multipart)            in-app async pipeline
 | Concern | Approach |
 |---------|----------|
 | Artifact | OCI image for backend + static assets via frontend build; `compose.yaml` for the full self-hosted stack (app + MySQL + volume) — dev compose exists today and doubles as the reference |
-| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline, `V2` media column alignment, `V3` `users.email_verified_at`, `V4` `media_assets.thumbnail_key` (migrations in `backend/src/main/resources/db/migration/`) |
+| Migrations | Flyway on boot; additive only; `V1__init.sql` baseline, `V2` media column alignment, `V3` `users.email_verified_at`, `V4` `media_assets.thumbnail_key` (migrations in `backend/api/src/main/resources/db/migration/`) |
 | Backups | `mysqldump`/volume snapshot, admin-facing docs; restore tested per release |
 | TLS | Terminated at company reverse proxy; app serves plain HTTP internally |
 | Observability | Actuator health/metrics; logs to stdout; **no** mandatory external telemetry |

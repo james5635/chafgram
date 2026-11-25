@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import AppShell from '@/components/AppShell'
 import { CreatePostDocument, MeDocument } from '@/generated/graphql'
 import { uploadMedia } from '@/lib/media-server'
+import { fileToBase64, postTypeFor } from '@/lib/media'
 
 const CHIPS = [
   { label: 'Photo', color: '#2563eb', icon: Image },
@@ -15,21 +16,6 @@ const CHIPS = [
   { label: 'Feeling', color: '#f59e0b', icon: Heart },
   { label: 'Poll', color: '#4f46e5', icon: BarChart2 },
 ] as const
-
-/** Read a file as base64 so it can travel through a server function. */
-async function fileToBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer())
-  let binary = ''
-  const chunkSize = 0x8000
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
-  }
-  return btoa(binary)
-}
-
-function postTypeFor(file: File): 'PHOTO' | 'VIDEO' {
-  return file.type.startsWith('video/') ? 'VIDEO' : 'PHOTO'
-}
 
 export const Route = createFileRoute('/compose')({
   component: Compose,

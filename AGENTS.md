@@ -13,7 +13,7 @@ assume public-social-network semantics anywhere in the codebase.
 ## Repository layout
 
 ```
-backend/    Spring Boot 4 (Java 21) service — Gradle wrapper, package io.github.james5635.chafgram
+backend/    Backend Gradle workspace (wrapper + settings); Spring Boot 4 (Java 21) service in backend/api/, package io.github.james5635.chafgram
 frontend/   TanStack Start (React 19, Vite, Tailwind v4) app — file-based routing
 compose.yaml  Local dev MySQL 8.0 (dev-only throwaway credentials)
 config/     Dev service config (Garage object-storage config)
@@ -51,11 +51,11 @@ just mysql                 # start local MySQL 8.0 via compose.yaml, wait for he
 just seed                  # RESET dev DB: wipe, Flyway-migrate, insert full demo fixtures (admin + members, posts, comments, DMs, notifications, reports, audit log)
 docker compose up -d       # start MySQL AND Garage (S3-compatible dev object storage, bucket chafgram-media)
 docker compose up garage-init   # one-shot: layout assign, dev key import, bucket create, permissions — idempotent
-./gradlew bootRun          # run dev server (default port 8080)
-./gradlew test             # run tests (hermetic — Testcontainers MySQL)
+./gradlew :api:bootRun     # run dev server (default port 8080)
+./gradlew :api:test        # run tests (hermetic — Testcontainers MySQL)
 just migrate               # apply Flyway migrations only, no data wiped
 just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
-./gradlew bootJar          # build jar (build/libs/)
+./gradlew :api:bootJar     # build jar (backend/api/build/libs/)
 ```
 
 `just dev` / `just backend::dev` / `just frontend::dev` do not start the database — run `just mysql` first.
@@ -67,10 +67,10 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 - Dev object storage: Garage (S3-compatible API on `http://localhost:3900`, region
   `garage`, bucket `chafgram-media`, dev key + secret in `scripts/garage-init.sh`).
   Bucket/layout/key are created by `garage-init` on first run — re-running is safe.
-- `./gradlew test` is hermetic: it starts a throwaway MySQL 8 container via
+- `./gradlew :api:test` is hermetic: it starts a throwaway MySQL 8 container via
   Testcontainers (one per test JVM, Docker must be running). The dev database is never
   touched — no `just seed` afterwards. Test-only config lives in
-  `backend/src/test/resources/application-test.properties` (profile `test`); never add a
+  `backend/api/src/test/resources/application-test.properties` (profile `test`); never add a
   test-scoped `application.properties`, it shadows the main one on the classpath.
 - Identity Backend modules implemented: `identity` (users/invites/workspace/passkeys/account
   flows, REST `/api/v1`), `social` (posts/comments/reactions/follows/feed/search + GraphQL at
@@ -116,11 +116,11 @@ just unseed                # EMPTY dev DB: wipe, Flyway-migrate, no fixtures
 ### Frontend (`frontend/`)
 
 ```bash
-npm install
-npm run dev                # dev server on port 3000
-npm run generate           # GraphQL codegen (also run by `just generate`)
-npm run build              # production build (also regenerates the route tree)
-npm run preview            # serve the production build
+pnpm install
+pnpm run dev               # dev server on port 3000
+pnpm run generate          # GraphQL codegen (also run by `just generate`)
+pnpm run build             # production build (also regenerates the route tree)
+pnpm run preview           # serve the production build
 ```
 
 - Routes are files in `src/routes/`; `src/routeTree.gen.ts` is **generated — never edit
@@ -146,7 +146,7 @@ npm run preview            # serve the production build
 - Devtools (TanStack Router/Devtools) render in the corner in dev; leave them out of any
   production-only code paths you author.
 - `frontend/AGENTS.md` contains an `intent-skills` block: before substantial work here,
-  run `npm exec --no -- intent list` and load a matching local skill if one exists.
+  run `pnpm exec intent list` and load a matching local skill if one exists.
 
 ## Conventions
 
@@ -210,7 +210,7 @@ and any other code change that can regress. A change without tests is not done.
 
 - Never commit secrets (`application.properties` with real credentials, `.env`, keys).
   Use env vars or local, git-ignored profiles.
-- Don't commit build output: `backend/build/`, `frontend/.output/`, `dist/`,
+- Don't commit build output: `backend/build/`, `backend/api/build/`, `frontend/.output/`, `dist/`,
   `node_modules/`.
 - Don't vendor fonts/CDN assets silently; the app currently loads Google Fonts via
   `styles.css` `@import` — flag it if self-hosting is needed for offline deployments
@@ -229,9 +229,9 @@ and any other code change that can regress. A change without tests is not done.
 1. Tests written and committed for the change (see "Testing (mandatory)" above), including a
    regression test for any bug fix. `just verify` is green — this runs backend + frontend
    tests and both builds.
-2. Backend: `./gradlew test` green; migration (if any) is forward-only and reversible by a
+2. Backend: `./gradlew :api:test` green; migration (if any) is forward-only and reversible by a
    documented restore; OpenAPI/GraphQL schema updated where applicable.
-3. Frontend: `npm run build` clean; new UI verified in light/dark/auto; keyboard focus
+3. Frontend: `pnpm run build` clean; new UI verified in light/dark/auto; keyboard focus
    visible; tokens used, not magic values.
 4. Docs updated (`README.md`, `product.md`, `design.md`, this file) if behavior, scope, or
    decisions changed.

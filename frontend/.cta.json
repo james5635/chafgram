@@ -3,7 +3,7 @@
   "projectName": "frontend",
   "mode": "file-router",
   "typescript": true,
-  "packageManager": "npm",
+  "packageManager": "pnpm",
   "includeExamples": true,
   "tailwind": true,
   "projectPreset": "default",
