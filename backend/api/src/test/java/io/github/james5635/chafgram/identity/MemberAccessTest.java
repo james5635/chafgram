@@ -12,6 +12,9 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import io.github.james5635.chafgram.identity.repository.UserRepository;
+import io.github.james5635.chafgram.identity.service.LastSeenService;
+import io.github.james5635.chafgram.identity.service.MemberAccess;
 
 class MemberAccessTest {
 

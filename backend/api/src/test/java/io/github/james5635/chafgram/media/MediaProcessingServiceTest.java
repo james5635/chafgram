@@ -9,6 +9,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import io.github.james5635.chafgram.media.repository.MediaAssetRepository;
+import io.github.james5635.chafgram.media.service.MediaProcessingService;
+import io.github.james5635.chafgram.media.utils.MediaStorage;
 
 class MediaProcessingServiceTest {
 

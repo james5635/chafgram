@@ -1,9 +1,9 @@
 package io.github.james5635.chafgram.social;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
-import io.github.james5635.chafgram.identity.MemberService;
-import io.github.james5635.chafgram.identity.UserRepository;
-import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
+import io.github.james5635.chafgram.identity.service.MemberService;
+import io.github.james5635.chafgram.identity.repository.UserRepository;
+import io.github.james5635.chafgram.identity.repository.WorkspaceSettingsRepository;
 import io.github.james5635.chafgram.identity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +19,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import io.github.james5635.chafgram.social.service.BlockService;
+import io.github.james5635.chafgram.social.service.PostService;
 
 /**
  * Smoke-tests the GraphQL surface end to end: schema loading, argument

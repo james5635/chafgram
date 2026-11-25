@@ -6,3 +6,4 @@ rootProject.name = "chafgram"
 // The Spring Boot application lives in the `api` subproject. Additional
 // backend modules (workers, jobs, …) can be added here as the project grows.
 include("api")
+include("seed")

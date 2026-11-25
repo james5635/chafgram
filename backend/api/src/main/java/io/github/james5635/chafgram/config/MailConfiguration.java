@@ -1,8 +1,8 @@
 package io.github.james5635.chafgram.config;
 
-import io.github.james5635.chafgram.mail.ChafgramMailSender;
-import io.github.james5635.chafgram.mail.LoggingMailSender;
-import io.github.james5635.chafgram.mail.SmtpMailSender;
+import io.github.james5635.chafgram.mail.service.ChafgramMailSender;
+import io.github.james5635.chafgram.mail.service.LoggingMailSender;
+import io.github.james5635.chafgram.mail.service.SmtpMailSender;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

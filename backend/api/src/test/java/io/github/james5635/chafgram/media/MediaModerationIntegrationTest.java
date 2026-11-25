@@ -1,8 +1,8 @@
 package io.github.james5635.chafgram.media;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
-import io.github.james5635.chafgram.identity.InviteService;
-import io.github.james5635.chafgram.identity.MemberService;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.github.james5635.chafgram.media.repository.MediaAssetRepository;
 
 /**
  * Admin media moderation delete (BR-5.3): an admin can delete any media for

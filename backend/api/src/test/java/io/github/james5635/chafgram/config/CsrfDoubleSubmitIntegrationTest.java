@@ -1,7 +1,7 @@
 package io.github.james5635.chafgram.config;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
-import io.github.james5635.chafgram.identity.MemberService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

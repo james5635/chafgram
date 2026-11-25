@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import io.github.james5635.chafgram.identity.utils.RoleConverter;
 
 /**
  * A workspace invite. `token_hash` is the SHA-256 hex of the bearer token —

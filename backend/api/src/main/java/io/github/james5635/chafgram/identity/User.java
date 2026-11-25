@@ -11,6 +11,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import io.github.james5635.chafgram.identity.utils.RoleConverter;
+import io.github.james5635.chafgram.identity.utils.UserStatusConverter;
 
 /** A member of the workspace. Mapped to the `users` table. */
 @Entity

@@ -2,9 +2,9 @@ package io.github.james5635.chafgram.media;
 
 import com.jayway.jsonpath.JsonPath;
 import io.github.james5635.chafgram.AbstractIntegrationTest;
-import io.github.james5635.chafgram.identity.MemberService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 import io.github.james5635.chafgram.identity.User;
-import io.github.james5635.chafgram.identity.UserRepository;
+import io.github.james5635.chafgram.identity.repository.UserRepository;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +27,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.github.james5635.chafgram.media.repository.MediaAssetRepository;
+import io.github.james5635.chafgram.media.service.MediaProcessingService;
+import io.github.james5635.chafgram.media.utils.MediaStorage;
 
 /**
  * End-to-end video pipeline test: upload → PROCESSING → READY with duration/blurhash.

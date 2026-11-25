@@ -2,28 +2,28 @@ package io.github.james5635.chafgram.social;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
 import io.github.james5635.chafgram.common.ApiException;
-import io.github.james5635.chafgram.identity.InviteService;
-import io.github.james5635.chafgram.identity.MemberService;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
-import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
+import io.github.james5635.chafgram.identity.repository.WorkspaceSettingsRepository;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
 import io.github.james5635.chafgram.social.dto.Views;
-import io.github.james5635.chafgram.common.AuditService;
-import io.github.james5635.chafgram.common.AuditLogRepository;
+import io.github.james5635.chafgram.common.service.AuditService;
+import io.github.james5635.chafgram.common.repository.AuditLogRepository;
 import io.github.james5635.chafgram.moderation.Report;
 import io.github.james5635.chafgram.moderation.ReportReason;
-import io.github.james5635.chafgram.moderation.ReportService;
+import io.github.james5635.chafgram.moderation.service.ReportService;
 import io.github.james5635.chafgram.moderation.ReportStatus;
 import io.github.james5635.chafgram.moderation.ReportTargetType;
 import io.github.james5635.chafgram.notifications.Notification;
-import io.github.james5635.chafgram.notifications.NotificationService;
+import io.github.james5635.chafgram.notifications.service.NotificationService;
 import io.github.james5635.chafgram.notifications.NotificationType;
-import io.github.james5635.chafgram.messaging.MessagingService;
+import io.github.james5635.chafgram.messaging.service.MessagingService;
 import io.github.james5635.chafgram.messaging.Conversation;
 import io.github.james5635.chafgram.messaging.Message;
 import io.github.james5635.chafgram.media.MediaAsset;
-import io.github.james5635.chafgram.media.MediaAssetRepository;
+import io.github.james5635.chafgram.media.repository.MediaAssetRepository;
 import io.github.james5635.chafgram.media.MediaKind;
 import io.github.james5635.chafgram.media.MediaStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +37,14 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import io.github.james5635.chafgram.social.repository.CommentRepository;
+import io.github.james5635.chafgram.social.repository.PostRepository;
+import io.github.james5635.chafgram.social.service.BlockService;
+import io.github.james5635.chafgram.social.service.CommentService;
+import io.github.james5635.chafgram.social.service.FeedService;
+import io.github.james5635.chafgram.social.service.FollowService;
+import io.github.james5635.chafgram.social.service.PostService;
+import io.github.james5635.chafgram.social.service.ReactionService;
 
 /**
  * End-to-end social flow: bootstrap → post → follow → react → comment → report →

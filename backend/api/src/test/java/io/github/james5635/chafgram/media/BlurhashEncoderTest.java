@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import io.github.james5635.chafgram.media.utils.BlurhashEncoder;
 
 /** Determinism + contract tests for the blurhash encoder (no decode, spec-only). */
 class BlurhashEncoderTest {

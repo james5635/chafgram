@@ -119,10 +119,27 @@
 
 ## 4. Backend architecture
 
-Package root `io.github.james5635.chafgram`. Layers per module:
-`api` (GraphQL resolvers / REST controllers) → `service` (transactional) →
-`domain` (JPA entities) → `repository` (Spring Data). *(`identity`, `common`,
-all implemented)*
+Package root `io.github.james5635.chafgram`. Each module is physically layered:
+
+```
+<module>/controller    GraphQL resolvers and REST controllers (the API layer)
+<module>/service       transactional services
+<module>/repository    Spring Data repositories
+<module>/utils         helpers, converters, stateless utilities
+<module>/dto           wire types (where present)
+<module>/              JPA entities, enums and value types
+```
+
+Dependencies point inward: `controller` → `service` → `repository`; `utils` is
+called by all layers but depends on none of them. `config` keeps Spring
+configuration. *(`identity`, `common`, all implemented)*
+
+The Gradle workspace has a second subproject, `backend/seed`, for dev fixtures.
+It boots a headless Spring context (controllers and web security excluded),
+depends on `:api`, and creates fixtures by calling the same services as the app
+with an explicit acting member. `just seed` runs it after resetting the dev DB;
+`just migrate` / `just unseed` use the `:api:flywayMigrate` Gradle task instead.
+No seed SQL script is shipped.
 
 ```
 io.github.james5635.chafgram

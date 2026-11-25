@@ -14,6 +14,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import io.github.james5635.chafgram.identity.repository.InviteRepository;
+import io.github.james5635.chafgram.identity.repository.UserRepository;
+import io.github.james5635.chafgram.identity.service.MemberService;
+import io.github.james5635.chafgram.identity.service.WorkspaceService;
 
 /**
  * Workspace query is public (needed pre-login); everything else on GraphQL

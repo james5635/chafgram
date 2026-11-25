@@ -7,7 +7,7 @@ dev:
 
 # Run backend tests (hermetic — Testcontainers MySQL)
 test:
-    ./gradlew :api:test
+    ./gradlew :api:test :seed:test
 
 # Build the backend production jar
 build:

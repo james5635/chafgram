@@ -2,24 +2,24 @@ package io.github.james5635.chafgram.media;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
 import io.github.james5635.chafgram.common.ApiException;
-import io.github.james5635.chafgram.identity.InviteService;
-import io.github.james5635.chafgram.identity.MemberService;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
-import io.github.james5635.chafgram.identity.UserRepository;
+import io.github.james5635.chafgram.identity.repository.UserRepository;
 import io.github.james5635.chafgram.identity.UserStatus;
-import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
+import io.github.james5635.chafgram.identity.repository.WorkspaceSettingsRepository;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
 import io.github.james5635.chafgram.messaging.Message;
-import io.github.james5635.chafgram.messaging.MessagingService;
+import io.github.james5635.chafgram.messaging.service.MessagingService;
 import io.github.james5635.chafgram.social.PostMedia;
-import io.github.james5635.chafgram.social.PostMediaRepository;
-import io.github.james5635.chafgram.social.PostService;
+import io.github.james5635.chafgram.social.repository.PostMediaRepository;
+import io.github.james5635.chafgram.social.service.PostService;
 import io.github.james5635.chafgram.social.Post;
-import io.github.james5635.chafgram.social.PostRepository;
+import io.github.james5635.chafgram.social.repository.PostRepository;
 import io.github.james5635.chafgram.social.PostType;
 import io.github.james5635.chafgram.social.UserBlock;
-import io.github.james5635.chafgram.social.UserBlockRepository;
+import io.github.james5635.chafgram.social.repository.UserBlockRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +40,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.github.james5635.chafgram.media.repository.MediaAssetRepository;
 
 /**
  * Media bytes authorization tests (FR-5.4, BR-2.2, BR-3.1, BR-5.2).

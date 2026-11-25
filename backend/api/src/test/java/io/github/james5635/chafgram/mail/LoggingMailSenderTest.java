@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import io.github.james5635.chafgram.mail.service.LoggingMailSender;
 
 /**
  * The dev fallback writes account mail to the application log; bearer tokens

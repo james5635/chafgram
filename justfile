@@ -76,7 +76,7 @@ infra-down:
 
 # Apply Flyway migrations to the dev database (no data is touched)
 migrate: infra-up
-    cd {{backend_dir}} && ./gradlew -q :api:flywayMigrate
+    cd "{{justfile_directory()}}/{{backend_dir}}" && ./gradlew -q :api:flywayMigrate
 
 # Reset the dev database to full fixtures (WIPES ALL dev data)
 # Every table seeded except user_entities/user_credentials (passkeys — register via UI) and flyway_schema_history.
@@ -87,8 +87,8 @@ seed: infra-up
     read -r -p "This DELETES ALL DATA in the dev chafgram database. Type 'yes' to continue: " confirm
     if [ "$confirm" != "yes" ]; then echo "aborted"; exit 1; fi
     docker compose exec -T mysql mysql -uroot -proot -e "DROP DATABASE IF EXISTS chafgram; CREATE DATABASE chafgram CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
-    cd {{backend_dir}} && ./gradlew -q :api:flywayMigrate
-    docker compose exec -T mysql mysql -uroot -proot chafgram < "{{justfile_directory()}}/scripts/dev-seed.sql"
+    cd "{{justfile_directory()}}/{{backend_dir}}" && ./gradlew -q :api:flywayMigrate
+    cd "{{justfile_directory()}}/{{backend_dir}}" && ./gradlew -q :seed:bootRun
     echo "dev database reset and seeded (admin@chafgram.test / password: chafgram-dev-password)"
 
 # Empty the dev database and re-apply migrations (WIPES ALL dev data, no fixtures)
@@ -98,7 +98,7 @@ unseed: infra-up
     read -r -p "This DELETES ALL DATA in the dev chafgram database (leaves empty, migrated schema). Type 'yes' to continue: " confirm
     if [ "$confirm" != "yes" ]; then echo "aborted"; exit 1; fi
     docker compose exec -T mysql mysql -uroot -proot -e "DROP DATABASE IF EXISTS chafgram; CREATE DATABASE chafgram CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
-    cd {{backend_dir}} && ./gradlew -q :api:flywayMigrate
+    cd "{{justfile_directory()}}/{{backend_dir}}" && ./gradlew -q :api:flywayMigrate
     echo "dev database emptied and migrated"
 
 # Run backend and frontend together (Ctrl-C stops both)

@@ -2,15 +2,15 @@ package io.github.james5635.chafgram.notifications;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
 import io.github.james5635.chafgram.common.ApiException;
-import io.github.james5635.chafgram.identity.InviteService;
-import io.github.james5635.chafgram.identity.MemberService;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
-import io.github.james5635.chafgram.identity.WorkspaceSettingsRepository;
+import io.github.james5635.chafgram.identity.repository.WorkspaceSettingsRepository;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
-import io.github.james5635.chafgram.social.PostService;
+import io.github.james5635.chafgram.social.service.PostService;
 import io.github.james5635.chafgram.social.Post;
-import io.github.james5635.chafgram.social.PostRepository;
+import io.github.james5635.chafgram.social.repository.PostRepository;
 import io.github.james5635.chafgram.social.PostType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +28,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.github.james5635.chafgram.notifications.service.NotificationService;
 
 /**
  * Notification flow: FR-7.2 mark-read, BR-7.3 tombstone hiding, badge parity.

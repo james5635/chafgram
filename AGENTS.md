@@ -13,7 +13,7 @@ assume public-social-network semantics anywhere in the codebase.
 ## Repository layout
 
 ```
-backend/    Backend Gradle workspace (wrapper + settings); Spring Boot 4 (Java 21) service in backend/api/, package io.github.james5635.chafgram
+backend/    Backend Gradle workspace (wrapper + settings); Spring Boot 4 (Java 21) service in backend/api/ and dev-fixture seeder in backend/seed/, package io.github.james5635.chafgram
 frontend/   TanStack Start (React 19, Vite, Tailwind v4) app — file-based routing
 compose.yaml  Local dev MySQL 8.0 (dev-only throwaway credentials)
 config/     Dev service config (Garage object-storage config)
@@ -48,7 +48,7 @@ cloning to install the tracked pre-push hook (`scripts/hooks/pre-push`), which r
 
 ```bash
 just mysql                 # start local MySQL 8.0 via compose.yaml, wait for healthy (stop with: docker compose down)
-just seed                  # RESET dev DB: wipe, Flyway-migrate, insert full demo fixtures (admin + members, posts, comments, DMs, notifications, reports, audit log)
+just seed                  # RESET dev DB: wipe, migrate, and run the backend/seed Gradle subproject (fixtures via :api services; no seed SQL)
 docker compose up -d       # start MySQL AND Garage (S3-compatible dev object storage, bucket chafgram-media)
 docker compose up garage-init   # one-shot: layout assign, dev key import, bucket create, permissions — idempotent
 ./gradlew :api:bootRun     # run dev server (default port 8080)
@@ -151,7 +151,10 @@ pnpm run preview           # serve the production build
 ## Conventions
 
 - **Java:** 21, Lombok for boilerplate, constructor injection, records for DTOs where
-  practical. Keep the base package `io.github.james5635.chafgram`.
+  practical. Keep the base package `io.github.james5635.chafgram`. Each module is
+  split into `controller/` (resolvers + REST controllers), `service/`,
+  `repository/`, `utils/` and `dto/`; JPA entities/enums stay in the module root.
+  Put new classes in the matching layer — do not flatten them back into the root.
 - **API surface:** GraphQL-first — everything goes through `/graphql` (social, identity,
   invites, workspace, messaging, moderation). REST only for the documented keep-list in
   `docs/architecture.md` (session ceremonies, WebAuthn, media upload/bytes, multipart

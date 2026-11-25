@@ -1,16 +1,16 @@
 package io.github.james5635.chafgram.messaging;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
-import io.github.james5635.chafgram.identity.InviteService;
-import io.github.james5635.chafgram.identity.MemberService;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 import io.github.james5635.chafgram.identity.Role;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
 import io.github.james5635.chafgram.media.MediaAsset;
-import io.github.james5635.chafgram.media.MediaAssetRepository;
+import io.github.james5635.chafgram.media.repository.MediaAssetRepository;
 import io.github.james5635.chafgram.media.MediaKind;
 import io.github.james5635.chafgram.media.MediaStatus;
-import io.github.james5635.chafgram.social.CurrentMember;
+import io.github.james5635.chafgram.social.utils.CurrentMember;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +39,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.github.james5635.chafgram.messaging.service.MessagingService;
 
 /**
  * End-to-end media messaging tests (FR-5.4, FR-6.6).

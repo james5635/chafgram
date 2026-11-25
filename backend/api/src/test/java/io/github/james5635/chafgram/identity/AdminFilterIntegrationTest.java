@@ -2,7 +2,7 @@ package io.github.james5635.chafgram.identity;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
 import io.github.james5635.chafgram.common.AuditLog;
-import io.github.james5635.chafgram.common.AuditService;
+import io.github.james5635.chafgram.common.service.AuditService;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +21,8 @@ import static org.hamcrest.Matchers.is;import static org.springframework.securit
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 
 /**
  * Staff-only admin filters: member search (FR-10.1) and audit-log search

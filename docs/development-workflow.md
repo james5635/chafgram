@@ -83,7 +83,10 @@ Rules:
   Flyway checksums enforce this and any applied database fails validation.
   Alignments go in a new `V<n>__snake_case.sql`.
 - `just migrate` applies migrations without touching data.
-- `just seed` WIPES the dev database and re-seeds full fixtures (asks for `yes`).
+- `just seed` WIPES the dev database and re-seeds full fixtures (asks for `yes`). The
+  fixtures live in the `backend/seed` Gradle subproject (`DevFixtureSeeder`), which boots
+  a headless Spring context and calls the `:api` services with an explicit acting member;
+  `just migrate` / `just unseed` use the `:api:flywayMigrate` Gradle task instead.
 - `just unseed` WIPES and leaves an empty migrated schema (asks for `yes`).
 - Dev credentials (`chafgram` / `chafgram`, DB `chafgram`) are throwaway, local-only;
   override via `SPRING_DATASOURCE_*` for anything else. Never commit real credentials.

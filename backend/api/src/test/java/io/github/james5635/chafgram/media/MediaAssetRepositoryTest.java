@@ -1,13 +1,14 @@
 package io.github.james5635.chafgram.media;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
-import io.github.james5635.chafgram.identity.MemberService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 import io.github.james5635.chafgram.identity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import io.github.james5635.chafgram.media.repository.MediaAssetRepository;
 
 /** `media_assets` lifecycle transitions (FR-5.2, BR-5.3). */
 class MediaAssetRepositoryTest extends AbstractIntegrationTest {

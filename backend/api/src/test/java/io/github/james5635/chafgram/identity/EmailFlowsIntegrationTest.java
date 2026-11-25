@@ -3,7 +3,7 @@ package io.github.james5635.chafgram.identity;
 import io.github.james5635.chafgram.AbstractIntegrationTest;
 import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
-import io.github.james5635.chafgram.mail.ChafgramMailSender;
+import io.github.james5635.chafgram.mail.service.ChafgramMailSender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -40,6 +40,10 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.github.james5635.chafgram.identity.repository.UserRepository;
+import io.github.james5635.chafgram.identity.service.AccountFlowService;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 
 /**
  * Email verification and password reset (FR-1.7): single-use, time-boxed,

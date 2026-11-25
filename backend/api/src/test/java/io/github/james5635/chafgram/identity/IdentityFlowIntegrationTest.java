@@ -5,7 +5,7 @@ import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
 import io.github.james5635.chafgram.identity.dto.UpdateWorkspaceRequest;
 import io.github.james5635.chafgram.media.MediaAsset;
-import io.github.james5635.chafgram.media.MediaAssetRepository;
+import io.github.james5635.chafgram.media.repository.MediaAssetRepository;
 import io.github.james5635.chafgram.media.MediaKind;
 import io.github.james5635.chafgram.media.MediaStatus;
 import io.github.james5635.chafgram.social.dto.MemberDto;
@@ -29,6 +29,15 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import io.github.james5635.chafgram.identity.repository.InviteRepository;
+import io.github.james5635.chafgram.identity.repository.UserRepository;
+import io.github.james5635.chafgram.identity.repository.WorkspaceSettingsRepository;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.MemberAccess;
+import io.github.james5635.chafgram.identity.service.MemberService;
+import io.github.james5635.chafgram.identity.service.MemberUserDetailsService;
+import io.github.james5635.chafgram.identity.service.WorkspaceService;
+import io.github.james5635.chafgram.identity.utils.Tokens;
 
 /**
  * End-to-end identity flow against a real MySQL: bootstrap, invite lifecycle,

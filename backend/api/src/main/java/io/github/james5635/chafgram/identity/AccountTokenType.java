@@ -1,6 +1,6 @@
 package io.github.james5635.chafgram.identity;
 
-import io.github.james5635.chafgram.common.LowercaseEnumConverter;
+import io.github.james5635.chafgram.common.utils.LowercaseEnumConverter;
 import jakarta.persistence.Converter;
 
 /**

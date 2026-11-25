@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import io.github.james5635.chafgram.identity.utils.SignupModeConverter;
 
 /**
  * Singleton workspace configuration (id is always 1 — enforced at the DB level

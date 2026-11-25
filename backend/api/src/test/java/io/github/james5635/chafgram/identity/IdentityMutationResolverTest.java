@@ -2,7 +2,7 @@ package io.github.james5635.chafgram.identity;
 
 import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.identity.dto.PasskeyDto;
-import io.github.james5635.chafgram.social.CurrentMember;
+import io.github.james5635.chafgram.social.utils.CurrentMember;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -17,6 +17,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import io.github.james5635.chafgram.identity.controller.IdentityMutationResolver;
+import io.github.james5635.chafgram.identity.repository.UserRepository;
+import io.github.james5635.chafgram.identity.service.AccountFlowService;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.LastSeenService;
+import io.github.james5635.chafgram.identity.service.MemberAccess;
+import io.github.james5635.chafgram.identity.service.MemberService;
+import io.github.james5635.chafgram.identity.service.PasskeyService;
+import io.github.james5635.chafgram.identity.service.WorkspaceService;
 
 /**
  * Passkey mutations (rename/revoke) must enforce the writeable-member rule

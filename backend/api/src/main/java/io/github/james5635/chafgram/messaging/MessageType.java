@@ -1,6 +1,6 @@
 package io.github.james5635.chafgram.messaging;
 
-import io.github.james5635.chafgram.common.LowercaseEnumConverter;
+import io.github.james5635.chafgram.common.utils.LowercaseEnumConverter;
 import jakarta.persistence.Converter;
 
 public enum MessageType {
