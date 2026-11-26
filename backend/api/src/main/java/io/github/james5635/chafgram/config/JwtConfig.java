@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -53,6 +54,21 @@ public class JwtConfig {
 		NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey()).build();
 		OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(
 				JwtValidators.createDefaultWithIssuer(issuer), new AudienceValidator(audience));
+		decoder.setJwtValidator(validator);
+		return decoder;
+	}
+
+	/**
+	 * Logout-only decoder. Signature, issuer, and audience are still verified,
+	 * but {@code JwtTimestampValidator} is deliberately omitted: a client idle
+	 * past the short access TTL must still be able to revoke its much longer
+	 * refresh token, otherwise the 14-day credential stays live with no way to
+	 * kill it from the app. Never use this decoder for resource access.
+	 */
+	public JwtDecoder decoderWithoutTimestampValidation() {
+		NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey()).build();
+		OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(
+				new JwtIssuerValidator(issuer), new AudienceValidator(audience));
 		decoder.setJwtValidator(validator);
 		return decoder;
 	}

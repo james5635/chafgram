@@ -2,6 +2,7 @@ package io.github.james5635.chafgram.identity.controller;
 
 import com.jayway.jsonpath.JsonPath;
 import io.github.james5635.chafgram.AbstractIntegrationTest;
+import io.github.james5635.chafgram.config.JwtConfig;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.dto.CreateInviteResponse;
 import io.github.james5635.chafgram.identity.dto.UpdateWorkspaceRequest;
@@ -16,16 +17,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.env.MockEnvironment;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -59,6 +68,12 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
 
 	@Autowired
 	private JwtDecoder jwtDecoder;
+
+	@Autowired
+	private JwtEncoder jwtEncoder;
+
+	@Autowired
+	private JwtConfig jwtConfig;
 
 	@BeforeEach
 	void clean() {
@@ -238,6 +253,38 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
 		assertThat(jwtDecoder.decode(accessToken(result)).getSubject())
 				.isEqualTo(String.valueOf(users.findByUsername("bob").orElseThrow().getId()));
 		assertRefreshCookie(result, false);
+	}
+
+	@Test
+	void logoutAcceptsAnExpiredBearerAndRevokesTheLiveRefreshToken() throws Exception {
+		User alice = memberService.bootstrap("alice", "Alice", "alice@example.com", PASSWORD);
+		MvcResult login = login("alice", PASSWORD);
+		String rawCookie = refreshCookie(login);
+		Instant now = Instant.now();
+
+		JwtClaimsSet expiredClaims = JwtClaimsSet.builder()
+				.issuer(jwtConfig.issuer())
+				.audience(List.of(jwtConfig.audience()))
+				.subject(String.valueOf(alice.getId()))
+				.issuedAt(now.minusSeconds(3600))
+				.expiresAt(now.minusSeconds(60))
+				.claim("roles", List.of("admin"))
+				.build();
+		String expiredBearer = jwtEncoder.encode(JwtEncoderParameters.from(
+				JwsHeader.with(MacAlgorithm.HS256).build(), expiredClaims)).getTokenValue();
+		// The resource-server decoder rejects it; logout must still accept it.
+		assertThatThrownBy(() -> jwtDecoder.decode(expiredBearer)).isInstanceOf(JwtException.class);
+
+		mockMvc.perform(post("/api/v1/auth/logout")
+						.with(user("browser")).with(csrf())
+						.header(HttpHeaders.AUTHORIZATION, "Bearer " + expiredBearer)
+						.cookie(new Cookie(REFRESH_COOKIE, rawCookie)))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(post("/api/v1/auth/refresh")
+						.with(user("browser")).with(csrf())
+						.cookie(new Cookie(REFRESH_COOKIE, rawCookie)))
+				.andExpect(status().isUnauthorized());
 	}
 
 	@Test

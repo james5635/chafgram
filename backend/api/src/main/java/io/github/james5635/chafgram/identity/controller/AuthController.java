@@ -1,6 +1,7 @@
 package io.github.james5635.chafgram.identity.controller;
 
 import io.github.james5635.chafgram.common.ApiException;
+import io.github.james5635.chafgram.config.JwtConfig;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.auth.TokenPair;
 import io.github.james5635.chafgram.identity.auth.TokenService;
@@ -46,18 +47,18 @@ public class AuthController {
 	private final PasswordEncoder passwordEncoder;
 	private final UserRepository users;
 	private final TokenService tokenService;
-	private final JwtDecoder jwtDecoder;
+	private final JwtDecoder logoutJwtDecoder;
 	private final boolean cookieSecure;
 
 	public AuthController(MemberUserDetailsService userDetailsService, PasswordEncoder passwordEncoder,
-			UserRepository users, TokenService tokenService, JwtDecoder jwtDecoder,
+			UserRepository users, TokenService tokenService, JwtConfig jwtConfig,
 			Environment environment,
 			@Value("${chafgram.cookie.secure:${CHAFGRAM_COOKIE_SECURE:}}") String cookieSecure) {
 		this.userDetailsService = userDetailsService;
 		this.passwordEncoder = passwordEncoder;
 		this.users = users;
 		this.tokenService = tokenService;
-		this.jwtDecoder = jwtDecoder;
+		this.logoutJwtDecoder = jwtConfig.decoderWithoutTimestampValidation();
 		this.cookieSecure = resolveCookieSecure(cookieSecure, environment);
 	}
 
@@ -106,7 +107,10 @@ public class AuthController {
 			throw invalidCredentials();
 		}
 		try {
-			jwtDecoder.decode(authorization.substring(BEARER_PREFIX.length()).trim());
+			// Expiry is tolerated here: an idle client must still be able to revoke
+			// a live 14-day refresh token after its 15-minute access JWT expired.
+			// Signature, issuer, and audience are verified as usual.
+			logoutJwtDecoder.decode(authorization.substring(BEARER_PREFIX.length()).trim());
 		}
 		catch (JwtException | IllegalArgumentException e) {
 			throw invalidCredentials();
