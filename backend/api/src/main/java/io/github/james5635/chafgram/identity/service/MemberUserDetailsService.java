@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 import io.github.james5635.chafgram.identity.repository.UserRepository;
 import io.github.james5635.chafgram.identity.UserStatus;
 
@@ -30,8 +31,10 @@ public class MemberUserDetailsService implements UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		var member = users.findByUsername(username)
-				.orElseThrow(() -> new UsernameNotFoundException("Unknown username: " + username));
+		String login = username == null ? "" : username.trim();
+		String normalized = login.toLowerCase(Locale.ROOT);
+		var member = users.findByUsernameOrEmail(normalized, normalized)
+				.orElseThrow(() -> new UsernameNotFoundException("Unknown username: " + login));
 
 		if (member.getStatus() == UserStatus.DEACTIVATED) {
 			throw new UsernameNotFoundException("Account is deactivated: " + username);

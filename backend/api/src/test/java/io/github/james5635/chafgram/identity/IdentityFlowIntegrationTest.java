@@ -186,6 +186,18 @@ class IdentityFlowIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void passwordLoginAcceptsEmailAsWellAsUsername() {
+		memberService.bootstrap(
+				"alice", "Alice", "alice@example.com", "a-very-strong-password");
+
+		assertThat(userDetailsService.loadUserByUsername("alice").getUsername()).isEqualTo("alice");
+		assertThat(userDetailsService.loadUserByUsername("alice@example.com").getUsername())
+				.isEqualTo("alice");
+		assertThat(userDetailsService.loadUserByUsername("  ALICE@EXAMPLE.COM  ").getUsername())
+				.isEqualTo("alice");
+	}
+
+	@Test
 	void suspendedAccountsCannotAuthenticateButCanStillBeListed() {
 		User admin = memberService.bootstrap(
 				"alice", "Alice", "alice@example.com", "a-very-strong-password");
