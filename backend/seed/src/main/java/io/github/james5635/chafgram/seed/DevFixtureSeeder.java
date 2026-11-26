@@ -16,6 +16,7 @@ import io.github.james5635.chafgram.media.MediaAsset;
 import io.github.james5635.chafgram.media.MediaKind;
 import io.github.james5635.chafgram.media.MediaStatus;
 import io.github.james5635.chafgram.media.repository.MediaAssetRepository;
+import io.github.james5635.chafgram.media.utils.MediaStorage;
 import io.github.james5635.chafgram.messaging.service.MessagingService;
 import io.github.james5635.chafgram.moderation.ReportReason;
 import io.github.james5635.chafgram.moderation.ReportStatus;
@@ -38,10 +39,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import javax.imageio.ImageIO;
 
 /**
  * Dev-only fixtures, written through the same services the application uses.
@@ -65,6 +76,7 @@ public class DevFixtureSeeder implements ApplicationRunner {
     private final AccountTokenService accountTokens;
     private final AccountFlowService accountFlows;
     private final MediaAssetRepository mediaAssets;
+    private final MediaStorage storage;
     private final PostService posts;
     private final CommentService comments;
     private final ReactionService reactions;
@@ -84,6 +96,7 @@ public class DevFixtureSeeder implements ApplicationRunner {
             AccountTokenService accountTokens,
             AccountFlowService accountFlows,
             MediaAssetRepository mediaAssets,
+            MediaStorage storage,
             PostService posts,
             CommentService comments,
             ReactionService reactions,
@@ -101,6 +114,7 @@ public class DevFixtureSeeder implements ApplicationRunner {
         this.accountTokens = accountTokens;
         this.accountFlows = accountFlows;
         this.mediaAssets = mediaAssets;
+        this.storage = storage;
         this.posts = posts;
         this.comments = comments;
         this.reactions = reactions;
@@ -168,6 +182,75 @@ public class DevFixtureSeeder implements ApplicationRunner {
         users.save(owner);
     }
 
+    /** Five real photos shipped as classpath resources under images/. */
+    private record ResourcePhoto(String filename, User author, String body) {
+    }
+
+    private void seedResourcePosts(User admin, User maya, User tao, User lena) {
+        List<ResourcePhoto> photos = List.of(
+                new ResourcePhoto("top-hydrating-fruits-oranges-1440x810.webp", maya,
+                        "Hydration break — fresh oranges for the whole team. 🍊"),
+                new ResourcePhoto("what_is_a_river.avif", tao,
+                        "Weekend walk: where does this river go?"),
+                new ResourcePhoto("ripe-coffee-cherries-on-branch-of-coffee-tree-1536x864.jpg", admin,
+                        "Coffee cherries on the branch — from the offsite farm visit."),
+                new ResourcePhoto("thumb-1920-1093256.jpg", lena,
+                        "One of my favourite shots from the team trip."),
+                new ResourcePhoto("TTFMiKaXKGY2DKLU5Fwgid-1200-80.jpg.webp", maya,
+                        "New workspace view — light and quiet."));
+
+        for (ResourcePhoto photo : photos) {
+            String storageKey = "demo/posts/" + photo.filename();
+            MediaAsset asset = resourceAsset(photo.author(), storageKey, imageMimeType(photo.filename()));
+            posts.create(photo.author(), PostType.PHOTO, photo.body(), List.of(asset.getId()));
+        }
+    }
+
+    private MediaAsset resourceAsset(User owner, String storageKey, String mimeType) {
+        writeResourceImage(storageKey);
+        MediaAsset asset = new MediaAsset();
+        asset.setOwnerUserId(owner.getId());
+        asset.setKind(MediaKind.IMAGE);
+        asset.setStatus(MediaStatus.READY);
+        asset.setStorageKey(storageKey);
+        asset.setMimeType(mimeType);
+        asset.setSizeBytes(storageSize(storageKey));
+        asset.setBlurhash("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
+        return mediaAssets.save(asset);
+    }
+
+    private void writeResourceImage(String storageKey) {
+        String filename = storageKey.substring("demo/posts/".length());
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream("images/" + filename)) {
+            if (in == null) {
+                throw new IllegalStateException("Missing seed image resource: images/" + filename);
+            }
+            Path target = storage.resolvePath(storageKey);
+            Files.createDirectories(target.getParent());
+            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+        catch (IOException e) {
+            throw new IllegalStateException("Failed to seed image " + storageKey, e);
+        }
+    }
+
+    private long storageSize(String storageKey) {
+        try {
+            return Files.size(storage.resolvePath(storageKey));
+        }
+        catch (IOException e) {
+            throw new IllegalStateException("Failed to size seeded image " + storageKey, e);
+        }
+    }
+
+    static String imageMimeType(String filename) {
+        String lower = filename.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".webp")) return "image/webp";
+        if (lower.endsWith(".avif")) return "image/avif";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        return "image/png";
+    }
+
     private void socialGraph(User admin, User maya, User tao, User lena) {
         MediaAsset adminPostImage = asset(admin, MediaKind.IMAGE, "demo/posts/all-hands.png",
                 "image/png", 1600, 900, null, 834_400);
@@ -190,6 +273,7 @@ public class DevFixtureSeeder implements ApplicationRunner {
         posts.create(admin, PostType.VIDEO, "Q3 all-hands recording.", List.of(longVideo.getId()));
         posts.create(lena, PostType.PHOTO, "Offsite agenda is up.", List.of(agenda.getId()));
         var removable = posts.create(maya, PostType.NOTE, "Temporary post for moderation demo.", List.of());
+        seedResourcePosts(admin, maya, tao, lena);
 
         follows.follow(maya, admin.getId());
         follows.follow(tao, maya.getId());
@@ -251,6 +335,10 @@ public class DevFixtureSeeder implements ApplicationRunner {
 
     private MediaAsset asset(User owner, MediaKind kind, String storageKey, String mimeType,
             Integer width, Integer height, Integer durationMs, long sizeBytes) {
+        long actualSize = sizeBytes;
+        if (kind == MediaKind.IMAGE) {
+            actualSize = writeDemoImage(storageKey, width, height);
+        }
         MediaAsset asset = new MediaAsset();
         asset.setOwnerUserId(owner.getId());
         asset.setKind(kind);
@@ -260,8 +348,31 @@ public class DevFixtureSeeder implements ApplicationRunner {
         asset.setWidth(width);
         asset.setHeight(height);
         asset.setDurationMs(durationMs);
-        asset.setSizeBytes(sizeBytes);
+        asset.setSizeBytes(actualSize);
         asset.setBlurhash("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
         return mediaAssets.save(asset);
+    }
+
+    /** Seed a real PNG so the BFF media route has bytes to stream. */
+    private long writeDemoImage(String storageKey, Integer width, Integer height) {
+        int w = width == null || width <= 0 ? 256 : width;
+        int h = height == null || height <= 0 ? 256 : height;
+        BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D graphics = image.createGraphics();
+        graphics.setColor(new Color(Math.floorMod(storageKey.hashCode(), 0xFFFFFF)));
+        graphics.fillRect(0, 0, w, h);
+        graphics.setColor(Color.WHITE);
+        graphics.drawString("Chafgram demo", 24, Math.min(48, h - 8));
+        graphics.dispose();
+
+        Path target = storage.resolvePath(storageKey);
+        try {
+            Files.createDirectories(target.getParent());
+            ImageIO.write(image, "png", target.toFile());
+            return Files.size(target);
+        }
+        catch (IOException e) {
+            throw new IllegalStateException("Failed to seed demo image " + storageKey, e);
+        }
     }
 }

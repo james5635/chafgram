@@ -9,4 +9,5 @@ type Post {
   reactionCount: Int!
   myReaction: ReactionType
   isSaved: Boolean!
+  mediaIds: [ID!]!
 }

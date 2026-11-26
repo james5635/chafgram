@@ -68,6 +68,10 @@
 - **TanStack Start + TanStack Router (React 19, TypeScript 6, Vite 8)** — SSR with
   streaming; file-based routing under `src/routes/`; generated `routeTree.gen.ts`
   (never hand-edited). Dev-only TanStack Devtools/Router Devtools render in the corner.
+- **Media bytes** — the browser loads images from the server route
+  `/api/media/$id`, which proxies `GET /api/v1/media/{id}/bytes` through
+  `callBackend`, forwarding the session cookie. The backend URL is never
+  exposed to the browser. `Post.mediaIds` from GraphQL supplies the ids.
 - **Server functions** (`createServerFn`) act as the BFF for all backend calls:
   typed, server-only credential handling, single egress point to the Spring Boot API.
   `src/lib/backend-proxy.ts` is the only module that talks to the backend; it

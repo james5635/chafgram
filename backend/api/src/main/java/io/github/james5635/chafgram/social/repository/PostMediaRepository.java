@@ -12,4 +12,7 @@ public interface PostMediaRepository extends JpaRepository<PostMedia, PostMediaI
 
 	@Query("select pm from PostMedia pm where pm.mediaId = :mediaId")
 	List<PostMedia> findByMediaId(@Param("mediaId") Long mediaId);
+
+	@Query("select pm from PostMedia pm where pm.postId = :postId order by pm.position asc")
+	List<PostMedia> findByPostIdOrderByPositionAsc(@Param("postId") Long postId);
 }

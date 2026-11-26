@@ -10,6 +10,7 @@ import io.github.james5635.chafgram.social.service.CommentService;
 import io.github.james5635.chafgram.social.service.FollowService;
 import io.github.james5635.chafgram.social.Post;
 import io.github.james5635.chafgram.social.service.PostService;
+import io.github.james5635.chafgram.social.repository.PostMediaRepository;
 import io.github.james5635.chafgram.social.PostType;
 import io.github.james5635.chafgram.social.service.ReactionService;
 import io.github.james5635.chafgram.social.ReactionType;
@@ -30,14 +31,16 @@ public class Views {
 	private final CommentService comments;
 	private final ReactionService reactions;
 	private final PostService posts;
+	private final PostMediaRepository postMedia;
 
 	public Views(UserRepository users, FollowService follows, CommentService comments,
-			ReactionService reactions, PostService posts) {
+			ReactionService reactions, PostService posts, PostMediaRepository postMedia) {
 		this.users = users;
 		this.follows = follows;
 		this.comments = comments;
 		this.reactions = reactions;
 		this.posts = posts;
+		this.postMedia = postMedia;
 	}
 
 	public User findUser(Long id) {
@@ -70,7 +73,9 @@ public class Views {
 				edited ? p.getUpdatedAt() : null, p.getCreatedAt(),
 				comments.countByPost(p.getId()), reactions.postReactionCount(p.getId()),
 				reactions.myPostReaction(viewer, p.getId()).orElse(null),
-				viewer != null && posts.isSaved(viewer.getId(), p.getId()));
+				viewer != null && posts.isSaved(viewer.getId(), p.getId()),
+				postMedia.findByPostIdOrderByPositionAsc(p.getId()).stream()
+						.map(pm -> pm.getMediaId()).toList());
 	}
 
 	public List<PostDto> posts(List<Post> page, User viewer) {

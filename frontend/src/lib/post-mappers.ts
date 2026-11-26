@@ -34,19 +34,39 @@ export function toPostCardData(post: FeedPost): PostCardData {
     },
     createdAt: formatCreatedAt(post.createdAt),
     body: post.body ?? '',
-    media: type === 'NOTE' ? [] : [
-      {
-        url: gradientPlaceholder({
-          colors: type === 'VIDEO' ? ['#4a6f8c', '#9db8c9'] : ['#6ba8e0', '#bcdcf5'],
-        }),
-        alt: 'Post media',
-      },
-    ],
+    media: mediaFor(type, post.mediaIds, post.body),
     reactions: { count: post.reactionCount, myReaction: post.myReaction },
     comments: post.commentCount,
     shares: 0,
     edited: Boolean(post.editedAt),
   }
+}
+
+/**
+ * Real attachments are streamed through the BFF's `/api/media/:id` route so
+ * the browser never needs the backend URL. A post without an image still gets
+ * a generated placeholder so the card keeps its shape.
+ */
+function mediaFor(
+  type: FeedPost['type'],
+  mediaIds: string[],
+  body: string | null,
+): PostCardData['media'] {
+  if (type === 'PHOTO' && mediaIds.length > 0) {
+    return mediaIds.map((id) => ({
+      url: `/api/media/${id}`,
+      alt: body?.trim() ? `Post image: ${body}` : 'Post image',
+    }))
+  }
+  if (type === 'NOTE') return []
+  return [
+    {
+      url: gradientPlaceholder({
+        colors: type === 'VIDEO' ? ['#4a6f8c', '#9db8c9'] : ['#6ba8e0', '#bcdcf5'],
+      }),
+      alt: 'Post media',
+    },
+  ]
 }
 
 /** Coarse relative time — enough for a mock-free feed label. */

@@ -15,6 +15,7 @@ function post(overrides: Partial<FeedPost> = {}): FeedPost {
     reactionCount: 12,
     myReaction: null,
     isSaved: false,
+    mediaIds: [],
     author: {
       id: '1',
       username: 'rojame',
@@ -53,10 +54,24 @@ describe('toPostCardData', () => {
     expect(toPostCardData(post({ editedAt: '2026-11-21T11:00:00Z' })).edited).toBe(true)
   })
 
-  it('adds no media for a text post but one for a photo post', () => {
+  it('adds no media for a text post but a placeholder when a photo has no attachment', () => {
     expect(toPostCardData(post({ type: 'NOTE' })).media).toEqual([])
     expect(toPostCardData(post({ type: 'PHOTO' })).media).toHaveLength(1)
     expect(toPostCardData(post({ type: 'VIDEO' })).media).toHaveLength(1)
+  })
+
+  it('uses BFF media URLs for photo attachments instead of a gradient placeholder', () => {
+    const data = toPostCardData(
+      post({
+        type: 'PHOTO',
+        mediaIds: ['41'],
+        body: 'Team offsite',
+      }),
+    )
+
+    expect(data.media).toEqual([
+      { url: '/api/media/41', alt: 'Post image: Team offsite' },
+    ])
   })
 
   it('falls back to the username for the initials', () => {

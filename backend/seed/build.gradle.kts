@@ -38,6 +38,8 @@ tasks.withType<Test> {
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 	mainClass.set("io.github.james5635.chafgram.seed.SeedApplication")
+	// Write blobs where the :api app (cwd backend/api) will read them.
+	systemProperty("chafgram.media.storage-root", "${projectDir}/../api/media-data")
 }
 
 // The seeder is a one-shot dev job run via :seed:bootRun — no deployable jar.

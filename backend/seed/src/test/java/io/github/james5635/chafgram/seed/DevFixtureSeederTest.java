@@ -28,6 +28,14 @@ class DevFixtureSeederTest {
     private DevFixtureSeeder seeder;
 
     @Test
+    void resourceImageMimeTypesMatchTheirExtensions() {
+        assertThat(DevFixtureSeeder.imageMimeType("photo.webp")).isEqualTo("image/webp");
+        assertThat(DevFixtureSeeder.imageMimeType("river.avif")).isEqualTo("image/avif");
+        assertThat(DevFixtureSeeder.imageMimeType("coffee.jpg")).isEqualTo("image/jpeg");
+        assertThat(DevFixtureSeeder.imageMimeType("cover.jpg.webp")).isEqualTo("image/webp");
+    }
+
+    @Test
     void demoInviteStoresOnlyTheHashOfTheKnownToken() {
         User admin = mock(User.class);
         when(admin.getId()).thenReturn(1L);

@@ -10,6 +10,7 @@ query FollowingFeed($first: Int = 20, $cursor: String) {
       reactionCount
       myReaction
       isSaved
+      mediaIds
       author {
         id
         username

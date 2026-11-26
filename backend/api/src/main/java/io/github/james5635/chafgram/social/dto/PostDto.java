@@ -4,6 +4,7 @@ import io.github.james5635.chafgram.social.PostType;
 import io.github.james5635.chafgram.social.ReactionType;
 
 import java.time.Instant;
+import java.util.List;
 
 public record PostDto(
 		Long id,
@@ -15,5 +16,6 @@ public record PostDto(
 		long commentCount,
 		long reactionCount,
 		ReactionType myReaction,
-		boolean isSaved) {
+		boolean isSaved,
+		List<Long> mediaIds) {
 }
