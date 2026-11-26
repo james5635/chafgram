@@ -213,7 +213,7 @@ class MediaModerationIntegrationTest extends AbstractIntegrationTest {
 		asset.setMimeType("image/png");
 		asset.setSizeBytes(100L);
 		try {
-			Path filePath = Paths.get("media-data", storageKey);
+			Path filePath = Paths.get("build", "test-media-data", storageKey);
 			Files.createDirectories(filePath.getParent());
 			Files.write(filePath, new byte[] { 1, 2, 3, 4 });
 		}

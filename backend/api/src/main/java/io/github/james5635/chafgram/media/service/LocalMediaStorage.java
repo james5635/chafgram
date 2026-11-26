@@ -14,14 +14,14 @@ import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 import io.github.james5635.chafgram.media.utils.MediaStorage;
 
-/** Stores media under a configurable root (default ./media-data) with opaque keys. */
+/** Stores media under a configurable root (default ./build/media-data) with opaque keys. */
 @Service
 @ConditionalOnProperty(name = "chafgram.media.backend", havingValue = "local", matchIfMissing = true)
 public class LocalMediaStorage implements MediaStorage {
 
 	private final Path root;
 
-	public LocalMediaStorage(@Value("${chafgram.media.storage-root:./media-data}") String root) {
+	public LocalMediaStorage(@Value("${chafgram.media.storage-root:./build/media-data}") String root) {
 		this.root = Path.of(root).toAbsolutePath().normalize();
 	}
 

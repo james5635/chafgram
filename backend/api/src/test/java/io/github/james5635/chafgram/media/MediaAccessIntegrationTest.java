@@ -111,7 +111,7 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 
 		// Create actual file on disk
 		try {
-			Path filePath = Paths.get("media-data", storageKey);
+			Path filePath = Paths.get("build", "test-media-data", storageKey);
 			Files.createDirectories(filePath.getParent());
 			Files.write(filePath, new byte[]{1, 2, 3, 4});
 		} catch (Exception e) {
@@ -139,7 +139,7 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 
 	private void writeBlob(String storageKey) {
 		try {
-			Path filePath = Paths.get("media-data", storageKey);
+			Path filePath = Paths.get("build", "test-media-data", storageKey);
 			Files.createDirectories(filePath.getParent());
 			Files.write(filePath, new byte[]{1, 2, 3, 4});
 		} catch (Exception e) {

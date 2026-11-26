@@ -85,4 +85,8 @@ tasks.generateJava {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// System properties outrank env vars and the test profile, so hermetic
+	// tests never pick up CHAFGRAM_MEDIA_BACKEND=s3 from .env.
+	systemProperty("chafgram.media.backend", "local")
+	systemProperty("chafgram.media.storage-root", "./build/test-media-data")
 }
