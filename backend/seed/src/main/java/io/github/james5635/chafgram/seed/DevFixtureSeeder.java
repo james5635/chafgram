@@ -207,39 +207,32 @@ public class DevFixtureSeeder implements ApplicationRunner {
     }
 
     private MediaAsset resourceAsset(User owner, String storageKey, String mimeType) {
-        writeResourceImage(storageKey);
+        long size = writeResourceImage(storageKey);
         MediaAsset asset = new MediaAsset();
         asset.setOwnerUserId(owner.getId());
         asset.setKind(MediaKind.IMAGE);
         asset.setStatus(MediaStatus.READY);
         asset.setStorageKey(storageKey);
         asset.setMimeType(mimeType);
-        asset.setSizeBytes(storageSize(storageKey));
+        asset.setSizeBytes(size);
         asset.setBlurhash("LEHV6nWB2yk8pyo0adR*.7kCMdnj");
         return mediaAssets.save(asset);
     }
 
-    private void writeResourceImage(String storageKey) {
+    private long writeResourceImage(String storageKey) {
         String filename = storageKey.substring("demo/posts/".length());
         try (InputStream in = getClass().getClassLoader().getResourceAsStream("images/" + filename)) {
             if (in == null) {
                 throw new IllegalStateException("Missing seed image resource: images/" + filename);
             }
-            Path target = storage.resolvePath(storageKey);
-            Files.createDirectories(target.getParent());
-            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            Path temp = Files.createTempFile("chafgram-seed-", "-" + filename);
+            Files.copy(in, temp, StandardCopyOption.REPLACE_EXISTING);
+            long size = Files.size(temp);
+            storage.storeProcessed(temp, storageKey);
+            return size;
         }
         catch (IOException e) {
             throw new IllegalStateException("Failed to seed image " + storageKey, e);
-        }
-    }
-
-    private long storageSize(String storageKey) {
-        try {
-            return Files.size(storage.resolvePath(storageKey));
-        }
-        catch (IOException e) {
-            throw new IllegalStateException("Failed to size seeded image " + storageKey, e);
         }
     }
 
@@ -365,11 +358,12 @@ public class DevFixtureSeeder implements ApplicationRunner {
         graphics.drawString("Chafgram demo", 24, Math.min(48, h - 8));
         graphics.dispose();
 
-        Path target = storage.resolvePath(storageKey);
         try {
-            Files.createDirectories(target.getParent());
-            ImageIO.write(image, "png", target.toFile());
-            return Files.size(target);
+            Path temp = Files.createTempFile("chafgram-seed-", ".png");
+            ImageIO.write(image, "png", temp.toFile());
+            long size = Files.size(temp);
+            storage.storeProcessed(temp, storageKey);
+            return size;
         }
         catch (IOException e) {
             throw new IllegalStateException("Failed to seed demo image " + storageKey, e);

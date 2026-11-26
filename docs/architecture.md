@@ -251,7 +251,9 @@ upload (REST multipart)            in-app async pipeline
 - Short vs. long video: same `media_assets` table; short feed =
   `kind='video' AND duration_ms <= 60000 AND status='ready'` — a query, not a table.
 - Storage behind `MediaStorage` interface (`store`, `storeProcessed`, `delete`, `read`);
-  default local disk under a configurable root; S3-compatible via SDK later.
+  S3-compatible backend is the default (Garage in dev, any S3 provider in prod),
+  with local filesystem storage available via `chafgram.media.backend=local`.
+  `resolvePath` stages S3 objects into a temp file for image probing/ffmpeg.
 - Bytes are never served anonymously: `GET /api/v1/media/{id}/bytes` runs the
   authorization tree in `MediaAccessService` (owner, message participants, visible
   posts, avatars/logos; staff see everything) and answers `404` for every denial.
@@ -361,7 +363,7 @@ path; read replicas and sharding; mobile native apps (responsive web/PWA only).
 |----------|--------|--------|
 | Built-in passkeys vs. LDAP/OIDC/SAML SSO vs. both | identity module | product.md §Open |
 | WebSocket/STOMP vs. WebFlux/SSE for messaging | messaging module | product.md §Open |
-| Local disk vs. S3-compatible media storage | media module | product.md §Open |
+| ~~Local disk vs. S3-compatible media storage~~ — resolved: S3-compatible default, local fallback | media module | docs/architecture.md §4 |
 | Group chat semantics (simple groups vs. channels) | conversation model | business-rules.md §12 |
 | FULLTEXT scope: `posts.body` only vs. also comments | search | functional-requirements.md FR-3.6 / FR-8.1 |
 | Retention/legal-hold policies | moderation | product.md §Open |

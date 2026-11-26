@@ -27,6 +27,8 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework:spring-web")
 	implementation("org.springframework.security:spring-security-crypto")
+	implementation(platform("software.amazon.awssdk:bom:2.59.8"))
+	implementation("software.amazon.awssdk:s3")
 	runtimeOnly("com.mysql:mysql-connector-j")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -38,8 +40,6 @@ tasks.withType<Test> {
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 	mainClass.set("io.github.james5635.chafgram.seed.SeedApplication")
-	// Write blobs where the :api app (cwd backend/api) will read them.
-	systemProperty("chafgram.media.storage-root", "${projectDir}/../api/media-data")
 }
 
 // The seeder is a one-shot dev job run via :seed:bootRun — no deployable jar.

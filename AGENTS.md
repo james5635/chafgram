@@ -67,6 +67,10 @@ just db-reset              # drop all objects in the dev DB schema via Flyway cl
 - Dev object storage: Garage (S3-compatible API on `http://localhost:3900`, region
   `garage`, bucket `chafgram-media`, dev key + secret in `scripts/garage-init.sh`).
   Bucket/layout/key are created by `garage-init` on first run — re-running is safe.
+  The backend is the default media backend (`S3MediaStorage`); override with
+  `CHAFGRAM_MEDIA_BACKEND=local` for filesystem storage. S3 settings come from
+  `CHAFGRAM_MEDIA_S3_ENDPOINT`, `CHAFGRAM_MEDIA_S3_BUCKET`, `CHAFGRAM_MEDIA_S3_REGION`,
+  `GARAGE_ACCESS_KEY` and `GARAGE_SECRET_KEY`. Integration tests force `local`.
 - `./gradlew :api:test` is hermetic: it starts a throwaway MySQL 8 container via
   Testcontainers (one per test JVM, Docker must be running). The dev database is never
   touched — no `just seed` afterwards. Test-only config lives in

@@ -1,6 +1,7 @@
 package io.github.james5635.chafgram.media.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,6 +16,7 @@ import io.github.james5635.chafgram.media.utils.MediaStorage;
 
 /** Stores media under a configurable root (default ./media-data) with opaque keys. */
 @Service
+@ConditionalOnProperty(name = "chafgram.media.backend", havingValue = "local", matchIfMissing = true)
 public class LocalMediaStorage implements MediaStorage {
 
 	private final Path root;

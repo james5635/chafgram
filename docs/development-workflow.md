@@ -43,9 +43,11 @@ just dev               # backend :8080 + frontend :3000 (parallel; Ctrl-C stops 
   compose dev credentials; override with real environment variables for anything shared.
   `just` loads `.env` into recipes (`set dotenv-load := true`); `docker compose`
   auto-loads it too.
-- Optional, for media uploads: `docker compose up -d garage garage-init` — one-shot,
-  idempotent S3 setup (bucket `chafgram-media`, endpoint `http://localhost:3900`,
-  region `garage`). Re-running is safe.
+- Required for media uploads/seeding: `docker compose up -d garage garage-init` —
+  one-shot, idempotent S3 setup (bucket `chafgram-media`, endpoint
+  `http://localhost:3900`, region `garage`). The backend uses this S3-compatible
+  storage by default; `CHAFGRAM_MEDIA_BACKEND=local` switches to filesystem storage
+  (integration tests do this automatically). Re-running the init is safe.
 - Optional, for video: `ffmpeg` + `ffprobe` on `PATH`. The in-app pipeline shells out
   to them; without them video uploads end in `status='failed'` (images are unaffected).
 - The frontend talks to the backend through its BFF (`src/lib/backend-proxy.ts`), which
