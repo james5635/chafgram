@@ -103,7 +103,7 @@ Three-column layout: **left rail / content column / right rail**. Content column
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Header (sticky): [Brand chip] Search Chafgram…  [Theme] [Avatar ▾]        │
+│  Header (sticky): [Brand chip] Search Chafgram…                             │
 ├──────────┬──────────────────────────────────────────────┬──────────────────┤
 │ Left Rail│  Content column  .page-wrap                  │ Right Rail       │
 │ (w-64)   │                                              │ (w-80, lg+)      │
@@ -128,7 +128,7 @@ Three-column layout: **left rail / content column / right rail**. Content column
 └──────────┴──────────────────────────────────────────────┴──────────────────┘
 ```
 
-**Header** (sticky, `design.md` §7): brand chip + "Chafgram" wordmark (Manrope bold), centered search input (`.demo-input`), theme toggle, avatar (32px, circular, `--line` ring, name-initial fallback from the signed-in `me` member). No nav links here — nav lives in LeftRail.
+**Header** (sticky, `design.md` §7): brand chip + "Chafgram" wordmark (Manrope bold) and a search input (`.demo-input`). No theme toggle or avatar here — theme switching lives in Settings and the user chip lives in the left rail. No nav links here — nav lives in LeftRail.
 
 **Left rail** (`LeftRail` component): fixed `w-64`, `top-14 bottom-0`, `border-r`, `bg-white/60 backdrop-blur-md`. Brand chip + wordmark at top. Nav links: Home, Explore, Messages (badge 3), Notifications (badge 5), Profile, More. Active link: `bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold`. Inactive: `text-[var(--sea-ink-soft)] hover:bg-[var(--brand-light)]/50`. Bottom: blue "Create Post" pill (rounded-full, `border-[var(--brand)] bg-[var(--brand)] text-white`, hover `bg-[var(--brand-dark)] shadow-lg shadow-[var(--brand)]/40`) + user chip with the signed-in member's display name and `@username` from `me`, with a name-initial avatar fallback. No hardcoded member names in the shell.
 
@@ -368,7 +368,7 @@ This section lists every reusable component type used across web screens. Each e
 | Nav link | Rail navigation item | LeftRail | `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition`; active `bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold`; inactive `text-[var(--sea-ink-soft)] hover:bg-[var(--brand-light)]/50`; badge `ml-auto inline-flex h-5 w-5 ... bg-[var(--brand)] text-white` |
 | Create Post pill | Primary CTA | LeftRail bottom | `w-full flex items-center justify-center gap-2 rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white transition hover:bg-[var(--brand-dark)] hover:shadow-lg hover:shadow-[var(--brand)]/40` |
 | Search input | Header search | Header | `w-full pl-9 pr-3 py-1.5 rounded-full border border-[var(--line)] bg-white/80 text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none transition focus:border-[var(--brand)] focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--brand)24%,transparent)]` |
-| Theme toggle | Mode switcher | Header, Settings | `rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow shadow-[0_8px_22px_rgba(57,91,158,0.08)] transition hover:-translate-y-0.5` |
+| Theme toggle | Mode switcher | Settings | `rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow shadow-[0_8px_22px_rgba(57,91,158,0.08)] transition hover:-translate-y-0.5` |
 | Avatar | Circular profile image | Everywhere | `relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-[var(--line)] rounded-full`; sizes 24/32/40/56; `img h-full w-full object-cover` or a single uppercase name initial on a deterministic `--avatar-tint-*` background (`text-[var(--sea-ink)] font-semibold`) |
 | Island shell | Card container | Every card | `.island-shell`: 1px `--line`, `165deg` `--surface-strong`→`--surface`, `--inset-glint`, soft blue shadow, `blur(4px)`, radius `0.75rem` |
 | Composer | Post creation | Home, Compose | `.island-shell rise-in relative overflow-hidden rounded-xl p-6 sm:p-8`; textarea + chips + blue Post button |

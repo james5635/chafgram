@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import ThemeToggle from '../components/ThemeToggle'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
@@ -21,7 +22,7 @@ function Settings() {
         <section className="island-shell rise-in rounded-xl p-6 sm:p-8">
           <p className="island-kicker mb-4">Appearance</p>
           <div className="flex items-center gap-3">
-            <ThemeTogglePreview />
+            <ThemeToggle />
           </div>
         </section>
 
@@ -75,16 +76,5 @@ function Settings() {
         </section>
       </section>
     </main>
-  )
-}
-
-function ThemeTogglePreview() {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-[var(--sea-ink-soft)]">Theme mode</span>
-      <Button variant="secondary" size="sm" className="rounded-full">
-        Auto
-      </Button>
-    </div>
   )
 }
