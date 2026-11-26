@@ -1,84 +1,106 @@
 package io.github.james5635.chafgram.identity.controller;
 
-import io.github.james5635.chafgram.common.utils.SessionAuthenticator;
+import io.github.james5635.chafgram.identity.User;
+import io.github.james5635.chafgram.identity.auth.TokenPair;
+import io.github.james5635.chafgram.identity.auth.TokenService;
 import io.github.james5635.chafgram.identity.dto.AcceptInviteRequest;
 import io.github.james5635.chafgram.identity.dto.BootstrapRequest;
 import io.github.james5635.chafgram.identity.dto.MemberResponse;
 import io.github.james5635.chafgram.identity.dto.RegisterRequest;
-import jakarta.servlet.http.HttpServletRequest;
+import io.github.james5635.chafgram.identity.service.InviteService;
+import io.github.james5635.chafgram.identity.service.MemberService;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import io.github.james5635.chafgram.identity.service.InviteService;
-import io.github.james5635.chafgram.identity.service.MemberService;
-import io.github.james5635.chafgram.identity.User;
+import java.time.Instant;
 
 /**
  * One-time first-run setup (`POST /api/v1/bootstrap`, valid only while the
- * workspace has no members) and self-serve registration (`POST /api/v1/register`,
- * valid only when signup_mode is `open`). Both create the account and
- * immediately authenticate the caller.
+ * workspace has no members), invite acceptance, and self-serve registration
+ * (`POST /api/v1/register`, valid only when signup_mode is `open`).
+ *
+ * <p>Each flow creates the account and immediately issues the same token pair
+ * as password login: identity fields stay at the top level of the response,
+ * with the access token alongside them and the refresh token in a cookie.</p>
  */
 @RestController
 public class OnboardingController {
 
 	private final MemberService memberService;
-	private final SessionAuthenticator sessionAuthenticator;
-
 	private final InviteService invites;
+	private final TokenService tokenService;
+	private final boolean cookieSecure;
 
 	public OnboardingController(MemberService memberService, InviteService invites,
-			SessionAuthenticator sessionAuthenticator) {
+			TokenService tokenService, Environment environment,
+			@Value("${chafgram.cookie.secure:${CHAFGRAM_COOKIE_SECURE:}}") String cookieSecure) {
 		this.memberService = memberService;
 		this.invites = invites;
-		this.sessionAuthenticator = sessionAuthenticator;
+		this.tokenService = tokenService;
+		this.cookieSecure = AuthController.resolveCookieSecure(cookieSecure, environment);
 	}
 
 	@PostMapping("/api/v1/bootstrap")
 	@ResponseStatus(HttpStatus.CREATED)
-	public MemberResponse bootstrap(@RequestBody BootstrapRequest request,
-			HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+	public OnboardingResponse bootstrap(@RequestBody BootstrapRequest request,
+			HttpServletResponse response) {
 		User user = memberService.bootstrap(
 				request.username(), request.displayName(), request.email(), request.password());
-		authenticate(user, servletRequest, servletResponse);
-		return MemberService.toResponse(user);
+		return issueTokens(user, response);
 	}
 
 	@PostMapping("/api/v1/invites/accept")
 	@ResponseStatus(HttpStatus.CREATED)
-	public MemberResponse accept(@RequestBody AcceptInviteRequest request,
-			HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+	public OnboardingResponse accept(@RequestBody AcceptInviteRequest request,
+			HttpServletResponse response) {
 		User user = invites.accept(
 				request.token(),
 				request.username(),
 				request.displayName(),
 				request.email(),
 				request.password());
-		List<SimpleGrantedAuthority> authorities = List.of(
-				new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
-		sessionAuthenticator.authenticate(user.getUsername(), authorities, servletRequest, servletResponse);
-		return MemberService.toResponse(user);
+		return issueTokens(user, response);
 	}
 
 	@PostMapping("/api/v1/register")
 	@ResponseStatus(HttpStatus.CREATED)
-	public MemberResponse register(@RequestBody RegisterRequest request,
-			HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+	public OnboardingResponse register(@RequestBody RegisterRequest request,
+			HttpServletResponse response) {
 		User user = memberService.registerOpen(
 				request.username(), request.displayName(), request.email(), request.password());
-		authenticate(user, servletRequest, servletResponse);
-		return MemberService.toResponse(user);
+		return issueTokens(user, response);
 	}
 
-	private void authenticate(User user, HttpServletRequest request, HttpServletResponse response) {
-		List<SimpleGrantedAuthority> authorities = List.of(
-				new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
-		sessionAuthenticator.authenticate(user.getUsername(), authorities, request, response);
+	private OnboardingResponse issueTokens(User user, HttpServletResponse response) {
+		TokenPair tokens = tokenService.issue(user);
+		AuthController.setRefreshCookie(response, tokens.refreshToken(), cookieSecure);
+		return OnboardingResponse.of(MemberService.toResponse(user), tokens);
+	}
+
+	public record OnboardingResponse(
+			Long id,
+			String username,
+			String displayName,
+			String email,
+			String role,
+			String status,
+			Instant emailVerifiedAt,
+			Instant createdAt,
+			String accessToken,
+			String tokenType,
+			long expiresIn) {
+
+		static OnboardingResponse of(MemberResponse member, TokenPair tokens) {
+			return new OnboardingResponse(
+					member.id(), member.username(), member.displayName(), member.email(),
+					member.role(), member.status(), member.emailVerifiedAt(), member.createdAt(),
+					tokens.accessToken(), AuthController.TOKEN_TYPE, tokens.expiresIn());
+		}
 	}
 }
