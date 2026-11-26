@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
-import { callBackend } from '@/lib/backend-proxy'
-
 const { callBackend: mockCallBackend } = vi.hoisted(() => ({ callBackend: vi.fn() }))
 vi.mock('@/lib/backend-proxy', () => ({ callBackend: mockCallBackend }))
 
 import { Route } from '../routes/api/media/$id'
+
+function get(params: { id: string }, range?: string) {
+  const handlers = (Route as any).options.server.handlers
+  const request = new Request('http://localhost/api/media/' + params.id)
+  if (range) request.headers.set('range', range)
+  return handlers.GET({ params, request })
+}
 
 describe('media BFF route', () => {
   it('streams backend bytes with the original content type', async () => {
@@ -14,8 +19,7 @@ describe('media BFF route', () => {
       }),
     )
 
-    const handlers = (Route as any).options.server.handlers
-    const response = await handlers.GET({ params: { id: '41' } })
+    const response = await get({ id: '41' })
 
     expect(mockCallBackend).toHaveBeenCalledWith({
       path: '/api/v1/media/41/bytes',
@@ -27,10 +31,23 @@ describe('media BFF route', () => {
   })
 
   it('rejects a non-numeric media id before calling the backend', async () => {
-    const handlers = (Route as any).options.server.handlers
-    const response = await handlers.GET({ params: { id: 'oops' } })
+    const response = await get({ id: 'oops' })
 
     expect(response.status).toBe(400)
     expect(mockCallBackend).not.toHaveBeenCalled()
+  })
+
+  it('serves byte ranges so videos can seek', async () => {
+    mockCallBackend.mockResolvedValue(
+      new Response(new Uint8Array([1, 2, 3, 4, 5]), {
+        headers: { 'content-type': 'video/mp4' },
+      }),
+    )
+
+    const response = await get({ id: '42' }, 'bytes=1-2')
+
+    expect(response.status).toBe(206)
+    expect(response.headers.get('content-range')).toBe('bytes 1-2/5')
+    expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([2, 3])
   })
 })

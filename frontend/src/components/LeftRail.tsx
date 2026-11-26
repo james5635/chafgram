@@ -4,6 +4,7 @@ import { Home, Compass, MessageSquare, Bell, User, Plus, ChevronRight, MoreHoriz
 import { MeDocument } from '@/generated/graphql'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { useHydrated } from '../hooks/useHydrated'
 
 const navLinks = [
   { to: '/', label: 'Home', icon: Home },
@@ -16,11 +17,13 @@ const navLinks = [
 
 export default function LeftRail() {
   const location = useLocation()
+  const hydrated = useHydrated()
   // The signed-in member is the only source for the user chip — never a
-  // hardcoded name, or it disagrees with /profile/me.
-  const { data } = useQuery(MeDocument)
-  const displayName = data?.me.displayName ?? 'You'
-  const username = data?.me.username ?? ''
+  // hardcoded name, or it disagrees with /profile/me. Wait for hydration so
+  // SSR and the first client render agree on the placeholder.
+  const { data } = useQuery(MeDocument, { skip: !hydrated })
+  const displayName = hydrated ? (data?.me.displayName ?? 'You') : 'You'
+  const username = hydrated ? (data?.me.username ?? '') : ''
 
   return (
     <aside

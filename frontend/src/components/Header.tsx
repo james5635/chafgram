@@ -4,10 +4,12 @@ import { Link } from '@tanstack/react-router'
 import { useQuery } from '@apollo/client/react'
 import { MeDocument } from '@/generated/graphql'
 import { Search, ChevronDown } from 'lucide-react'
+import { useHydrated } from '../hooks/useHydrated'
 
 export default function Header() {
-  const { data } = useQuery(MeDocument)
-  const displayName = data?.me.displayName ?? 'You'
+  const hydrated = useHydrated()
+  const { data } = useQuery(MeDocument, { skip: !hydrated })
+  const displayName = hydrated ? (data?.me.displayName ?? 'You') : 'You'
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-md">

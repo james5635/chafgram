@@ -33,6 +33,8 @@ import io.github.james5635.chafgram.social.service.FollowService;
 import io.github.james5635.chafgram.social.service.PostService;
 import io.github.james5635.chafgram.social.service.ReactionService;
 import org.springframework.boot.ApplicationArguments;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -188,16 +190,24 @@ public class DevFixtureSeeder implements ApplicationRunner {
 
     private void seedResourcePosts(User admin, User maya, User tao, User lena) {
         List<ResourcePhoto> photos = List.of(
-                new ResourcePhoto("top-hydrating-fruits-oranges-1440x810.webp", maya,
+                new ResourcePhoto("oranges-on-pink.webp", maya,
                         "Hydration break — fresh oranges for the whole team. 🍊"),
-                new ResourcePhoto("what_is_a_river.avif", tao,
+                new ResourcePhoto("forest-river.avif", tao,
                         "Weekend walk: where does this river go?"),
-                new ResourcePhoto("ripe-coffee-cherries-on-branch-of-coffee-tree-1536x864.jpg", admin,
+                new ResourcePhoto("coffee-cherries.jpg", admin,
                         "Coffee cherries on the branch — from the offsite farm visit."),
-                new ResourcePhoto("thumb-1920-1093256.jpg", lena,
-                        "One of my favourite shots from the team trip."),
-                new ResourcePhoto("TTFMiKaXKGY2DKLU5Fwgid-1200-80.jpg.webp", maya,
-                        "New workspace view — light and quiet."));
+                new ResourcePhoto("portrait-grey-shirt.jpg", lena,
+                        "Portrait from the team offsite — studio light turned out nicely."),
+                new ResourcePhoto("mountain-lake-autumn.webp", maya,
+                        "Autumn colours at the lake — what a view."),
+                new ResourcePhoto("nomadic-traveler.jpeg", tao,
+                        "Met a traveller on the road — what a portrait."),
+                new ResourcePhoto("bioluminescent-forest.jpeg", maya,
+                        "This forest at night looks unreal."),
+                new ResourcePhoto("silver-gown-model.jpeg", lena,
+                        "Editorial shoot from the weekend — silver reflections."),
+                new ResourcePhoto("hot-cocoa-windowsill.jpeg", admin,
+                        "Rainy windowsill, hot cocoa, tiny break. ☕"));
 
         for (ResourcePhoto photo : photos) {
             String storageKey = "demo/posts/" + photo.filename();
@@ -219,20 +229,81 @@ public class DevFixtureSeeder implements ApplicationRunner {
         return mediaAssets.save(asset);
     }
 
-    private long writeResourceImage(String storageKey) {
-        String filename = storageKey.substring("demo/posts/".length());
-        try (InputStream in = getClass().getClassLoader().getResourceAsStream("images/" + filename)) {
-            if (in == null) {
-                throw new IllegalStateException("Missing seed image resource: images/" + filename);
-            }
-            Path temp = Files.createTempFile("chafgram-seed-", "-" + filename);
+    private MediaAsset resourceVideoAsset(User owner, Resource resource, String storageKey, Integer durationMs) {
+        long size = storeResource(storageKey, resource);
+        MediaAsset asset = new MediaAsset();
+        asset.setOwnerUserId(owner.getId());
+        asset.setKind(MediaKind.VIDEO);
+        asset.setStatus(MediaStatus.READY);
+        asset.setStorageKey(storageKey);
+        asset.setMimeType("video/mp4");
+        asset.setDurationMs(durationMs);
+        asset.setSizeBytes(size);
+        return mediaAssets.save(asset);
+    }
+
+    private long storeResource(String storageKey, Resource resource) {
+        try (InputStream in = resource.getInputStream()) {
+            Path temp = Files.createTempFile("chafgram-seed-", "-" + storageKey.replace('/', '_'));
             Files.copy(in, temp, StandardCopyOption.REPLACE_EXISTING);
             long size = Files.size(temp);
             storage.storeProcessed(temp, storageKey);
             return size;
         }
         catch (IOException e) {
-            throw new IllegalStateException("Failed to seed image " + storageKey, e);
+            throw new IllegalStateException("Failed to seed blob " + storageKey, e);
+        }
+    }
+
+    /** Seed every MP4 shipped under videos/ as a VIDEO post. */
+    private record VideoFixture(String filename, String storageKey, String caption) {
+    }
+
+    /** Explicit list of MP4s shipped under videos/ that are seeded as posts. */
+    private static final List<VideoFixture> VIDEO_FIXTURES = List.of(
+            new VideoFixture("Dewdrop falling from a fern leaf in a misty forest.mp4",
+                    "demo/videos/dewdrop-fern.mp4", "A dewdrop falling from a fern in the misty forest."),
+            new VideoFixture("Futuristic sports car speeding down a neon-lit street.mp4",
+                    "demo/videos/neon-sports-car.mp4", "Neon nights and a very fast car."),
+            new VideoFixture("Medieval castle by a cliffside waterfall.mp4",
+                    "demo/videos/castle-waterfall.mp4", "A castle by the cliffside waterfall."),
+            new VideoFixture("Woman with gold geometric makeup laughing.mp4",
+                    "demo/videos/gold-makeup.mp4", "Gold makeup, good laugh."),
+            new VideoFixture("dog-eating-pizza.mp4",
+                    "demo/videos/dog-eating-pizza.mp4", "Lunch break with the world's hungriest intern 🐶🍕"));
+
+    private void seedResourceVideos(User admin, User maya, User tao, User lena) {
+        List<User> authors = List.of(admin, maya, tao, lena);
+        for (int i = 0; i < VIDEO_FIXTURES.size(); i += 1) {
+            VideoFixture fixture = VIDEO_FIXTURES.get(i);
+            Resource resource = new ClassPathResource("videos/" + fixture.filename());
+            User author = authors.get(i % authors.size());
+            MediaAsset asset = resourceVideoAsset(author, resource, fixture.storageKey(), 5_042);
+            var post = posts.create(author, PostType.VIDEO, fixture.caption(), List.of(asset.getId()));
+            if (i == 0) {
+                likedVideoPostId = post.getId();
+            }
+        }
+    }
+
+    private long writeResourceImage(String storageKey) {
+        String filename = storageKey.substring("demo/posts/".length());
+        return writeClasspathBlob(storageKey, "images/" + filename);
+    }
+
+    private long writeClasspathBlob(String storageKey, String resourcePath) {
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
+            if (in == null) {
+                throw new IllegalStateException("Missing seed resource: " + resourcePath);
+            }
+            Path temp = Files.createTempFile("chafgram-seed-", "-" + resourcePath.replace('/', '_'));
+            Files.copy(in, temp, StandardCopyOption.REPLACE_EXISTING);
+            long size = Files.size(temp);
+            storage.storeProcessed(temp, storageKey);
+            return size;
+        }
+        catch (IOException e) {
+            throw new IllegalStateException("Failed to seed blob " + storageKey, e);
         }
     }
 
@@ -251,27 +322,26 @@ public class DevFixtureSeeder implements ApplicationRunner {
                 "image/png", 1600, 900, null, 834_400);
         MediaAsset agenda = asset(lena, MediaKind.IMAGE, "demo/posts/offsite-agenda.png",
                 "image/png", 1600, 900, null, 902_144);
-        MediaAsset shortVideo = asset(tao, MediaKind.VIDEO, "demo/shorts/walkthrough.mp4",
-                "video/mp4", 720, 1280, 30_000, 6_214_400);
-        MediaAsset longVideo = asset(admin, MediaKind.VIDEO, "demo/videos/all-hands-q3.mp4",
-                "video/mp4", 1280, 720, 75_000, 18_432_000);
-
         var allHands = posts.create(admin, PostType.PHOTO, "All hands recap — great to see everyone! 🚀",
                 List.of(adminPostImage.getId()));
         var status = posts.create(maya, PostType.NOTE, "Shipping the new feed today. Coffee first. ☕", List.of());
         var tea = posts.create(maya, PostType.PHOTO, "Whiteboard from this morning's session.",
                 List.of(teaBoard.getId()));
-        var walkthrough = posts.create(tao, PostType.VIDEO, "A quick walkthrough of the new workspace.",
-                List.of(shortVideo.getId()));
-        posts.create(admin, PostType.VIDEO, "Q3 all-hands recording.", List.of(longVideo.getId()));
         posts.create(lena, PostType.PHOTO, "Offsite agenda is up.", List.of(agenda.getId()));
         var removable = posts.create(maya, PostType.NOTE, "Temporary post for moderation demo.", List.of());
         seedResourcePosts(admin, maya, tao, lena);
+        seedResourceVideos(admin, maya, tao, lena);
 
-        follows.follow(maya, admin.getId());
-        follows.follow(tao, maya.getId());
-        follows.follow(lena, admin.getId());
-        follows.follow(admin, maya.getId());
+        // Following feed is pull-based: follow everyone so the demo workspace
+        // shows all seeded posts (including all videos) to every member.
+        List<User> everyone = List.of(admin, maya, tao, lena);
+        for (User follower : everyone) {
+            for (User target : everyone) {
+                if (!follower.getId().equals(target.getId())) {
+                    follows.follow(follower, target.getId());
+                }
+            }
+        }
 
         var comment = comments.add(maya, allHands.getId(), null, "Great turnout!");
         comments.add(admin, allHands.getId(), comment.getId(), "Thanks — thanks for coming.");
@@ -280,7 +350,7 @@ public class DevFixtureSeeder implements ApplicationRunner {
         reactions.reactToPost(maya, allHands.getId(), ReactionType.LIKE);
         reactions.reactToPost(tao, allHands.getId(), ReactionType.LOVE);
         reactions.reactToPost(admin, status.getId(), ReactionType.LIKE);
-        reactions.reactToPost(lena, walkthrough.getId(), ReactionType.WOW);
+        reactions.reactToPost(lena, likedVideoPostId, ReactionType.WOW);
         reactions.reactToComment(admin, comment.getId(), ReactionType.LIKE);
 
         posts.save(lena, tea.getId());
@@ -291,6 +361,7 @@ public class DevFixtureSeeder implements ApplicationRunner {
 
     private Long moderationTarget;
     private Long mentionPostId;
+    private Long likedVideoPostId;
 
     private void conversations(User admin, User maya, User tao) {
         var whiteboard = asset(maya, MediaKind.IMAGE, "demo/messages/whiteboard.png",

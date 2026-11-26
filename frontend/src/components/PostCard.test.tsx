@@ -36,7 +36,7 @@ const post = {
   author: { name: 'Dara', username: 'dara', initials: 'DR' },
   createdAt: '2h ago',
   body: 'A beautiful day to build something great! 🚀',
-  media: [{ url: 'https://example.com/img.jpg', alt: 'Mountain landscape' }],
+  media: [{ url: 'https://example.com/img.jpg', alt: 'Mountain landscape', kind: 'IMAGE' as const }],
   reactions: { count: 248, myReaction: null },
   comments: 32,
   shares: 12,
@@ -83,6 +83,23 @@ describe('PostCard', () => {
     renderPostCard(<PostCard post={post} />)
 
     expect(screen.getByAltText('Mountain landscape')).toBeInTheDocument()
+  })
+
+  it('renders a video attachment with native controls', () => {
+    renderPostCard(
+      <PostCard
+        post={{
+          ...post,
+          id: 'video-1',
+          media: [{ url: '/api/media/9', alt: 'Post video', kind: 'VIDEO' as const }],
+        }}
+      />,
+    )
+
+    const video = screen.getByLabelText('Post video')
+    expect(video.tagName).toBe('VIDEO')
+    expect(video).toHaveAttribute('src', '/api/media/9')
+    expect(video).toHaveProperty('controls', true)
   })
 
   it('links the author name to their profile with interpolated username', () => {

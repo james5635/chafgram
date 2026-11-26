@@ -70,7 +70,15 @@ describe('toPostCardData', () => {
     )
 
     expect(data.media).toEqual([
-      { url: '/api/media/41', alt: 'Post image: Team offsite' },
+      { url: '/api/media/41', alt: 'Post image: Team offsite', kind: 'IMAGE' },
+    ])
+  })
+
+  it('maps video attachments to BFF media URLs marked as video', () => {
+    const data = toPostCardData(post({ type: 'VIDEO', mediaIds: ['9'] }))
+
+    expect(data.media).toEqual([
+      { url: '/api/media/9', alt: 'Post video: Hello team', kind: 'VIDEO' },
     ])
   })
 

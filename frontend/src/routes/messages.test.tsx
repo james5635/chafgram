@@ -44,7 +44,8 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 
 import { Messages } from './messages'
 
-const mocks = [
+function mocks() {
+  return [
   {
     request: { query: ConversationsDocument, variables: { first: 50 } },
     result: {
@@ -93,10 +94,11 @@ const mocks = [
       },
     },
   },
-]
+  ]
+}
 
 function renderScreen(ui: ReactNode) {
-  return render(<MockedProvider mocks={mocks}>{ui}</MockedProvider>)
+  return render(<MockedProvider mocks={mocks()}>{ui}</MockedProvider>)
 }
 
 beforeEach(() => {

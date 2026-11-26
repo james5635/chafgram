@@ -8,7 +8,7 @@ export interface PostCardData {
   author: { name: string; username: string; avatar?: string; initials?: string }
   createdAt: string
   body: string
-  media?: { url: string; alt: string }[]
+  media?: { url: string; alt: string; kind: 'IMAGE' | 'VIDEO' }[]
   reactions: { count: number; myReaction: FeedPost['myReaction'] }
   comments: number
   shares: number
@@ -52,10 +52,11 @@ function mediaFor(
   mediaIds: string[],
   body: string | null,
 ): PostCardData['media'] {
-  if (type === 'PHOTO' && mediaIds.length > 0) {
+  if (mediaIds.length > 0 && (type === 'PHOTO' || type === 'VIDEO')) {
     return mediaIds.map((id) => ({
       url: `/api/media/${id}`,
-      alt: body?.trim() ? `Post image: ${body}` : 'Post image',
+      alt: body?.trim() ? `${type === 'VIDEO' ? 'Post video' : 'Post image'}: ${body}` : `Post ${type.toLowerCase()}`,
+      kind: type === 'VIDEO' ? 'VIDEO' : 'IMAGE',
     }))
   }
   if (type === 'NOTE') return []
@@ -65,6 +66,7 @@ function mediaFor(
         colors: type === 'VIDEO' ? ['#4a6f8c', '#9db8c9'] : ['#6ba8e0', '#bcdcf5'],
       }),
       alt: 'Post media',
+      kind: 'IMAGE',
     },
   ]
 }

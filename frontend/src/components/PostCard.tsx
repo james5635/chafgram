@@ -22,7 +22,7 @@ interface PostCardProps {
     author: { name: string; username: string; avatar?: string; initials?: string }
     createdAt: string
     body: string
-    media?: { url: string; alt: string }[]
+    media?: { url: string; alt: string; kind: 'IMAGE' | 'VIDEO' }[]
     reactions: { count: number; myReaction?: string | null }
     comments: number
     shares: number
@@ -205,7 +205,18 @@ export default function PostCard({ post }: PostCardProps) {
       {post.media && post.media.length > 0 && (
         <div className="px-4 sm:px-5 pb-5 sm:pb-0">
           <div className="aspect-video rounded-lg overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]">
-            <img src={post.media[0].url} alt={post.media[0].alt} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+            {post.media[0].kind === 'VIDEO' ? (
+              <video
+                src={post.media[0].url}
+                aria-label={post.media[0].alt}
+                className="h-full w-full object-cover"
+                controls
+                preload="metadata"
+                playsInline
+              />
+            ) : (
+              <img src={post.media[0].url} alt={post.media[0].alt} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+            )}
           </div>
         </div>
       )}
