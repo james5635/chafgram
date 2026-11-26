@@ -22,4 +22,22 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
 	@Query("UPDATE RefreshToken r SET r.revokedAt = :now "
 			+ "WHERE r.userId = :userId AND r.revokedAt IS NULL")
 	int revokeAllForUser(@Param("userId") Long userId, @Param("now") Instant now);
+
+	/**
+	 * Claim a live row for rotation. The conditional UPDATE is the atomic
+	 * compare-and-swap: exactly one concurrent refresher can claim a given hash
+	 * because the second update sees {@code revoked_at} already set.
+	 */
+	@Modifying(flushAutomatically = true)
+	@Transactional
+	@Query("UPDATE RefreshToken r SET r.revokedAt = :now "
+			+ "WHERE r.tokenHash = :tokenHash AND r.revokedAt IS NULL")
+	int claimForRotation(@Param("tokenHash") String tokenHash, @Param("now") Instant now);
+
+	/** Record the successor on the row claimed by this transaction. */
+	@Modifying(flushAutomatically = true)
+	@Transactional
+	@Query("UPDATE RefreshToken r SET r.replacedBy = :successorId "
+			+ "WHERE r.tokenHash = :tokenHash AND r.replacedBy IS NULL")
+	int recordReplacement(@Param("tokenHash") String tokenHash, @Param("successorId") Long successorId);
 }

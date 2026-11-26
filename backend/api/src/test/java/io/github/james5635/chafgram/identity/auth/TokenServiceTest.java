@@ -19,6 +19,12 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -85,7 +91,7 @@ class TokenServiceTest extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void rotatedTokenIsNotTreatedAsTheft() {
+	void rotatedTokenReplayIsRejectedWithoutForkingTheSession() {
 		User alice = memberService.bootstrap(
 				"alice", "Alice", "alice@example.com", "a-very-strong-password");
 
@@ -98,19 +104,84 @@ class TokenServiceTest extends AbstractIntegrationTest {
 		assertThat(oldRow.getRevokedAt()).isNotNull();
 		assertThat(oldRow.getReplacedBy()).isEqualTo(newRow.getId());
 		assertThat(newRow.getRevokedAt()).isNull();
+		Instant firstRevokedAt = oldRow.getRevokedAt();
 
-		// The refreshed (rotated) token keeps working.
-		TokenPair third = tokenService.refresh(second.refreshToken());
-		assertThat(refreshTokens.findByTokenHash(Tokens.sha256Hex(third.refreshToken()))).isPresent();
-		assertThat(refreshTokens.findByTokenHash(Tokens.sha256Hex(second.refreshToken())).orElseThrow()
-				.getReplacedBy()).isNotNull();
+		// A superseded token is revoked: presenting it again must fail without
+		// minting a second live successor or touching the original revocation time.
+		assertThatThrownBy(() -> tokenService.refresh(first.refreshToken()))
+				.isInstanceOf(ApiException.class)
+				.satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
 
-		// Replaying the superseded token is normal rotation noise, not theft: the
-		// live session must not be revoked user-wide.
-		TokenPair replay = tokenService.refresh(first.refreshToken());
+		RefreshToken afterReplay = refreshTokens.findByTokenHash(Tokens.sha256Hex(first.refreshToken())).orElseThrow();
+		assertThat(afterReplay.getRevokedAt()).isEqualTo(firstRevokedAt);
+		assertThat(afterReplay.getReplacedBy()).isEqualTo(newRow.getId());
 		assertThat(refreshTokens.findAllByUserIdAndRevokedAtIsNull(alice.getId()))
 				.extracting(RefreshToken::getTokenHash)
-				.contains(Tokens.sha256Hex(third.refreshToken()), Tokens.sha256Hex(replay.refreshToken()));
+				.containsExactly(Tokens.sha256Hex(second.refreshToken()));
+		assertThat(refreshTokens.findAll()).hasSize(2);
+	}
+
+	@Test
+	void replayAfterRevokeAllForUserIsRejectedEvenWhenAncestorWasRotated() {
+		User alice = memberService.bootstrap(
+				"alice", "Alice", "alice@example.com", "a-very-strong-password");
+
+		TokenPair first = tokenService.issue(alice);
+		TokenPair second = tokenService.refresh(first.refreshToken());
+		tokenService.revokeAllForUser(alice.getId());
+
+		// The ancestor has replaced_by, but logout-everywhere revoked the whole
+		// family: neither the ancestor nor its successor can mint a new token.
+		assertThatThrownBy(() -> tokenService.refresh(first.refreshToken()))
+				.isInstanceOf(ApiException.class)
+				.satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+		assertThatThrownBy(() -> tokenService.refresh(second.refreshToken()))
+				.isInstanceOf(ApiException.class)
+				.satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+
+		assertThat(refreshTokens.findAllByUserIdAndRevokedAtIsNull(alice.getId())).isEmpty();
+		assertThat(refreshTokens.findAll()).hasSize(2);
+	}
+
+	@Test
+	void concurrentRefreshWithSameTokenMintsExactlyOneLiveSuccessor() throws Exception {
+		User alice = memberService.bootstrap(
+				"alice", "Alice", "alice@example.com", "a-very-strong-password");
+		TokenPair first = tokenService.issue(alice);
+
+		CountDownLatch gate = new CountDownLatch(1);
+		Callable<Object> refreshTask = () -> {
+			gate.await();
+			try {
+				return tokenService.refresh(first.refreshToken());
+			}
+			catch (ApiException e) {
+				return e;
+			}
+		};
+		ExecutorService pool = Executors.newFixedThreadPool(2);
+		try {
+			Future<Object> one = pool.submit(refreshTask);
+			Future<Object> two = pool.submit(refreshTask);
+			gate.countDown();
+			List<Object> results = List.of(one.get(60, TimeUnit.SECONDS), two.get(60, TimeUnit.SECONDS));
+
+			assertThat(results).filteredOn(TokenPair.class::isInstance).hasSize(1);
+			assertThat(results).filteredOn(ApiException.class::isInstance).hasSize(1);
+			TokenPair winner = (TokenPair) results.stream().filter(TokenPair.class::isInstance).findFirst().orElseThrow();
+			ApiException loser = (ApiException) results.stream().filter(ApiException.class::isInstance).findFirst().orElseThrow();
+			assertThat(loser.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+			List<RefreshToken> live = refreshTokens.findAllByUserIdAndRevokedAtIsNull(alice.getId());
+			assertThat(live).hasSize(1);
+			assertThat(live.get(0).getTokenHash()).isEqualTo(Tokens.sha256Hex(winner.refreshToken()));
+			RefreshToken oldRow = refreshTokens.findByTokenHash(Tokens.sha256Hex(first.refreshToken())).orElseThrow();
+			assertThat(oldRow.getReplacedBy()).isEqualTo(live.get(0).getId());
+			assertThat(refreshTokens.findAll()).hasSize(2);
+		}
+		finally {
+			pool.shutdownNow();
+		}
 	}
 
 	@Test

@@ -64,23 +64,30 @@ public class TokenService {
 	}
 
 	/**
-	 * Rotate a refresh token. A row revoked with {@code replacedBy} was rotated
-	 * (a lost response or a second tab) and is harmless; a row revoked without
-	 * it was logged out or stolen, so the whole user's token family is revoked.
+	 * Rotate a live refresh token. Any revoked row — rotated or not — is
+	 * invalid and never mints a new token; only a row revoked <em>without</em>
+	 * {@code replacedBy} (logout or suspected theft) additionally revokes the
+	 * whole user's token family.
 	 *
-	 * <p>The auth failure must not roll back that family-wide revocation.</p>
+	 * <p>Rotation is atomic: a conditional UPDATE claims the row before any
+	 * successor is inserted, so two concurrent refreshes cannot both mint a
+	 * live successor. The loser gets 401 — retrying would be wrong here,
+	 * because a second live chain is exactly what reuse detection prevents.
+	 * An auth failure must not roll back a family-wide revocation.</p>
 	 */
 	@Transactional(noRollbackFor = ApiException.class)
 	public TokenPair refresh(String rawRefreshToken) {
 		if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
 			throw invalidToken();
 		}
-		RefreshToken row = refreshTokens.findByTokenHash(Tokens.sha256Hex(rawRefreshToken))
-				.orElseThrow(TokenService::invalidToken);
+		String hash = Tokens.sha256Hex(rawRefreshToken);
+		RefreshToken row = refreshTokens.findByTokenHash(hash).orElseThrow(TokenService::invalidToken);
 		Instant now = Instant.now();
 
-		if (row.getRevokedAt() != null && row.getReplacedBy() == null) {
-			revokeAllForUser(row.getUserId());
+		if (row.getRevokedAt() != null) {
+			if (row.getReplacedBy() == null) {
+				revokeAllForUser(row.getUserId());
+			}
 			throw invalidToken();
 		}
 		if (!row.getExpiresAt().isAfter(now)) {
@@ -91,14 +98,16 @@ public class TokenService {
 			throw invalidToken();
 		}
 
+		// Claim first: no successor exists until this CAS succeeds.
+		if (refreshTokens.claimForRotation(hash, now) != 1) {
+			throw invalidToken();
+		}
 		String rawRefreshTokenNext = Tokens.newBearerToken();
 		RefreshToken successor = storeRefreshToken(user.getId(), now, rawRefreshTokenNext);
-		row.setRevokedAt(now);
-		// Keep the first successor recorded when a superseded token is replayed.
-		if (row.getReplacedBy() == null) {
-			row.setReplacedBy(successor.getId());
+		if (refreshTokens.recordReplacement(hash, successor.getId()) != 1) {
+			// Invariant broken: roll back both the claim and the successor.
+			throw new IllegalStateException("Could not record refresh-token rotation lineage");
 		}
-		refreshTokens.save(row);
 		return new TokenPair(accessToken(user, now), rawRefreshTokenNext, accessTtl.toSeconds());
 	}
 
