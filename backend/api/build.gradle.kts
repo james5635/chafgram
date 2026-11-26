@@ -52,6 +52,9 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
 	implementation("org.springframework.security:spring-security-webauthn")
+	// JwtEncoder/JwtDecoder for access-token issuance (HS256). The resource-server
+	// starter added later brings this in too; declare it here so config/tests compile.
+	implementation("org.springframework.security:spring-security-oauth2-jose")
 	compileOnly("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	runtimeOnly("com.mysql:mysql-connector-j")
