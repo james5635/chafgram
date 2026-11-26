@@ -145,8 +145,8 @@ class MediaProcessingIntegrationTest extends AbstractIntegrationTest {
 		assertThat(asset.getStorageKey()).endsWith(".mp4");
 		assertThat(asset.getStorageKey()).isNotEqualTo(sourceKey);
 		// the pre-transcode source is superseded and dropped
-		assertThat(Files.notExists(storage.resolvePath(sourceKey))).isTrue();
-		assertThat(Files.exists(storage.resolvePath(asset.getStorageKey()))).isTrue();
+		assertThat(storage.exists(sourceKey)).isFalse();
+		assertThat(storage.exists(asset.getStorageKey())).isTrue();
 	}
 
 	@Test

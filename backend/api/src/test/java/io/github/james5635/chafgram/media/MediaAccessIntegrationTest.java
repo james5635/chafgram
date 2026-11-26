@@ -29,9 +29,6 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -74,6 +71,9 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 	private MediaAssetRepository mediaAssets;
 
 	@Autowired
+	private InMemoryMediaStorage storage;
+
+	@Autowired
 	private PostMediaRepository postMedia;
 
 	@Autowired
@@ -109,14 +109,7 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 		asset.setMimeType("image/png");
 		asset.setSizeBytes(100L);
 
-		// Create actual file on disk
-		try {
-			Path filePath = Paths.get("build", "test-media-data", storageKey);
-			Files.createDirectories(filePath.getParent());
-			Files.write(filePath, new byte[]{1, 2, 3, 4});
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		storage.put(storageKey, new byte[]{1, 2, 3, 4});
 
 		return mediaAssets.save(asset);
 	}
@@ -138,13 +131,7 @@ class MediaAccessIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	private void writeBlob(String storageKey) {
-		try {
-			Path filePath = Paths.get("build", "test-media-data", storageKey);
-			Files.createDirectories(filePath.getParent());
-			Files.write(filePath, new byte[]{1, 2, 3, 4});
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		storage.put(storageKey, new byte[]{1, 2, 3, 4});
 	}
 
 	private byte[] pngBytes() {

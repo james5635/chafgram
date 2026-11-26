@@ -2,6 +2,7 @@ package io.github.james5635.chafgram.media.utils;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 
@@ -19,6 +20,20 @@ public interface MediaStorage {
 
 	MediaStream read(String storageKey);
 
-	record MediaStream(InputStream stream, String contentType, long sizeBytes) {
+	/** Storage-agnostic existence check. */
+	default boolean exists(String storageKey) {
+		try (MediaStream stream = read(storageKey)) {
+			return true;
+		}
+		catch (Exception e) {
+			return false;
+		}
+	}
+
+	record MediaStream(InputStream stream, String contentType, long sizeBytes) implements AutoCloseable {
+		@Override
+		public void close() throws IOException {
+			stream.close();
+		}
 	}
 }

@@ -12,9 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -44,6 +41,9 @@ class MediaModerationIntegrationTest extends AbstractIntegrationTest {
 
 	@Autowired
 	private MediaAssetRepository mediaAssets;
+
+	@Autowired
+	private InMemoryMediaStorage storage;
 
 	User admin;
 	User moderator;
@@ -212,14 +212,7 @@ class MediaModerationIntegrationTest extends AbstractIntegrationTest {
 		asset.setStorageKey(storageKey);
 		asset.setMimeType("image/png");
 		asset.setSizeBytes(100L);
-		try {
-			Path filePath = Paths.get("build", "test-media-data", storageKey);
-			Files.createDirectories(filePath.getParent());
-			Files.write(filePath, new byte[] { 1, 2, 3, 4 });
-		}
-		catch (Exception e) {
-			throw new IllegalStateException(e);
-		}
+		storage.put(storageKey, new byte[] { 1, 2, 3, 4 });
 		return mediaAssets.save(asset);
 	}
 }
