@@ -70,11 +70,16 @@ that state to assistive technology.
 ## Decisions
 
 - New primitive `frontend/src/components/BusyOverlay.tsx`:
-  `BusyOverlay({ label }: { label: string })`, rendered as an
-  `absolute inset-0 z-10` layer inside a `relative` parent, with a translucent
-  token surface, `backdrop-blur-[2px]`, a `animate-spin` ring, and the label in
-  `text-sm font-semibold text-[var(--sea-ink)]`. It carries
-  `role="status" aria-live="polite"`.
+  `BusyOverlay({ label }: { label: string })`, rendered as a purely
+  presentational `aria-hidden="true"`, `absolute inset-0 z-10` layer inside a
+  `relative` parent, with a translucent token surface, `backdrop-blur-[2px]`,
+  an `animate-spin` ring, and the label in
+  `text-sm font-semibold text-[var(--sea-ink)]`.
+- Each adoption site renders a permanently mounted `sr-only` live region with
+  `role="status" aria-live="polite"` as a sibling **outside** the `aria-busy`
+  root (via a fragment), so the busy state cannot suppress the announcement.
+  It contains the action label while busy and empty text otherwise; the label
+  comes from one local const shared with `BusyOverlay` to prevent drift.
 - New hook `frontend/src/hooks/useBusy.ts`:
   `useBusy(): { busy: boolean; run: <T>(task: () => Promise<T>) => Promise<T | undefined> }`.
   `run` guards against re-entry while busy, sets busy before awaiting, clears it
@@ -99,8 +104,11 @@ that state to assistive technology.
   switch; only the explicit send action gets an overlay.
 - **Keyboard blocking**: a busy region is truly inert. The region root carries
   `aria-busy`; its content subtree gets React 19's `inert` attribute while busy,
-  and the `BusyOverlay` sits **outside** that inert subtree so `role="status"`
-  is still announced. Controls are also `disabled` for clarity.
+  and the presentational, `aria-hidden` `BusyOverlay` sits **outside** that inert
+  subtree. Controls are also `disabled` for clarity. The live `role="status"`
+  region is a permanently mounted sibling of the `aria-busy` root — not a
+  descendant — so WAI-ARIA 1.2 `aria-busy` deferral cannot delay or suppress the
+  announcement.
 
 ## Left to the builder
 

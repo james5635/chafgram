@@ -227,7 +227,9 @@ describe('Messages screen', () => {
     expect(status).toHaveTextContent('Sending…')
     const region = sendButton.closest('[aria-busy="true"]')
     expect(region).toHaveClass('relative')
-    expect(status.parentElement).toBe(region)
+    expect(region).not.toContainElement(status)
+    expect(status.closest('[aria-busy]')).toBeNull()
+    expect(status.closest('[inert]')).toBeNull()
     const inertContent = sendButton.closest('[inert]')
     expect(inertContent).not.toBeNull()
     expect(inertContent).toContainElement(input)
@@ -258,6 +260,6 @@ describe('Messages screen', () => {
 
     expect(await screen.findByText('Hi from Dara')).toBeInTheDocument()
     await waitFor(() => expect(markReadRequest).toHaveBeenCalledTimes(1))
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 })

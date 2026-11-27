@@ -1,12 +1,12 @@
 /**
- * Regional loading overlay. Render it as a sibling of the busy region's content
- * inside a `relative` parent, and mark that parent with `aria-busy`.
+ * Presentational regional loading overlay. Render it as a child of the busy
+ * region's `relative` root, outside the `inert` content subtree. The visually
+ * hidden live status lives in a permanently mounted sibling of that root.
  */
 export function BusyOverlay({ label }: { label: string }) {
   return (
     <div
-      role="status"
-      aria-live="polite"
+      aria-hidden="true"
       className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[var(--surface-strong)] backdrop-blur-[2px]"
     >
       <span
@@ -17,5 +17,3 @@ export function BusyOverlay({ label }: { label: string }) {
     </div>
   )
 }
-
-export default BusyOverlay

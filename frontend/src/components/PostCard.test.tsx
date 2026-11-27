@@ -476,9 +476,12 @@ describe('PostCard busy overlays', () => {
     expect(calls.filter((name) => name === 'ReactToPost')).toHaveLength(1)
     expect(like).toBeDisabled()
 
-    const region = status.parentElement
+    const region = like.closest('[aria-busy="true"]')
+    expect(region).not.toBeNull()
     expect(region).toHaveClass('relative')
-    expect(region).toHaveAttribute('aria-busy', 'true')
+    expect(region).not.toContainElement(status)
+    expect(status.closest('[aria-busy]')).toBeNull()
+    expect(status.closest('[inert]')).toBeNull()
     const inertSubtree = like.closest('[inert]')
     expect(inertSubtree).not.toBeNull()
     expect(inertSubtree).not.toContainElement(status)
@@ -488,7 +491,7 @@ describe('PostCard busy overlays', () => {
     expect(calls.filter((name) => name === 'ReactToPost')).toHaveLength(1)
 
     release()
-    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement())
     expect(region).toHaveAttribute('aria-busy', 'false')
     expect(like).toBeEnabled()
   })
@@ -536,7 +539,7 @@ describe('PostCard busy overlays', () => {
     expect(calls.filter((name) => name === 'CreateComment')).toHaveLength(1)
 
     release()
-    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement())
     await waitFor(() =>
       expect(screen.queryByPlaceholderText('Write a comment…')).not.toBeInTheDocument(),
     )
@@ -554,11 +557,11 @@ describe('PostCard busy overlays', () => {
     fireEvent.click(screen.getByLabelText('Comment'))
 
     expect(await screen.findByText('Loading comments…')).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
     expect(calls.filter((name) => name === 'PostComments')).toHaveLength(1)
 
     release()
     await waitFor(() => expect(screen.queryByText('Loading comments…')).not.toBeInTheDocument())
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 })

@@ -47,6 +47,7 @@ export function Notifications() {
     refetchQueries: [MyNotificationsDocument, UnreadNotificationsDocument],
   })
   const { busy, run } = useBusy()
+  const busyLabel = 'Updating…'
 
   const notifications = data?.myNotifications ?? []
   const unread = unreadData?.unreadNotifications ?? 0
@@ -58,23 +59,26 @@ export function Notifications() {
   return (
     <AppShell>
       <div className="page-wrap px-4 pb-8 pt-6">
-        <div className="relative mb-4 flex items-center justify-between" aria-busy={busy}>
-          <div inert={busy ? true : undefined} className="flex w-full items-center justify-between">
-            <div>
-              <h1 className="m-0 text-2xl font-bold text-[var(--sea-ink)] sm:text-3xl">Notifications</h1>
-              {unread > 0 && <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">{unread} unread</p>}
+        <>
+          <span className="sr-only" role="status" aria-live="polite">{busy ? busyLabel : ''}</span>
+          <div className="relative mb-4 flex items-center justify-between" aria-busy={busy}>
+            <div inert={busy ? true : undefined} className="flex w-full items-center justify-between">
+              <div>
+                <h1 className="m-0 text-2xl font-bold text-[var(--sea-ink)] sm:text-3xl">Notifications</h1>
+                {unread > 0 && <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">{unread} unread</p>}
+              </div>
+              <button
+                type="button"
+                onClick={() => void markAllRead()}
+                disabled={unread === 0 || busy}
+                className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)] transition hover:bg-[var(--brand-light)] disabled:opacity-50"
+              >
+                Mark all as read
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => void markAllRead()}
-              disabled={unread === 0 || busy}
-              className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)] transition hover:bg-[var(--brand-light)] disabled:opacity-50"
-            >
-              Mark all as read
-            </button>
+            {busy && <BusyOverlay label={busyLabel} />}
           </div>
-          {busy && <BusyOverlay label="Updating…" />}
-        </div>
+        </>
 
         <div className="flex gap-5 mb-5 border-b border-[var(--line)] overflow-x-auto no-scrollbar">
           {TABS.map((tab, i) => (

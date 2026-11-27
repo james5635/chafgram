@@ -154,7 +154,9 @@ describe('Compose screen', () => {
     const region = postButton.closest('[aria-busy="true"]')
     expect(region).not.toBeNull()
     expect(region).toHaveClass('relative')
-    expect(status.parentElement).toBe(region)
+    expect(region).not.toContainElement(status)
+    expect(status.closest('[aria-busy]')).toBeNull()
+    expect(status.closest('[inert]')).toBeNull()
 
     const inertContent = postButton.closest('[inert]')
     expect(inertContent).not.toBeNull()
@@ -166,6 +168,6 @@ describe('Compose screen', () => {
 
     await waitFor(() => expect(createPostResult).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/' }))
-    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement())
   })
 })

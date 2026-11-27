@@ -188,12 +188,13 @@ Traceability: FR-1.3, BR-1.3, BR-1.5, architecture.md §4.1.
 **Interaction notes — regional busy overlays.** Explicit user mutations (login in §4.2,
 home and `/compose` composers, post-card like/comment, messages send, notifications
 mark-all-read) wrap their control region in a `relative` root with `aria-busy={busy}`.
-The content subtree is `inert` while busy, and a `BusyOverlay` sibling (§7) renders an
-`absolute inset-0` token surface with a spinner and an action-specific live status label
-(`role="status" aria-live="polite"`, e.g. `Signing in…`, `Posting…`, `Saving…`, `Sending…`,
-`Updating…`). Controls are also `disabled`, and `useBusy` skips re-entry, so a rapid double
-click fires one mutation. The overlay sits outside the inert subtree so its status is still
-announced. Initial data loading (feed, comment thread) keeps `sand`/`foam` skeletons and
+The content subtree is `inert` while busy, and a `BusyOverlay` child (§7) renders an
+`aria-hidden`, `absolute inset-0` token surface with a spinner and an action-specific label
+(e.g. `Signing in…`, `Posting…`, `Saving…`, `Sending…`, `Updating…`). A permanently mounted
+`sr-only` sibling of the busy root carries `role="status" aria-live="polite"` with that label
+while busy and empty text otherwise, so the announcement is not owned by `aria-busy`. The
+visual overlay sits outside the inert subtree. Controls are also `disabled`, and `useBusy`
+skips re-entry, so a rapid double click fires one mutation. Initial data loading (feed, comment thread) keeps `sand`/`foam` skeletons and
 never shows an overlay; effect-driven `markRead` is excluded too. See [`design.md`](design.md)
 §9–§10.
 
@@ -358,8 +359,8 @@ Traceability: FR-1.7, FR-7.3, design.md §6.
 
 | State | Treatment |
 |-------|-----------|
-| Loading | `sand`/`foam` shimmer skeletons (no spinners; design.md §13 #6) |
-| Action busy | `BusyOverlay` — `absolute inset-0` token surface + spinner + live status label over a `relative`, `aria-busy` region; content subtree `inert`; controls disabled |
+| Loading | `sand`/`foam` shimmer skeletons (no spinners; design.md §13 #7) |
+| Action busy | `BusyOverlay` — `aria-hidden`, `absolute inset-0` token surface + spinner + label over a `relative`, `aria-busy` region; content subtree `inert`; controls disabled; permanently mounted `sr-only` `role="status" aria-live="polite"` sibling of the busy root announces the label |
 | Empty | Empty-state pattern: kicker + one line + one action |
 | Error | `.demo-alert` tinted, 1rem radius, path forward (never bare code) |
 | Success | Lagoon/brand tinted confirmation; auto-dismiss toast (proposal, design.md §8) |
@@ -382,7 +383,7 @@ This section lists every reusable component type used across web screens. Each e
 | Island shell | Card container | Every card | `.island-shell`: 1px `--line`, `165deg` `--surface-strong`→`--surface`, `--inset-glint`, soft blue shadow, `blur(4px)`, radius `0.75rem` |
 | Composer | Post creation | Home, Compose | `.island-shell rise-in relative overflow-hidden rounded-xl p-6 sm:p-8`; textarea + chips + blue Post button |
 | Post card | Feed item | Home, Explore, Profile | `.island-shell rounded-xl overflow-hidden border border-[var(--line)] bg-white shadow-sm`; header, body, media, interaction bar, action row, optional comment thread |
-| BusyOverlay | Regional indeterminate-action overlay | Login, Composer, Compose, PostCard, Messages, Notifications | `absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[var(--surface-strong)] backdrop-blur-[2px]`; spinner `h-6 w-6 animate-spin rounded-full border-2 border-[var(--lagoon)] border-t-[var(--brand)] motion-reduce:animate-none`; label `text-sm font-semibold text-[var(--sea-ink)]`; `role="status" aria-live="polite"`; sibling of an `inert` content subtree inside a `relative aria-busy` root; driven by `useBusy` |
+| BusyOverlay | Regional indeterminate-action overlay | Login, Composer, Compose, PostCard, Messages, Notifications | `aria-hidden="true"`; `absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[var(--surface-strong)] backdrop-blur-[2px]`; spinner `h-6 w-6 animate-spin rounded-full border-2 border-[var(--lagoon)] border-t-[var(--brand)] motion-reduce:animate-none`; label `text-sm font-semibold text-[var(--sea-ink)]`; sibling of an `inert` content subtree inside a `relative aria-busy` root; live status is a permanently mounted `sr-only` `role="status" aria-live="polite"` sibling of that root; driven by `useBusy` |
 | Pill / tag | Small label | RightRail, chips | `.demo-pill`: `inline-flex items-center gap-0.35 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-0.35 py-0.65 text-[0.75rem] font-weight-700 text-[var(--sea-ink-soft)]` |
 | Button primary | Main action | Login, Welcome, Composer | `rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--brand)22%,var(--surface-strong))] px-6 py-3 text-sm font-semibold text-[var(--sea-ink)]` active; disabled variants |
 | Button secondary | Ghost action | Login, Welcome | `rounded-full border border-[var(--line)] bg-transparent px-6 py-3 text-sm font-semibold text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)]` |

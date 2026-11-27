@@ -208,7 +208,7 @@ use blue for static text or decoration.
 | Button (secondary) | transparent/ghost, `--sea-ink`, hover `--link-bg-hover` |
 | Card / post | `.island-shell rounded-xl overflow-hidden border border-[var(--line)] bg-white shadow-sm`; header, body, media, interaction bar, action row |
 | Composer | `.island-shell rounded-xl`; prompt row → `--line` divider → icon chips [Photo][Video][Feeling][Poll] + solid brand Post button |
-| Busy overlay (indeterminate action) | `absolute inset-0 z-10` over a `relative`, `aria-busy` region: `--surface-strong` surface + `backdrop-blur-[2px]`, `--lagoon`/`--brand` spin ring (§9), action-specific `role="status" aria-live="polite"` label; content subtree `inert` (§10) |
+| Busy overlay (indeterminate action) | `aria-hidden`, `absolute inset-0 z-10` over a `relative`, `aria-busy` region: `--surface-strong` surface + `backdrop-blur-[2px]`, `--lagoon`/`--brand` spin ring (§9), action-specific label; content subtree `inert` (§10). The `sr-only` live status is a permanently mounted sibling of the busy root (§10) |
 | Pill / tag | `.demo-pill` — rounded-full, chip tokens, 0.75rem 700 |
 | Input | `.demo-input` — 0.75rem radius, `--line` border, focus `--lagoon-deep` border + 3px `--lagoon` 24% ring *(legacy; new inputs use `--brand` focus — migrate on touch)* |
 | Alert | `.demo-alert` tinted amber/red variants, 1rem radius |
@@ -252,8 +252,11 @@ Per-component what/where/how detail lives in [`docs/web-ui.md`](docs/web-ui.md) 
 - Colour is never the only signal (status pills pair tint + text; unread pairs badge + text).
 - **Busy regions:** the `relative` region root carries `aria-busy`, its content subtree is
   `inert` while busy so pointer and keyboard input cannot reach it, and controls are
-  `disabled`. The busy overlay sits outside the inert subtree with
-  `role="status" aria-live="polite"` and a visible action label, so the wait is announced.
+  `disabled`. The visual overlay is `aria-hidden` and sits outside the inert subtree. The
+  wait is announced by a permanently mounted `sr-only` sibling of the busy root with
+  `role="status" aria-live="polite"` and the action label: as a descendant of `aria-busy`
+  the live region could be ignored until the root stops being busy — by which point the
+  overlay is removed.
 - Reduced motion honored (§9). Document language `en` is set on `<html>`.
 
 ## 11. Iconography & imagery

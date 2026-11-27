@@ -1,46 +1,59 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import BusyOverlay from './BusyOverlay'
+import { render, screen, within } from '@testing-library/react'
+import { BusyOverlay } from './BusyOverlay'
 
 describe('BusyOverlay', () => {
+  const label = 'Saving…'
+
   function renderRegion() {
     return render(
-      <div className="relative" aria-busy="true">
-        <div inert>
-          <input aria-label="Name" />
+      <>
+        <span className="sr-only" role="status" aria-live="polite">{label}</span>
+        <div className="relative" aria-busy="true">
+          <div inert>
+            <input aria-label="Name" />
+          </div>
+          <BusyOverlay label={label} />
         </div>
-        <BusyOverlay label="Saving…" />
-      </div>,
+      </>,
     )
   }
 
-  it('renders a polite status with the action label', () => {
+  it('renders one polite live status outside the busy root', () => {
     renderRegion()
 
-    const status = screen.getByRole('status')
-    expect(status).toBeInTheDocument()
+    const statuses = screen.getAllByRole('status')
+    expect(statuses).toHaveLength(1)
+    const status = statuses[0]
     expect(status).toHaveAttribute('aria-live', 'polite')
-    expect(status).toHaveTextContent('Saving…')
-    expect(screen.getByText('Saving…')).toHaveClass(
+    expect(status).toHaveClass('sr-only')
+    expect(status).toHaveTextContent(label)
+
+    const busyRoot = screen.getByLabelText('Name').closest('[aria-busy="true"]')
+    expect(busyRoot).not.toBeNull()
+    expect(busyRoot).not.toContainElement(status)
+  })
+
+  it('lays an absolute, blurred, hidden token surface over the relative parent', () => {
+    renderRegion()
+
+    const overlay = document.querySelector('[aria-hidden="true"].absolute')
+    expect(overlay).not.toBeNull()
+    expect(overlay).toHaveClass('absolute', 'inset-0', 'z-10', 'backdrop-blur-[2px]')
+    expect(overlay).toHaveAttribute('aria-hidden', 'true')
+    expect(overlay?.parentElement).toHaveClass('relative')
+    expect(within(overlay as HTMLElement).getByText(label)).toHaveClass(
       'text-sm',
       'font-semibold',
       'text-[var(--sea-ink)]',
     )
   })
 
-  it('lays an absolute, blurred token surface over the relative parent', () => {
-    renderRegion()
-
-    const status = screen.getByRole('status')
-    expect(status).toHaveClass('absolute', 'inset-0', 'z-10', 'backdrop-blur-[2px]')
-    expect(status.parentElement).toHaveClass('relative')
-  })
-
   it('shows a spinning ring alongside the label', () => {
     renderRegion()
 
-    const status = screen.getByRole('status')
-    expect(status.querySelector('.animate-spin')).not.toBeNull()
+    const overlay = document.querySelector('[aria-hidden="true"].absolute')
+    expect(overlay?.querySelector('.animate-spin')).not.toBeNull()
   })
 
   it('sits outside the inert content subtree containing the controls', () => {
@@ -53,6 +66,8 @@ describe('BusyOverlay', () => {
 
     const status = screen.getByRole('status')
     expect(inertSubtree).not.toContainElement(status)
-    expect(status.parentElement).not.toBe(inertSubtree)
+    const overlay = document.querySelector('[aria-hidden="true"].absolute')
+    expect(inertSubtree).not.toContainElement(overlay as Element)
+    expect(overlay?.parentElement).not.toBe(inertSubtree)
   })
 })

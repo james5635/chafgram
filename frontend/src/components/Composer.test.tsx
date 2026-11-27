@@ -166,7 +166,9 @@ describe('Composer', () => {
     const region = postButton.closest('[aria-busy="true"]')
     expect(region).not.toBeNull()
     expect(region).toHaveClass('relative')
-    expect(status.parentElement).toBe(region)
+    expect(region).not.toContainElement(status)
+    expect(status.closest('[aria-busy]')).toBeNull()
+    expect(status.closest('[inert]')).toBeNull()
 
     const inertContent = postButton.closest('[inert]')
     expect(inertContent).not.toBeNull()
@@ -179,7 +181,7 @@ describe('Composer', () => {
       gate.resolve(true)
     })
 
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
     expect(region).toHaveAttribute('aria-busy', 'false')
   })
 })

@@ -159,13 +159,16 @@ pnpm run preview           # serve the production build
 - Styling is Tailwind v4 (CSS-first, via `@tailwindcss/vite`) plus design tokens in
   `src/styles.css`. Use the tokens (`--lagoon`, `--sea-ink`, …), not raw hex; see
   `design.md`.
-- **Busy-state components:** `src/components/BusyOverlay.tsx` is the regional overlay for
-  explicit user mutations — a `relative` root carries `aria-busy`, its content subtree gets
-  `inert` while busy, and the overlay (`absolute inset-0`, `role="status"`,
-  `aria-live="polite"`, token surface + spinner + action label) sits outside the inert
-  subtree so its status is announced. `src/hooks/useBusy.ts` supplies the busy flag and a
-  re-entry-guarded `run`. Use these for actions (login, composers, post-card actions,
-  messages send, notifications mark-all-read), not content loading — that keeps skeletons.
+- **Busy-state components:** `src/components/BusyOverlay.tsx` is the presentational regional
+  overlay for explicit user mutations — a `relative` root carries `aria-busy`, its content
+  subtree gets `inert` while busy, and the `aria-hidden` overlay (`absolute inset-0`, token
+  surface + spinner + action label) sits outside the inert subtree. The announcement comes
+  from a permanently mounted `sr-only` `role="status" aria-live="polite"` sibling of the
+  `aria-busy` root (fragment, no DOM wrapper), never from a descendant of that root —
+  otherwise `aria-busy` can defer the announcement until the overlay is gone. `src/hooks/useBusy.ts`
+  supplies the busy flag and a re-entry-guarded `run`. Use these for actions (login, composers,
+  post-card actions, messages send, notifications mark-all-read), not content loading — that
+  keeps skeletons.
 - Light/dark/auto theming: inline `THEME_INIT_SCRIPT` in `src/routes/__root.tsx` sets
   `data-theme` on `<html>` before paint; mode persists in `localStorage["theme"]`. Keep
   them consistent if you touch either.
