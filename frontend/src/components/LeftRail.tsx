@@ -1,9 +1,9 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import { useQuery } from '@apollo/client/react'
-import { Home, Compass, MessageSquare, Bell, User, Plus, ChevronRight, MoreHorizontal } from 'lucide-react'
+import { Home, Compass, MessageSquare, Bell, User, Plus } from 'lucide-react'
 import { MeDocument } from '@/generated/graphql'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import AccountMenu from './AccountMenu'
 import { useHydrated } from '../hooks/useHydrated'
 
 const navLinks = [
@@ -12,7 +12,6 @@ const navLinks = [
   { to: '/messages', label: 'Messages', icon: MessageSquare, badge: 3 },
   { to: '/notifications', label: 'Notifications', icon: Bell, badge: 5 },
   { to: '/profile/$username', label: 'Profile', icon: User },
-  { to: '/settings', label: 'More', icon: MoreHorizontal },
 ]
 
 export default function LeftRail() {
@@ -66,23 +65,7 @@ export default function LeftRail() {
             Create Post
           </Link>
         </Button>
-        <Link
-          to="/profile/$username"
-          params={{ username: username || 'me' }}
-          className="flex items-center gap-2 rounded-xl px-2 py-2 no-underline transition hover:bg-[var(--brand-light)]/50"
-          aria-label="Your profile"
-        >
-          <Avatar className="h-8 w-8" aria-label={displayName}>
-            <AvatarFallback name={displayName} />
-          </Avatar>
-          <span className="flex-1 min-w-0 leading-none">
-            <span className="block text-sm font-semibold text-[var(--sea-ink)]">{displayName}</span>
-            <span className="block text-[0.7rem] text-[var(--sea-ink-soft)]">
-              {username ? `@${username}` : '…'}
-            </span>
-          </span>
-          <ChevronRight className="h-4 w-4 text-[var(--sea-ink-soft)]" aria-hidden="true" />
-        </Link>
+        <AccountMenu displayName={displayName} username={username} />
       </div>
     </aside>
   )

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MockedProvider } from '@apollo/client/testing/react'
 import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import type { ReactNode } from 'react'
@@ -69,9 +69,21 @@ describe('LeftRail', () => {
     renderShell(<LeftRail />)
 
     expect(screen.getByRole('button', { name: 'Create post' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Your profile' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Account menu' })).toBeInTheDocument()
     expect(await screen.findByText('Rojame')).toBeInTheDocument()
     expect(screen.getByText('@rojame')).toBeInTheDocument()
+  })
+
+  it('opens the account menu instead of showing a More or profile link', () => {
+    renderShell(<LeftRail />)
+
+    expect(screen.queryByRole('link', { name: 'More' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Your profile' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Profile' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }))
+    expect(screen.getByRole('link', { name: /Settings/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Sign out/ })).toBeInTheDocument()
   })
 
   it('shows the signed-in member instead of a hardcoded name', async () => {
