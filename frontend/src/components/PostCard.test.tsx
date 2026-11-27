@@ -348,6 +348,80 @@ describe('PostCard', () => {
     )
   })
 
+  it('renders every image in a two-column grid', () => {
+    const media = [
+      { id: 'a', url: '/api/media/a', alt: 'First photo', kind: 'IMAGE' as const },
+      { id: 'b', url: '/api/media/b', alt: 'Second photo', kind: 'IMAGE' as const },
+      { id: 'c', url: '/api/media/c', alt: 'Third photo', kind: 'IMAGE' as const },
+    ]
+    renderPostCard(<PostCard post={{ ...post, id: 'grid-3', media }} />)
+
+    const buttons = media.map((item) =>
+      screen.getByRole('button', { name: `Preview ${item.alt}` }),
+    )
+    expect(buttons).toHaveLength(3)
+    buttons.forEach((button, index) => {
+      expect(within(button).getByRole('img', { name: media[index].alt })).toHaveAttribute(
+        'src',
+        media[index].url,
+      )
+    })
+    expect(buttons[0].parentElement?.parentElement).toHaveClass('grid', 'grid-cols-2')
+  })
+
+  it('opens the lightbox at the clicked image', () => {
+    const media = [
+      { id: 'a', url: '/api/media/a', alt: 'First photo', kind: 'IMAGE' as const },
+      { id: 'b', url: '/api/media/b', alt: 'Second photo', kind: 'IMAGE' as const },
+      { id: 'c', url: '/api/media/c', alt: 'Third photo', kind: 'IMAGE' as const },
+    ]
+    renderPostCard(<PostCard post={{ ...post, id: 'grid-click', media }} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Second photo' }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('2 / 3')).toBeInTheDocument()
+    expect(within(dialog).getByRole('img', { name: 'Second photo' })).toBeInTheDocument()
+  })
+
+  it('renders all ten images without a cap', () => {
+    const media = Array.from({ length: 10 }, (_, index) => ({
+      id: `image-${index}`,
+      url: `/api/media/image-${index}`,
+      alt: `Photo ${index + 1}`,
+      kind: 'IMAGE' as const,
+    }))
+    renderPostCard(<PostCard post={{ ...post, id: 'grid-10', media }} />)
+
+    expect(screen.getAllByRole('button', { name: /^Preview Photo / })).toHaveLength(10)
+  })
+
+  it('refreshes the URL for a later thumbnail', async () => {
+    refreshMediaUrl.mockReset()
+    refreshMediaUrl.mockResolvedValue({
+      url: '/api/media/c?exp=fresh&sig=new',
+      expiresAt: '2026-11-27T12:00:00Z',
+    })
+    const media = [
+      { id: 'a', url: '/api/media/a', alt: 'First photo', kind: 'IMAGE' as const },
+      { id: 'b', url: '/api/media/b', alt: 'Second photo', kind: 'IMAGE' as const },
+      { id: 'c', url: '/api/media/c?exp=old&sig=old', alt: 'Third photo', kind: 'IMAGE' as const },
+    ]
+    renderPostCard(<PostCard post={{ ...post, id: 'grid-refresh', media }} />)
+
+    fireEvent.error(screen.getByAltText('Third photo'))
+
+    await waitFor(() =>
+      expect(refreshMediaUrl).toHaveBeenCalledWith({ data: { mediaId: 'c' } }),
+    )
+    await waitFor(() =>
+      expect(screen.getByAltText('Third photo')).toHaveAttribute(
+        'src',
+        '/api/media/c?exp=fresh&sig=new',
+      ),
+    )
+  })
+
   it('renders a post with no media', () => {
     renderPostCard(
       <PostCard
