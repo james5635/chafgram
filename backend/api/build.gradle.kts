@@ -55,6 +55,8 @@ dependencies {
 	// JwtEncoder/JwtDecoder for access-token issuance (HS256). The resource-server
 	// starter added later brings this in too; declare it here so config/tests compile.
 	implementation("org.springframework.security:spring-security-oauth2-jose")
+	// Bearer-token resource-server filter chain (replaces session/CSRF auth).
+	implementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server")
 	compileOnly("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	runtimeOnly("com.mysql:mysql-connector-j")
@@ -68,6 +70,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-mail-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-restclient-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-security-test")
+	testImplementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webflux-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

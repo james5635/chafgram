@@ -47,11 +47,14 @@ class GraphqlApiTest extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void graphqlRequiresCsrfToken() throws Exception {
+	void graphqlDoesNotRequireCsrfToken() throws Exception {
+		// Stateless chain: the request reaches GraphQL, whose resolver reports
+		// the missing authentication as HTTP 200 + errors[].
 		mockMvc.perform(post("/graphql")
 						.contentType("application/json")
 						.content("{\"query\":\"{ me { username } }\"}"))
-				.andExpect(status().isForbidden());
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.errors[0]").exists());
 	}
 
 	@Test

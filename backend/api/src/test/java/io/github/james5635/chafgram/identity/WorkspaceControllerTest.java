@@ -60,11 +60,13 @@ class WorkspaceControllerTest extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void workspaceQueryRequiresCsrfToken() throws Exception {
+	void workspaceQueryDoesNotRequireCsrfToken() throws Exception {
+		// The security chain is stateless: no XSRF-TOKEN is issued or expected.
 		mockMvc.perform(post("/graphql")
 						.contentType("application/json")
 						.content("{\"query\":\"{ workspace { name } }\"}"))
-				.andExpect(status().isForbidden());
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.workspace.name", is("Chafgram")));
 	}
 
 	@Test

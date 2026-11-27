@@ -7,31 +7,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Locks the double-submit CSRF contract that BFF clients rely on.
- *
- * <p>The backend issues the {@code XSRF-TOKEN} cookie (readable by JavaScript)
- * and expects the very same value in the {@code X-XSRF-TOKEN} header on every
- * mutating request. The token must be accepted verbatim — Spring Security's
- * default XOR-masked request handler only accepts a server-side masked value,
- * which a BFF can never obtain, so it is explicitly replaced with the plain
- * handler in {@link SecurityConfiguration}.</p>
+ * Locks the stateless contract that replaced double-submit CSRF: the backend
+ * no longer issues {@code XSRF-TOKEN}, and mutating requests are authorized
+ * solely by the bearer token (GraphQL keeps its HTTP 200 + {@code errors[]}
+ * failure shape).
  */
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 class CsrfDoubleSubmitIntegrationTest extends AbstractIntegrationTest {
-
-	private static final String TOKEN = "0f6b0f4a-3a52-4d2f-9a1c-6c1f0b5f2f11";
-
-	private static final String OTHER_TOKEN = "9d3d1c77-2b0e-4f2a-8c55-1f0a7d9e4b32";
 
 	private static final String QUERY = "{\"query\":\"{ me { username } }\"}";
 
@@ -48,22 +39,22 @@ class CsrfDoubleSubmitIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void mutatingRequestWithoutCsrfTokenIsForbiddenAndIssuesTheCookie() throws Exception {
+	void mutatingRequestWithoutCsrfTokenReachesGraphqlAndIssuesNoCsrfCookie() throws Exception {
 		mockMvc.perform(post("/graphql")
 						.contentType("application/json")
 						.content(QUERY))
-				.andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
-				.andExpect(status().isForbidden())
-				.andExpect(cookie().exists("XSRF-TOKEN"));
+				.andExpect(status().isOk())
+				.andExpect(cookie().doesNotExist("XSRF-TOKEN"))
+				.andExpect(jsonPath("$.errors[0].extensions.classification", is("UNAUTHORIZED")));
 	}
 
 	@Test
-	void mutatingRequestWithMatchingCookieAndHeaderPassesCsrf() throws Exception {
-		// CSRF passed → the request reaches GraphQL, which answers an
-		// authorization failure as HTTP 200 + errors[] (not a 403).
+	void staleCsrfCookieAndHeaderAreIgnored() throws Exception {
+		// CSRF is disabled, so stale/mismatched tokens are irrelevant; the
+		// request still reaches GraphQL and fails resolver authorization only.
 		mockMvc.perform(post("/graphql")
-						.cookie(new Cookie("XSRF-TOKEN", TOKEN))
-						.header("X-XSRF-TOKEN", TOKEN)
+						.cookie(new Cookie("XSRF-TOKEN", "stale"))
+						.header("X-XSRF-TOKEN", "different")
 						.contentType("application/json")
 						.content(QUERY))
 				.andExpect(status().isOk())
@@ -71,24 +62,22 @@ class CsrfDoubleSubmitIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	@Test
-	void mutatingRequestWithMismatchedTokenIsForbidden() throws Exception {
+	void publicEndpointIssuesNoSessionOrCsrfCookie() throws Exception {
 		mockMvc.perform(post("/graphql")
-						.cookie(new Cookie("XSRF-TOKEN", TOKEN))
-						.header("X-XSRF-TOKEN", OTHER_TOKEN)
 						.contentType("application/json")
-						.content(QUERY))
-				.andExpect(status().isForbidden());
+						.content("{\"query\":\"{ workspace { name } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(header().doesNotExist("Set-Cookie"));
 	}
 
 	@Test
 	@WithMockUser(username = "alice", roles = "ADMIN")
-	void authenticatedMutationWithDoubleSubmitTokenSucceeds() throws Exception {
+	void authenticatedMutationSucceedsWithoutCsrfTokens() throws Exception {
 		mockMvc.perform(post("/graphql")
-						.cookie(new Cookie("XSRF-TOKEN", TOKEN))
-						.header("X-XSRF-TOKEN", TOKEN)
 						.contentType("application/json")
-						.content("{\"query\":\"mutation { createPost(type: NOTE, body: \\\"csrf ok\\\") { id } }\"}"))
+						.content("{\"query\":\"mutation { createPost(type: NOTE, body: \\\"stateless ok\\\") { id } }\"}"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.createPost.id").exists());
+				.andExpect(jsonPath("$.data.createPost.id").exists())
+				.andExpect(cookie().doesNotExist("XSRF-TOKEN"));
 	}
 }
