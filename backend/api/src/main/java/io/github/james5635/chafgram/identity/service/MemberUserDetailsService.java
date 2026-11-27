@@ -13,8 +13,8 @@ import io.github.james5635.chafgram.identity.repository.UserRepository;
 import io.github.james5635.chafgram.identity.UserStatus;
 
 /**
- * Loads members for Spring Security (form login and as the principal source
- * for the WebAuthn ceremonies).
+ * Loads members for Spring Security's HTTP Basic actuator chain and password
+ * credential checks.
  *
  * <p>Deactivated accounts cannot authenticate at all (FR-1.4). Suspended
  * accounts may sign in — enforcement that suspended members cannot perform
@@ -43,12 +43,11 @@ public class MemberUserDetailsService implements UserDetailsService {
 		List<SimpleGrantedAuthority> authorities =
 				List.of(new SimpleGrantedAuthority("ROLE_" + member.getRole().name()));
 
-		// Accounts without a password are passkey-only; form login stays possible
-		// only for accounts that set one (Spring rejects null passwords, so use a
-		// deliberately unmatchable marker).
+		// Spring rejects null passwords, so accounts without a password get a
+		// deliberately unmatchable marker instead.
 		String password = member.getPasswordHash() != null
 				? member.getPasswordHash()
-				: "{invalid}passkey-only-account";
+				: "{invalid}no-password-account";
 
 		return new User(member.getUsername(), password, true, true, true, true, authorities);
 	}

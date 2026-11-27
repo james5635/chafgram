@@ -1,13 +1,11 @@
 package io.github.james5635.chafgram.identity.controller;
 
-import io.github.james5635.chafgram.common.ApiException;
 import io.github.james5635.chafgram.identity.dto.CreateInviteDto;
 import io.github.james5635.chafgram.identity.dto.MemberDetailDto;
 import io.github.james5635.chafgram.identity.dto.MemberResponse;
 import io.github.james5635.chafgram.identity.dto.UpdateWorkspaceRequest;
 import io.github.james5635.chafgram.identity.dto.WorkspaceDto;
 import io.github.james5635.chafgram.identity.dto.WorkspaceResponse;
-import io.github.james5635.chafgram.identity.dto.PasskeyDto;
 import io.github.james5635.chafgram.social.dto.MemberDto;
 import io.github.james5635.chafgram.social.utils.CurrentMember;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -20,7 +18,6 @@ import io.github.james5635.chafgram.identity.service.AccountFlowService;
 import io.github.james5635.chafgram.identity.service.InviteService;
 import io.github.james5635.chafgram.identity.service.MemberAccess;
 import io.github.james5635.chafgram.identity.service.MemberService;
-import io.github.james5635.chafgram.identity.service.PasskeyService;
 import io.github.james5635.chafgram.identity.service.WorkspaceService;
 import io.github.james5635.chafgram.identity.utils.Validation;
 import io.github.james5635.chafgram.identity.Role;
@@ -35,18 +32,16 @@ public class IdentityMutationResolver {
 	private final MemberService memberService;
 	private final WorkspaceService workspaceService;
 	private final InviteService invites;
-	private final PasskeyService passkeyService;
 	private final AccountFlowService accountFlows;
 	private final MemberAccess access;
 	private final CurrentMember current;
 
 	public IdentityMutationResolver(MemberService memberService, WorkspaceService workspaceService,
-			InviteService invites, PasskeyService passkeyService, AccountFlowService accountFlows,
+			InviteService invites, AccountFlowService accountFlows,
 			MemberAccess access, CurrentMember current) {
 		this.memberService = memberService;
 		this.workspaceService = workspaceService;
 		this.invites = invites;
-		this.passkeyService = passkeyService;
 		this.accountFlows = accountFlows;
 		this.access = access;
 		this.current = current;
@@ -68,21 +63,6 @@ public class IdentityMutationResolver {
 			@Argument Long avatarMediaId) {
 		String username = current.require().getUsername();
 		return memberService.updateProfile(username, displayName, bio, avatarMediaId);
-	}
-
-	@MutationMapping
-	public PasskeyDto renamePasskey(@Argument String credentialId, @Argument String label) {
-		// Writeable-member check (FR-1.4, BR-5.2): suspended/deactivated
-		// members cannot rename their passkeys either.
-		User actor = access.requireWriteable(current.require().getUsername());
-		return passkeyService.rename(actor, credentialId, label);
-	}
-
-	@MutationMapping
-	public Boolean revokePasskey(@Argument String credentialId) {
-		User actor = access.requireWriteable(current.require().getUsername());
-		passkeyService.revoke(actor, credentialId);
-		return true;
 	}
 
 	@MutationMapping

@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
 })
 
-function Settings() {
+export function Settings() {
   return (
     <main className="page-wrap px-4 pb-8 pt-14 max-w-2xl">
       <header className="mb-8 flex items-center gap-3">
@@ -23,28 +22,6 @@ function Settings() {
           <p className="island-kicker mb-4">Appearance</p>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-          </div>
-        </section>
-
-        <section className="island-shell rise-in rounded-xl p-6 sm:p-8">
-          <p className="island-kicker mb-4">Passkeys</p>
-          <p className="mb-4 max-w-md text-sm text-[var(--sea-ink-soft)]">
-            Sign in with passkeys. You can register several and name each one.
-          </p>
-          <div className="space-y-3">
-            <Button variant="outline" className="w-full justify-between rounded-full">
-              <span>Add a passkey</span>
-              <span className="text-[var(--sea-ink-soft)]">+</span>
-            </Button>
-            <div className="flex items-center justify-between px-4 py-3">
-              <div>
-                <p className="m-0 text-sm text-[var(--sea-ink)]">Work laptop</p>
-                <p className="m-0 text-[0.75rem] text-[var(--sea-ink-soft)]">Registered 2 days ago</p>
-              </div>
-              <Button variant="ghost" size="icon" aria-label="Remove passkey">
-                <Trash2 className="h-4 w-4 text-[var(--sea-ink-soft)] hover:text-[#9f3030]" aria-hidden="true" />
-              </Button>
-            </div>
           </div>
         </section>
 

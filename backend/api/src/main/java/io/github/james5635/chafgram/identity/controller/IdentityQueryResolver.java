@@ -3,7 +3,6 @@ package io.github.james5635.chafgram.identity.controller;
 import io.github.james5635.chafgram.identity.dto.InviteDto;
 import io.github.james5635.chafgram.identity.dto.MemberDetailDto;
 import io.github.james5635.chafgram.identity.dto.MemberResponse;
-import io.github.james5635.chafgram.identity.dto.PasskeyDto;
 import io.github.james5635.chafgram.social.utils.CurrentMember;
 import io.github.james5635.chafgram.social.dto.MemberDto;
 import io.github.james5635.chafgram.social.dto.Views;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Controller;
 import java.util.List;
 import io.github.james5635.chafgram.identity.service.InviteService;
 import io.github.james5635.chafgram.identity.service.MemberService;
-import io.github.james5635.chafgram.identity.service.PasskeyService;
 import io.github.james5635.chafgram.identity.User;
 
 @Controller
@@ -24,15 +22,13 @@ public class IdentityQueryResolver {
 
 	private final MemberService memberService;
 	private final InviteService inviteService;
-	private final PasskeyService passkeyService;
 	private final CurrentMember current;
 	private final Views views;
 
 	public IdentityQueryResolver(MemberService memberService, InviteService inviteService,
-			PasskeyService passkeyService, CurrentMember current, Views views) {
+			CurrentMember current, Views views) {
 		this.memberService = memberService;
 		this.inviteService = inviteService;
-		this.passkeyService = passkeyService;
 		this.current = current;
 		this.views = views;
 	}
@@ -49,12 +45,6 @@ public class IdentityQueryResolver {
 		return memberService.listMembers(query, limit).stream()
 				.map(IdentityQueryResolver::toDetail)
 				.toList();
-	}
-
-	@QueryMapping
-	public List<PasskeyDto> myPasskeys() {
-		User actor = current.require();
-		return passkeyService.list(actor);
 	}
 
 	@QueryMapping

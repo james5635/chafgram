@@ -50,7 +50,7 @@ public final class Validation {
 		return normalized;
 	}
 
-	/** Returns the normalized password, or null when absent (passkey-only account). */
+	/** Returns the normalized password, or null when none was supplied. */
 	public static String normalizePassword(String password) {
 		if (password == null || password.isBlank()) {
 			return null;

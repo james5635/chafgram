@@ -12,7 +12,9 @@ import io.github.james5635.chafgram.social.dto.MemberDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +29,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import io.github.james5635.chafgram.identity.repository.InviteRepository;
@@ -378,6 +381,31 @@ class IdentityFlowIntegrationTest extends AbstractIntegrationTest {
 		assertThat(settings.findById(WorkspaceSettings.SINGLETON_ID).orElseThrow().getLogoMediaId())
 				.isEqualTo(logo.getId());
 		assertThat(workspaceService.get().logoMediaId()).isEqualTo(logo.getId());
+	}
+
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void webAuthnEndpointsNoLongerExist() throws Exception {
+		// An authenticated principal gets past the chain, so a removed endpoint
+		// is a plain 404 — never a Spring Security filter response or a redirect.
+		for (String path : List.of("/webauthn/register/options", "/login/webauthn")) {
+			mockMvc.perform(post(path)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("{}"))
+					.andExpect(status().isNotFound())
+					.andExpect(header().doesNotExist(HttpHeaders.LOCATION));
+		}
+	}
+
+	@Test
+	void webAuthnTablesAreDropped() {
+		for (String table : List.of("user_entities", "user_credentials")) {
+			Integer count = jdbc.queryForObject(
+					"SELECT COUNT(*) FROM information_schema.tables "
+							+ "WHERE table_schema = DATABASE() AND table_name = ?",
+					Integer.class, table);
+			assertThat(count).as("WebAuthn table %s must not exist", table).isZero();
+		}
 	}
 
 	private MediaAsset imageAsset(User owner, MediaStatus status) {

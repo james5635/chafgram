@@ -25,8 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
         @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*\\.controller\\..*"),
         @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*\\.ChafgramApplication"),
         @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*\\.config\\.SecurityConfiguration"),
-        @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*\\.common\\.utils\\.SessionAuthenticator"),
-        @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*\\.identity\\.service\\.PasskeyService")
+        @ComponentScan.Filter(type = FilterType.REGEX, pattern = ".*\\.common\\.utils\\.SessionAuthenticator")
     }
 )
 @EntityScan(basePackages = "io.github.james5635.chafgram")

@@ -2,15 +2,13 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { loginRequest } from '../lib/session-server'
 
-/** Sign-in screen: password form wired to the backend session ceremony. */
+/** Sign-in screen: password form wired to the token auth endpoint via the BFF. */
 export default function LoginScreen() {
   const navigate = useNavigate()
-  const [mode, setMode] = useState<'passkey' | 'password'>('password')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
 
   async function signIn(event: React.FormEvent) {
     event.preventDefault()
@@ -46,89 +44,44 @@ export default function LoginScreen() {
           </h1>
         </div>
 
-        <div className="space-y-3">
+        <form className="mt-5 space-y-3" onSubmit={signIn}>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="login-username" className="text-sm font-semibold text-[var(--sea-ink)]">Email or username</label>
+            <input
+              id="login-username"
+              type="text"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@company.com"
+              autoComplete="username"
+              className="demo-input"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="login-password" className="text-sm font-semibold text-[var(--sea-ink)]">Password</label>
+            <input
+              id="login-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              className="demo-input"
+            />
+          </div>
+          {error && (
+            <p className="m-0 text-sm text-[#9f3030]" role="alert">
+              {error}
+            </p>
+          )}
           <button
-            type="button"
-            onClick={() => {
-              setMode('passkey')
-              setNotice('Passkey sign-in is not available on this server yet — use your password.')
-              setError(null)
-            }}
-            className={`w-full rounded-full border px-6 py-3 text-sm font-semibold transition ${
-              mode === 'passkey'
-                ? 'border-[var(--chip-line)] bg-[color-mix(in_oklab,var(--lagoon)22%,var(--surface-strong))] text-[var(--sea-ink)]'
-                : 'border-transparent bg-transparent text-[var(--sea-ink-soft)] hover:var(--link-bg-hover)'
-            }`}
+            type="submit"
+            disabled={!email || !password || pending}
+            className="w-full rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--lagoon)22%,var(--surface-strong))] px-6 py-3 text-sm font-semibold text-[var(--sea-ink)] transition disabled:opacity-55 disabled:transform-none hover:!bg-[color-mix(in_oklab,var(--lagoon)30%,var(--surface-strong))]"
           >
-            <span className="mr-2">🔑</span>
-            Sign in with passkey
+            {pending ? 'Signing in…' : 'Continue'}
           </button>
-
-          <div className="mx-2 mt-1 mb-1 h-[1px] bg-[var(--line)]" />
-
-          <button
-            type="button"
-            onClick={() => {
-              setMode('password')
-              setNotice(null)
-              setError(null)
-            }}
-            className={`w-full rounded-full border px-6 py-3 text-sm font-semibold transition ${
-              mode === 'password'
-                ? 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]'
-                : 'border-transparent bg-transparent text-[var(--sea-ink-soft)] hover:var(--link-bg-hover)'
-            }`}
-          >
-            Sign in with password
-          </button>
-        </div>
-
-        {notice && (
-          <p className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--brand-light)]/60 px-4 py-3 text-sm text-[var(--sea-ink-soft)]" role="status">
-            {notice}
-          </p>
-        )}
-
-        {mode === 'password' && (
-          <form className="mt-5 space-y-3" onSubmit={signIn}>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="login-username" className="text-sm font-semibold text-[var(--sea-ink)]">Email or username</label>
-              <input
-                id="login-username"
-                type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                autoComplete="username"
-                className="demo-input"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="login-password" className="text-sm font-semibold text-[var(--sea-ink)]">Password</label>
-              <input
-                id="login-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                className="demo-input"
-              />
-            </div>
-            {error && (
-              <p className="m-0 text-sm text-[#9f3030]" role="alert">
-                {error}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={!email || !password || pending}
-              className="w-full rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--lagoon)22%,var(--surface-strong))] px-6 py-3 text-sm font-semibold text-[var(--sea-ink)] transition disabled:opacity-55 disabled:transform-none hover:!bg-[color-mix(in_oklab,var(--lagoon)30%,var(--surface-strong))]"
-            >
-              {pending ? 'Signing in…' : 'Continue'}
-            </button>
-          </form>
-        )}
+        </form>
 
         <div className="mt-6 border-t border-[var(--line)] pt-6">
           <p className="mb-3 text-sm text-[var(--sea-ink-soft)]">

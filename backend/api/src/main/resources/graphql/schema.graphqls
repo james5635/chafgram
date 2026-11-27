@@ -26,7 +26,6 @@ type Query {
   myNotifications(first: Int = 30): [Notification!]!
   unreadNotifications: Int!
   blockedMembers: [Member!]!
-  myPasskeys: [Passkey!]!
 
   # workspace & invites (see WorkspaceDto.graphqls, InviteDto.graphqls)
   workspace: Workspace!
@@ -99,10 +98,6 @@ type Mutation {
   # moderation ----------------------------------------------------------------
   fileReport(targetType: String!, targetId: ID!, reason: String!, details: String): Report!
   resolveReport(id: ID!, resolution: String!, note: String): Report!
-
-  # passkeys ------------------------------------------------------------------
-  renamePasskey(credentialId: ID!, label: String!): Passkey!
-  revokePasskey(credentialId: ID!): Boolean!
 
   # media (admin moderation, BR-5.3) -------------------------------------------
   deleteMedia(id: ID!): Boolean!

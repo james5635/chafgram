@@ -79,13 +79,4 @@ describe('Login screen', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Those credentials did not match an account.')
     expect(navigate).not.toHaveBeenCalled()
   })
-
-  it('explains that passkey sign-in is not available yet', async () => {
-    const user = userEvent.setup()
-    renderScreen(<LoginScreen />)
-
-    await user.click(screen.getByRole('button', { name: /Sign in with passkey/ }))
-
-    expect(await screen.findByRole('status')).toHaveTextContent('not available on this server yet')
-  })
 })
