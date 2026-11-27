@@ -248,8 +248,8 @@ export default function PostCard({ post }: PostCardProps) {
 
       {post.media && post.media.length > 0 && (
         <div className="px-4 sm:px-5 pb-5 sm:pb-0">
-          <div className="aspect-video rounded-lg overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]">
-            {post.media[0].kind === 'VIDEO' ? (
+          {post.media[0].kind === 'VIDEO' ? (
+            <div className="aspect-video rounded-lg overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]">
               <video
                 src={refreshedUrls[0] ?? post.media[0].url}
                 aria-label={post.media[0].alt}
@@ -259,7 +259,9 @@ export default function PostCard({ post }: PostCardProps) {
                 playsInline
                 onError={() => void handleMediaError(0)}
               />
-            ) : (
+            </div>
+          ) : post.media.length === 1 ? (
+            <div className="aspect-video rounded-lg overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]">
               <button
                 type="button"
                 aria-label={`Preview ${post.media[0].alt}`}
@@ -275,8 +277,34 @@ export default function PostCard({ post }: PostCardProps) {
                   onError={() => void handleMediaError(0)}
                 />
               </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-1 overflow-hidden rounded-lg border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]">
+              {post.media.map((media, index) => (
+                <div key={media.id ?? index} className="aspect-square overflow-hidden">
+                  <button
+                    type="button"
+                    aria-label={`Preview ${media.alt}`}
+                    onClick={() =>
+                      setLightboxIndex(
+                        lightboxEntries.findIndex(({ index: source }) => source === index),
+                      )
+                    }
+                    className="block h-full w-full"
+                  >
+                    <img
+                      src={refreshedUrls[index] ?? media.url}
+                      alt={media.alt}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      onError={() => void handleMediaError(index)}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
