@@ -1,5 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { setAccessToken } from '../lib/auth-client'
 import { loginRequest } from '../lib/session-server'
 
 /** Sign-in screen: password form wired to the token auth endpoint via the BFF. */
@@ -19,6 +20,9 @@ export default function LoginScreen() {
     try {
       const result = await loginRequest({ data: { username: email, password } })
       if (result.ok) {
+        // The refresh token never reaches JS; only the access token is held in
+        // memory for the BFF server-function calls after navigation.
+        if (result.accessToken) setAccessToken(result.accessToken)
         await navigate({ to: '/' })
       } else {
         setError(result.message ?? 'Could not sign you in.')

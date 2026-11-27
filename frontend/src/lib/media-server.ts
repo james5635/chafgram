@@ -34,6 +34,15 @@ export interface SignedMediaUrl {
 }
 
 /**
+ * The browser→BFF fetch attaches the in-memory bearer to every server-function
+ * call (see `auth-client.ts`). Lifting this into a helper keeps the media
+ * re-sign path's auth transport explicit and independently testable.
+ */
+export function mediaAuthHeaders(authorization: string | null | undefined): Record<string, string> {
+  return authorization ? { Authorization: authorization } : {}
+}
+
+/**
  * Re-sign one media asset for the current viewer after a signed URL expires.
  * The backend re-checks media access before issuing the URL and never rotates
  * the refresh cookie; the browser only learns the short-lived URL.
@@ -45,13 +54,14 @@ export const refreshMediaUrl = createServerFn({ method: 'GET' })
       throw new Error('Invalid media id')
     }
 
-    // The browser's access token is in memory; the BFF attaches it to the
-    // backend call so /signed-url can authenticate the viewer.
+    // The browser's access token is in memory; the global BFF fetch attaches
+    // it to this server-function call, so /signed-url can authenticate the
+    // viewer even after the signed media URL has expired.
     const authorization = getRequestHeader('Authorization')
     const response = await callBackend({
       path: `/api/v1/media/${data.mediaId}/signed-url`,
       method: 'GET',
-      headers: authorization ? { Authorization: authorization } : {},
+      headers: mediaAuthHeaders(authorization),
     })
     if (!response.ok) {
       throw new Error(`Media URL refresh failed: ${response.status}`)

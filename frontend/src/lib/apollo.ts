@@ -1,14 +1,15 @@
 import { ApolloClient, ApolloLink, InMemoryCache, Observable } from '@apollo/client'
 import { CombinedGraphQLErrors } from '@apollo/client/errors'
 import { print } from 'graphql'
+import { signalReLogin } from './auth-client'
 import { graphqlRequest } from './graphql-server'
 
 /**
  * Apollo link that sends every operation through the TanStack Start BFF server
  * function instead of talking to the backend directly from the browser.
  *
- * The BFF owns the session cookie and the CSRF token, so the browser never
- * needs to know the backend URL or how authentication is wired.
+ * The global BFF fetch attaches the in-memory bearer; the BFF refreshes it
+ * once on a backend 401. A remaining 401 means re-authentication is required.
  */
 export const bffLink = new ApolloLink((operation) =>
   new Observable((observer) => {
@@ -32,7 +33,10 @@ export const bffLink = new ApolloLink((operation) =>
         observer.next({ data: result.data ?? {} })
         observer.complete()
       })
-      .catch((error: unknown) => observer.error(error))
+      .catch((error: unknown) => {
+        if (error instanceof Error && /\b401\b/.test(error.message)) signalReLogin()
+        observer.error(error)
+      })
   }),
 )
 

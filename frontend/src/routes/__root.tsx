@@ -6,6 +6,7 @@ import Footer from '../components/Footer'
 import Header from '../components/Header'
 
 import appCss from '../styles.css?url'
+import { useAuthBootstrap } from '../hooks/useAuthBootstrap'
 import { isPublicPath } from '../lib/public-paths'
 import { apolloClient } from '../lib/apollo'
 
@@ -38,6 +39,10 @@ export const Route = createRootRoute({
 function RootDocument({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const isPublic = isPublicPath(location.pathname)
+  // SSR always renders the public shell: no authenticated data is fetched on
+  // the server. Route content is revealed only after the client-side silent
+  // refresh has settled, so the first GraphQL operation already has a bearer.
+  const booted = useAuthBootstrap(isPublic)
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -48,7 +53,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
         <ApolloProvider client={apolloClient}>
           {!isPublic && <Header />}
-          {children}
+          {booted ? children : null}
           {!isPublic && <Footer />}
         </ApolloProvider>
         <TanStackDevtools

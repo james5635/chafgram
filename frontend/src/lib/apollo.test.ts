@@ -2,8 +2,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { gql } from '@apollo/client'
 
 const { graphqlRequest } = vi.hoisted(() => ({ graphqlRequest: vi.fn() }))
+const { signalReLogin } = vi.hoisted(() => ({ signalReLogin: vi.fn() }))
 
 vi.mock('./graphql-server', () => ({ graphqlRequest }))
+vi.mock('./auth-client', () => ({ signalReLogin }))
 
 import { createApolloClient } from './apollo'
 
@@ -18,6 +20,7 @@ const QUERY = gql`
 
 beforeEach(() => {
   graphqlRequest.mockReset()
+  signalReLogin.mockReset()
 })
 
 describe('createApolloClient', () => {
@@ -53,5 +56,15 @@ describe('createApolloClient', () => {
     const client = createApolloClient()
 
     await expect(client.query({ query: QUERY })).rejects.toThrow(/Backend GraphQL request failed/)
+    expect(signalReLogin).not.toHaveBeenCalled()
+  })
+
+  it('signals re-login when the BFF still returns 401 after the refresh retry', async () => {
+    graphqlRequest.mockRejectedValue(new Error('Backend GraphQL request failed: 401 Unauthorized'))
+
+    const client = createApolloClient()
+
+    await expect(client.query({ query: QUERY })).rejects.toThrow(/401/)
+    expect(signalReLogin).toHaveBeenCalledTimes(1)
   })
 })
