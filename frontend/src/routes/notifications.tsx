@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { gradientPlaceholder } from '@/lib/placeholders'
 import Avatar from '../components/Avatar'
 import AppShell from '../components/AppShell'
+import { BusyOverlay } from '../components/BusyOverlay'
+import { useBusy } from '../hooks/useBusy'
 import {
   MarkNotificationsReadDocument,
   MyNotificationsDocument,
@@ -41,29 +43,37 @@ function actionText(notification: Notification): string {
 export function Notifications() {
   const { data, loading, error } = useQuery(MyNotificationsDocument, { variables: { first: 30 } })
   const { data: unreadData } = useQuery(UnreadNotificationsDocument)
-  const [markAllRead] = useMutation(MarkNotificationsReadDocument, {
+  const [markAllReadMutation] = useMutation(MarkNotificationsReadDocument, {
     refetchQueries: [MyNotificationsDocument, UnreadNotificationsDocument],
   })
+  const { busy, run } = useBusy()
 
   const notifications = data?.myNotifications ?? []
   const unread = unreadData?.unreadNotifications ?? 0
 
+  async function markAllRead() {
+    await run(() => markAllReadMutation())
+  }
+
   return (
     <AppShell>
       <div className="page-wrap px-4 pb-8 pt-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="m-0 text-2xl font-bold text-[var(--sea-ink)] sm:text-3xl">Notifications</h1>
-            {unread > 0 && <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">{unread} unread</p>}
+        <div className="relative mb-4 flex items-center justify-between" aria-busy={busy}>
+          <div inert={busy ? true : undefined} className="flex w-full items-center justify-between">
+            <div>
+              <h1 className="m-0 text-2xl font-bold text-[var(--sea-ink)] sm:text-3xl">Notifications</h1>
+              {unread > 0 && <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">{unread} unread</p>}
+            </div>
+            <button
+              type="button"
+              onClick={() => void markAllRead()}
+              disabled={unread === 0 || busy}
+              className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)] transition hover:bg-[var(--brand-light)] disabled:opacity-50"
+            >
+              Mark all as read
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => void markAllRead()}
-            disabled={unread === 0}
-            className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)] transition hover:bg-[var(--brand-light)] disabled:opacity-50"
-          >
-            Mark all as read
-          </button>
+          {busy && <BusyOverlay label="Updating…" />}
         </div>
 
         <div className="flex gap-5 mb-5 border-b border-[var(--line)] overflow-x-auto no-scrollbar">

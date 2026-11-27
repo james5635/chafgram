@@ -1,12 +1,13 @@
 import { MockedProvider } from '@apollo/client/testing/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import {
   MyNotificationsDocument,
   UnreadNotificationsDocument,
   MarkNotificationsReadDocument,
+  MeDocument,
 } from '../generated/graphql'
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }))
@@ -58,6 +59,7 @@ const MEMBER = {
 }
 
 const mocks = [
+  { request: { query: MeDocument }, result: { data: { me: MEMBER } } },
   {
     request: { query: MyNotificationsDocument, variables: { first: 30 } },
     result: {
@@ -81,8 +83,10 @@ const mocks = [
   { request: { query: MarkNotificationsReadDocument }, result: { data: { markNotificationsRead: true } } },
 ]
 
-function renderScreen(ui: ReactNode) {
-  return render(<MockedProvider mocks={mocks}>{ui}</MockedProvider>)
+type ScreenMocks = ComponentProps<typeof MockedProvider>['mocks']
+
+function renderScreen(ui: ReactNode, screenMocks: ScreenMocks = mocks) {
+  return render(<MockedProvider mocks={screenMocks}>{ui}</MockedProvider>)
 }
 
 beforeEach(() => {
@@ -113,5 +117,39 @@ describe('Notifications screen', () => {
     await user.click(button)
 
     expect(button).toBeInTheDocument()
+  })
+
+  it('shows Updating… while marking all read and ignores a second rapid click', async () => {
+    const markAllRequest = vi.fn(() => true)
+    const slowMocks = [
+      mocks[0],
+      mocks[1],
+      mocks[2],
+      {
+        request: { query: MarkNotificationsReadDocument, variables: markAllRequest },
+        result: { data: { markNotificationsRead: true } },
+        delay: Infinity,
+        maxUsageCount: 5,
+      },
+    ]
+    renderScreen(<Notifications />, slowMocks)
+
+    await screen.findByText('1 unread')
+    const button = screen.getByRole('button', { name: 'Mark all as read' })
+    await waitFor(() => expect(button).toBeEnabled())
+    fireEvent.click(button)
+    fireEvent.click(button)
+
+    await waitFor(() => expect(markAllRequest).toHaveBeenCalledTimes(1))
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('Updating…')
+    const region = button.closest('[aria-busy="true"]')
+    expect(region).toHaveClass('relative')
+    expect(status.parentElement).toBe(region)
+    const inertContent = button.closest('[inert]')
+    expect(inertContent).not.toBeNull()
+    expect(inertContent).toContainElement(button)
+    expect(inertContent).not.toContainElement(status)
+    expect(button).toBeDisabled()
   })
 })
