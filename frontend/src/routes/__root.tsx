@@ -7,6 +7,7 @@ import Header from '../components/Header'
 
 import appCss from '../styles.css?url'
 import { useAuthBootstrap } from '../hooks/useAuthBootstrap'
+import { RailProvider } from '../hooks/useRail'
 import { isPublicPath } from '../lib/public-paths'
 import { apolloClient } from '../lib/apollo'
 
@@ -52,9 +53,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
         <ApolloProvider client={apolloClient}>
-          {!isPublic && <Header />}
-          {booted ? children : null}
-          {!isPublic && <Footer />}
+          <RailProvider>
+            {!isPublic && <Header />}
+            {booted ? children : null}
+            {!isPublic && <Footer />}
+          </RailProvider>
         </ApolloProvider>
         <TanStackDevtools
           config={{
