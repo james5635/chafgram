@@ -13,6 +13,8 @@ import {
 } from '@/generated/graphql'
 import type { PostCommentsQuery, ReactToPostMutation } from '@/generated/graphql'
 import { refreshMediaUrl } from '@/lib/media-server'
+import { BusyOverlay } from './BusyOverlay'
+import { useBusy } from '../hooks/useBusy'
 import { formatCreatedAt } from '../lib/post-mappers'
 
 type ThreadComment = PostCommentsQuery['postComments'][number]
@@ -34,6 +36,9 @@ interface PostCardProps {
 export default function PostCard({ post }: PostCardProps) {
   const postRef = { __typename: 'Post' as const, id: post.id }
   const isLiked = post.reactions.myReaction === 'LIKE'
+  // Like and comment share one busy region, so they share one re-entry guard.
+  const { busy, run } = useBusy()
+  const [busyLabel, setBusyLabel] = useState('Updating…')
 
   // reactToPost only upserts/changes a reaction. Removing it is a separate
   // mutation, so the Like button has to choose based on the viewer's reaction.
@@ -157,45 +162,51 @@ export default function PostCard({ post }: PostCardProps) {
   )
 
   const handleLike = async () => {
-    try {
-      if (isLiked) {
-        await unreactToPost({ variables: { id: post.id } })
-      } else {
-        await reactToPost({ variables: { id: post.id, type: 'LIKE' } })
+    setBusyLabel('Updating…')
+    await run(async () => {
+      try {
+        if (isLiked) {
+          await unreactToPost({ variables: { id: post.id } })
+        } else {
+          await reactToPost({ variables: { id: post.id, type: 'LIKE' } })
+        }
+      } catch (error) {
+        console.error('Failed to update reaction:', error)
       }
-    } catch (error) {
-      console.error('Failed to update reaction:', error)
-    }
+    })
   }
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!commentText.trim()) return
-    try {
-      const { data } = await createComment({
-        variables: { postId: post.id, body: commentText.trim() },
-      })
-      const created = data?.createComment
-      if (created) {
-        setPostedComments((current) => [
-          ...current,
-          {
-            id: created.id,
-            body: created.body,
-            createdAt: created.createdAt,
-            author: {
-              id: created.author.id,
-              username: created.author.username,
-              displayName: created.author.displayName,
+    setBusyLabel('Saving…')
+    await run(async () => {
+      try {
+        const { data } = await createComment({
+          variables: { postId: post.id, body: commentText.trim() },
+        })
+        const created = data?.createComment
+        if (created) {
+          setPostedComments((current) => [
+            ...current,
+            {
+              id: created.id,
+              body: created.body,
+              createdAt: created.createdAt,
+              author: {
+                id: created.author.id,
+                username: created.author.username,
+                displayName: created.author.displayName,
+              },
             },
-          },
-        ])
+          ])
+        }
+        setCommentText('')
+        setShowCommentInput(false)
+      } catch (error) {
+        console.error('Failed to create comment:', error)
       }
-      setCommentText('')
-      setShowCommentInput(false)
-    } catch (error) {
-      console.error('Failed to create comment:', error)
-    }
+    })
   }
 
   return (
@@ -252,104 +263,114 @@ export default function PostCard({ post }: PostCardProps) {
         </div>
       )}
 
-      <div className="px-4 sm:px-5 pt-4 pb-5 sm:pt-0 border-t border-[var(--line)]">
-        <div className="flex items-baseline justify-between gap-4 sm:gap-6 mb-3">
-          <div className="flex items-center gap-1 text-sm font-semibold text-[var(--sea-ink)]">
-            <Heart className="h-4 w-4" aria-hidden="true" />
-            <span className="ml-1">{post.reactions.count}</span>
+      <div
+        className="relative px-4 sm:px-5 pt-4 pb-5 sm:pt-0 border-t border-[var(--line)]"
+        aria-busy={busy}
+      >
+        <div inert={busy ? true : undefined}>
+          <div className="flex items-baseline justify-between gap-4 sm:gap-6 mb-3">
+            <div className="flex items-center gap-1 text-sm font-semibold text-[var(--sea-ink)]">
+              <Heart className="h-4 w-4" aria-hidden="true" />
+              <span className="ml-1">{post.reactions.count}</span>
+            </div>
+            <div className="flex items-center gap-4 sm:gap-6">
+              <span className="text-[var(--sea-ink-soft)] text-sm">{post.comments} comments</span>
+              <span className="text-[var(--sea-ink-soft)] text-sm">{post.shares} shares</span>
+            </div>
           </div>
-          <div className="flex items-center gap-4 sm:gap-6">
-            <span className="text-[var(--sea-ink-soft)] text-sm">{post.comments} comments</span>
-            <span className="text-[var(--sea-ink-soft)] text-sm">{post.shares} shares</span>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-5 sm:gap-8 pt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`gap-1.5 text-sm font-medium transition hover:text-[var(--brand-dark)] ${isLiked ? 'text-[var(--brand-dark)]' : 'text-[var(--sea-ink-soft)]'}`}
-            onClick={handleLike}
-            aria-label={isLiked ? 'Unlike' : 'Like'}
-            aria-pressed={isLiked}
-          >
-            <Heart className="h-4 w-4" aria-hidden="true" />
-            {isLiked ? 'Unlike' : 'Like'}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]"
-            onClick={() => {
-              setShowComments(true)
-              setShowCommentInput(true)
-            }}
-            aria-label="Comment"
-          >
-            <MessageSquare className="h-4 w-4" aria-hidden="true" />
-            Comment
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]"
-            aria-label="Share"
-          >
-            <Share2 className="h-4 w-4" aria-hidden="true" />
-            Share
-          </Button>
-          <Button variant="ghost" size="icon" className="ml-auto text-[var(--sea-ink-soft)]" aria-label="Save">
-            <Bookmark className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </div>
-
-        {showComments && (
-          <div className="mt-4 border-t border-[var(--line)] pt-4" aria-label="Comments">
-            {commentsLoading && comments.length === 0 && (
-              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Loading comments…</p>
-            )}
-            {!commentsLoading && comments.length === 0 && (
-              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">No comments yet.</p>
-            )}
-            <ul className="m-0 list-none space-y-3 p-0">
-              {comments.map((comment) => (
-                <li key={comment.id} className="flex gap-2">
-                  <Avatar size="sm" aria-label={comment.author.displayName}>
-                    <AvatarFallback name={comment.author.displayName} />
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="m-0 text-xs font-semibold text-[var(--sea-ink)]">
-                      {comment.author.displayName}
-                      <span className="ml-2 font-normal text-[var(--sea-ink-soft)]">
-                        {formatCreatedAt(comment.createdAt)}
-                      </span>
-                    </p>
-                    <p className="m-0 text-sm leading-6 text-[var(--sea-ink)]">{comment.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {showCommentInput && (
-          <form onSubmit={handleCommentSubmit} className="mt-4 flex gap-2">
-            <Input
-              type="text"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Write a comment…"
-              className="flex-1"
-              autoFocus
-            />
-            <Button type="submit" className="gap-1.5" disabled={!commentText.trim()}>
-              Post
+          <div className="flex items-center gap-5 sm:gap-8 pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`gap-1.5 text-sm font-medium transition hover:text-[var(--brand-dark)] ${isLiked ? 'text-[var(--brand-dark)]' : 'text-[var(--sea-ink-soft)]'}`}
+              onClick={handleLike}
+              aria-label={isLiked ? 'Unlike' : 'Like'}
+              aria-pressed={isLiked}
+              disabled={busy}
+            >
+              <Heart className="h-4 w-4" aria-hidden="true" />
+              {isLiked ? 'Unlike' : 'Like'}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setShowCommentInput(false)} aria-label="Cancel">
-              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]"
+              onClick={() => {
+                setShowComments(true)
+                setShowCommentInput(true)
+              }}
+              aria-label="Comment"
+              disabled={busy}
+            >
+              <MessageSquare className="h-4 w-4" aria-hidden="true" />
+              Comment
             </Button>
-          </form>
-        )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]"
+              aria-label="Share"
+              disabled={busy}
+            >
+              <Share2 className="h-4 w-4" aria-hidden="true" />
+              Share
+            </Button>
+            <Button variant="ghost" size="icon" className="ml-auto text-[var(--sea-ink-soft)]" aria-label="Save" disabled={busy}>
+              <Bookmark className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+
+          {showComments && (
+            <div className="mt-4 border-t border-[var(--line)] pt-4" aria-label="Comments">
+              {commentsLoading && comments.length === 0 && (
+                <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Loading comments…</p>
+              )}
+              {!commentsLoading && comments.length === 0 && (
+                <p className="m-0 text-sm text-[var(--sea-ink-soft)]">No comments yet.</p>
+              )}
+              <ul className="m-0 list-none space-y-3 p-0">
+                {comments.map((comment) => (
+                  <li key={comment.id} className="flex gap-2">
+                    <Avatar size="sm" aria-label={comment.author.displayName}>
+                      <AvatarFallback name={comment.author.displayName} />
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="m-0 text-xs font-semibold text-[var(--sea-ink)]">
+                        {comment.author.displayName}
+                        <span className="ml-2 font-normal text-[var(--sea-ink-soft)]">
+                          {formatCreatedAt(comment.createdAt)}
+                        </span>
+                      </p>
+                      <p className="m-0 text-sm leading-6 text-[var(--sea-ink)]">{comment.body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {showCommentInput && (
+            <form onSubmit={handleCommentSubmit} className="mt-4 flex gap-2">
+              <Input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Write a comment…"
+                className="flex-1"
+                autoFocus
+                disabled={busy}
+              />
+              <Button type="submit" className="gap-1.5" disabled={busy || !commentText.trim()}>
+                Post
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setShowCommentInput(false)} aria-label="Cancel" disabled={busy}>
+                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </Button>
+            </form>
+          )}
+        </div>
+        {busy && <BusyOverlay label={busyLabel} />}
       </div>
     </article>
   )
