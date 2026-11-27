@@ -14,6 +14,7 @@ import {
 import type { PostCommentsQuery, ReactToPostMutation } from '@/generated/graphql'
 import { refreshMediaUrl } from '@/lib/media-server'
 import { BusyOverlay } from './BusyOverlay'
+import ImageLightbox from './ImageLightbox'
 import { useBusy } from '../hooks/useBusy'
 import { formatCreatedAt } from '../lib/post-mappers'
 
@@ -146,6 +147,15 @@ export default function PostCard({ post }: PostCardProps) {
     }
   }
 
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const lightboxImages = (post.media ?? [])
+    .map((media, index) => ({ media, index }))
+    .filter(({ media }) => media.kind === 'IMAGE')
+    .map(({ media, index }) => ({
+      url: refreshedUrls[index] ?? media.url,
+      alt: media.alt,
+    }))
+
   const [showComments, setShowComments] = useState(false)
   const [showCommentInput, setShowCommentInput] = useState(false)
   const [commentText, setCommentText] = useState('')
@@ -250,14 +260,21 @@ export default function PostCard({ post }: PostCardProps) {
                 onError={() => void handleMediaError(0)}
               />
             ) : (
-              <img
-                src={refreshedUrls[0] ?? post.media[0].url}
-                alt={post.media[0].alt}
-                className="h-full w-full object-cover"
-                loading="lazy"
-                decoding="async"
-                onError={() => void handleMediaError(0)}
-              />
+              <button
+                type="button"
+                aria-label={`Preview ${post.media[0].alt}`}
+                onClick={() => setLightboxIndex(0)}
+                className="block h-full w-full"
+              >
+                <img
+                  src={refreshedUrls[0] ?? post.media[0].url}
+                  alt={post.media[0].alt}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => void handleMediaError(0)}
+                />
+              </button>
             )}
           </div>
         </div>
@@ -375,6 +392,12 @@ export default function PostCard({ post }: PostCardProps) {
           {busy && <BusyOverlay label={busyLabel} />}
         </div>
       </>
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={lightboxIndex ?? 0}
+        open={lightboxIndex !== null}
+        onClose={() => setLightboxIndex(null)}
+      />
     </article>
   )
 }
