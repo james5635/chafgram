@@ -312,6 +312,42 @@ describe('PostCard', () => {
     ).toHaveAttribute('src', '/api/media/9?exp=fresh&sig=new')
   })
 
+  it('refreshes an expired URL for a secondary lightbox image', async () => {
+    refreshMediaUrl.mockReset()
+    refreshMediaUrl.mockResolvedValue({
+      url: '/api/media/b?exp=fresh&sig=new',
+      expiresAt: '2026-11-27T12:00:00Z',
+    })
+
+    renderPostCard(
+      <PostCard
+        post={{
+          ...post,
+          id: 'refresh-secondary-lightbox',
+          media: [
+            { id: 'a', url: '/api/media/a?exp=old&sig=old', alt: 'First photo', kind: 'IMAGE' as const },
+            { id: 'b', url: '/api/media/b?exp=old&sig=old', alt: 'Second photo', kind: 'IMAGE' as const },
+          ],
+        }}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview First photo' }))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Next image' }))
+    fireEvent.error(within(dialog).getByRole('img', { name: 'Second photo' }))
+
+    await waitFor(() =>
+      expect(refreshMediaUrl).toHaveBeenCalledWith({ data: { mediaId: 'b' } }),
+    )
+    await waitFor(() =>
+      expect(within(dialog).getByRole('img', { name: 'Second photo' })).toHaveAttribute(
+        'src',
+        '/api/media/b?exp=fresh&sig=new',
+      ),
+    )
+  })
+
   it('renders a post with no media', () => {
     renderPostCard(
       <PostCard

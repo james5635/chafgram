@@ -12,10 +12,11 @@ interface ImageLightboxProps {
   initialIndex: number
   open: boolean
   onClose: () => void
+  onImageError?: (lightboxIndex: number) => void
 }
 
 /** Full-size image preview with previous/next navigation. */
-export default function ImageLightbox({ images, initialIndex, open, onClose }: ImageLightboxProps) {
+export default function ImageLightbox({ images, initialIndex, open, onClose, onImageError }: ImageLightboxProps) {
   const [index, setIndex] = useState(initialIndex)
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function ImageLightbox({ images, initialIndex, open, onClose }: I
               src={current.url}
               alt={current.alt}
               className="max-h-[70vh] max-w-full rounded-lg object-contain"
+              onError={() => onImageError?.(index)}
             />
           </div>
 

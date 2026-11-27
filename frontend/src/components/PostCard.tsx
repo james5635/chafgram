@@ -148,13 +148,13 @@ export default function PostCard({ post }: PostCardProps) {
   }
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
-  const lightboxImages = (post.media ?? [])
+  const lightboxEntries = (post.media ?? [])
     .map((media, index) => ({ media, index }))
     .filter(({ media }) => media.kind === 'IMAGE')
-    .map(({ media, index }) => ({
-      url: refreshedUrls[index] ?? media.url,
-      alt: media.alt,
-    }))
+  const lightboxImages = lightboxEntries.map(({ media, index }) => ({
+    url: refreshedUrls[index] ?? media.url,
+    alt: media.alt,
+  }))
 
   const [showComments, setShowComments] = useState(false)
   const [showCommentInput, setShowCommentInput] = useState(false)
@@ -397,6 +397,10 @@ export default function PostCard({ post }: PostCardProps) {
         initialIndex={lightboxIndex ?? 0}
         open={lightboxIndex !== null}
         onClose={() => setLightboxIndex(null)}
+        onImageError={(index) => {
+          const originalIndex = lightboxEntries[index]?.index
+          if (originalIndex !== undefined) void handleMediaError(originalIndex)
+        }}
       />
     </article>
   )
