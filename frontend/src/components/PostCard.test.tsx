@@ -5,7 +5,7 @@ import { MockedProvider } from '@apollo/client/testing/react'
 import { vi, describe, it, expect } from 'vitest'
 const { refreshMediaUrl } = vi.hoisted(() => ({ refreshMediaUrl: vi.fn() }))
 vi.mock('@/lib/media-server', () => ({ refreshMediaUrl }))
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import {
   CreateCommentDocument,
@@ -233,6 +233,119 @@ describe('PostCard', () => {
     }
     // Save is an icon-only button, check for aria-label
     expect(screen.getByLabelText('Save')).toBeInTheDocument()
+  })
+
+  it('opens a lightbox with all images from the post thumbnail', () => {
+    renderPostCard(
+      <PostCard
+        post={{
+          ...post,
+          id: 'multi-image',
+          media: [
+            { url: '/api/media/a', alt: 'First photo', kind: 'IMAGE' as const },
+            { url: '/api/media/b', alt: 'Second photo', kind: 'IMAGE' as const },
+          ],
+        }}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview First photo' }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('img', { name: 'First photo' })).toHaveAttribute('src', '/api/media/a')
+    expect(within(dialog).getByText('1 / 2')).toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Next image' }))
+    expect(within(dialog).getByRole('img', { name: 'Second photo' })).toHaveAttribute('src', '/api/media/b')
+  })
+
+  it('does not render an image preview button for video posts', () => {
+    renderPostCard(
+      <PostCard
+        post={{
+          ...post,
+          id: 'video-no-preview',
+          media: [{ url: '/api/media/9', alt: 'Post video', kind: 'VIDEO' as const }],
+        }}
+      />,
+    )
+
+    expect(screen.getByLabelText('Post video').tagName).toBe('VIDEO')
+    expect(screen.queryByRole('button', { name: /Preview/ })).not.toBeInTheDocument()
+  })
+
+  it('uses the refreshed URL in the lightbox', async () => {
+    refreshMediaUrl.mockReset()
+    refreshMediaUrl.mockResolvedValue({
+      url: '/api/media/9?exp=fresh&sig=new',
+      expiresAt: '2026-11-27T12:00:00Z',
+    })
+
+    renderPostCard(
+      <PostCard
+        post={{
+          ...post,
+          id: 'refresh-lightbox',
+          media: [
+            {
+              id: '9',
+              url: '/api/media/9?exp=old&sig=old',
+              alt: 'Expiring image',
+              kind: 'IMAGE' as const,
+            },
+          ],
+        }}
+      />,
+    )
+
+    fireEvent.error(screen.getByAltText('Expiring image'))
+    await waitFor(() =>
+      expect(screen.getByAltText('Expiring image')).toHaveAttribute(
+        'src',
+        '/api/media/9?exp=fresh&sig=new',
+      ),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview Expiring image' }))
+    expect(
+      within(screen.getByRole('dialog')).getByRole('img', { name: 'Expiring image' }),
+    ).toHaveAttribute('src', '/api/media/9?exp=fresh&sig=new')
+  })
+
+  it('refreshes an expired URL for a secondary lightbox image', async () => {
+    refreshMediaUrl.mockReset()
+    refreshMediaUrl.mockResolvedValue({
+      url: '/api/media/b?exp=fresh&sig=new',
+      expiresAt: '2026-11-27T12:00:00Z',
+    })
+
+    renderPostCard(
+      <PostCard
+        post={{
+          ...post,
+          id: 'refresh-secondary-lightbox',
+          media: [
+            { id: 'a', url: '/api/media/a?exp=old&sig=old', alt: 'First photo', kind: 'IMAGE' as const },
+            { id: 'b', url: '/api/media/b?exp=old&sig=old', alt: 'Second photo', kind: 'IMAGE' as const },
+          ],
+        }}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview First photo' }))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Next image' }))
+    fireEvent.error(within(dialog).getByRole('img', { name: 'Second photo' }))
+
+    await waitFor(() =>
+      expect(refreshMediaUrl).toHaveBeenCalledWith({ data: { mediaId: 'b' } }),
+    )
+    await waitFor(() =>
+      expect(within(dialog).getByRole('img', { name: 'Second photo' })).toHaveAttribute(
+        'src',
+        '/api/media/b?exp=fresh&sig=new',
+      ),
+    )
   })
 
   it('renders a post with no media', () => {
