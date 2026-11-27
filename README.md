@@ -262,6 +262,22 @@ Every step below was verified against a fresh `just seed` on a local MySQL.
   accessibility
 - **[AGENTS.md](AGENTS.md)** — repo conventions, commands, and guardrails for contributors
   and AI agents
+## Development
+### arch linux
+```bash
+# install docker & curl
+sudo pacman -Syu
+sudo pacman -S docker docker-buildx docker-compose curl
+sudo systemctl enable --now docker.service
+sudo usermod -aG docker $USER
+newgrp docker
+
+# install mise
+curl -fsSL https://mise.run | sh
+
+# install node, java, pnpm, just
+mise install
+```
 
 ## Contributing
 
