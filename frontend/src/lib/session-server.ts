@@ -63,11 +63,13 @@ export const refreshRequest = createServerFn({ method: 'POST' }).handler(async (
 
 /**
  * Revoke the refresh token. The access token is supplied by the BFF fetch as a
- * bearer; the response header makes the browser drop its in-memory token.
+ * bearer; `callBackend` relays the backend's cookie-clearing `Set-Cookie`.
+ * The re-login signal is sent unconditionally: even a 401/500 from logout must
+ * not leave a stale in-memory bearer behind.
  */
 export const logoutRequest = createServerFn({ method: 'POST' })
   .handler(async (): Promise<{ ok: boolean }> => {
     const response = await callBackend({ path: '/api/v1/auth/logout', method: 'POST' })
-    if (response.ok) setResponseHeader(RELOGIN_HEADER, '1')
+    setResponseHeader(RELOGIN_HEADER, '1')
     return { ok: response.ok }
   })
