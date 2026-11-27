@@ -19,8 +19,8 @@ that state to assistive technology.
 
 ## Goals
 
-- One reusable overlay primitive and one reusable busy-state hook in
-  `frontend/src/components/`.
+- One reusable overlay primitive in `frontend/src/components/` and one reusable
+  busy-state hook in `frontend/src/hooks/`.
 - Apply to every user-initiated async action: login form, home composer,
   `/compose` page, post card (like, comment thread, comment submit), messages
   send, notifications mark-all-read, and any profile/admin action that mutates.
