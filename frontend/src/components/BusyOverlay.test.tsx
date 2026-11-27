@@ -67,7 +67,7 @@ describe('BusyOverlay', () => {
     const status = screen.getByRole('status')
     expect(inertSubtree).not.toContainElement(status)
     const overlay = document.querySelector('[aria-hidden="true"].absolute')
-    expect(inertSubtree).not.toContainElement(overlay as Element)
+    expect(inertSubtree).not.toContainElement(overlay as HTMLElement | null)
     expect(overlay?.parentElement).not.toBe(inertSubtree)
   })
 })
