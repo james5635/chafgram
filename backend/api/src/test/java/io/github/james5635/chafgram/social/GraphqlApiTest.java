@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -151,6 +152,48 @@ class GraphqlApiTest extends AbstractIntegrationTest {
 						.content("{\"query\":\"{ me { bio } }\"}"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.me.bio", is("bio!")));
+	}
+
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void memberPostsReturnsTheAuthorsPostsAndHonoursFirst() throws Exception {
+		User alice = users.findByUsername("alice").orElseThrow();
+		posts.create(alice, PostType.NOTE, "older post", List.of());
+		posts.create(alice, PostType.NOTE, "newer post", List.of());
+
+		mockMvc.perform(post("/graphql")
+						.with(csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ memberPosts(username: \\\"alice\\\", first: 1) { body author { username } } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.memberPosts", hasSize(1)))
+				.andExpect(jsonPath("$.data.memberPosts[0].body", is("newer post")))
+				.andExpect(jsonPath("$.data.memberPosts[0].author.username", is("alice")));
+
+		mockMvc.perform(post("/graphql")
+						.with(csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ memberPosts(username: \\\"alice\\\") { body } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.memberPosts", hasSize(2)));
+	}
+
+	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void memberPostsHidesPostsFromBlockedAuthor() throws Exception {
+		jdbc.update("INSERT INTO users (username, display_name, email) VALUES ('bob', 'Bob', 'bob@example.com')");
+		User bob = users.findByUsername("bob").orElseThrow();
+		User alice = users.findByUsername("alice").orElseThrow();
+		posts.create(bob, PostType.NOTE, "hidden post", List.of());
+		blocks.block(bob, alice.getId());
+
+		mockMvc.perform(post("/graphql")
+						.with(csrf())
+						.contentType("application/json")
+						.content("{\"query\":\"{ memberPosts(username: \\\"bob\\\") { body } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.errors[0].extensions.classification", is("NOT_FOUND")))
+				.andExpect(jsonPath("$.data.memberPosts").doesNotExist());
 	}
 
 	@Test

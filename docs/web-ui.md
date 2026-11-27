@@ -274,7 +274,7 @@ Traceability: FR-7.1, FR-7.2, FR-7.3, BR-7.1–BR-7.3.
 | [Edit Profile] | Stats row | `flex-1 rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--brand)22%,var(--surface-strong))] px-4 py-2 text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[color-mix(in_oklab,var(--brand)30%,var(--surface-strong))]` (owner only) |
 | [Share] | Stats row | `rounded-full border border-[var(--line)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)]` + share SVG |
 | Tabs | Below shell | `flex gap-2 border-b border-[var(--line)] pb-4 overflow-x-auto no-scrollbar sm:overflow-visible sm:flex-nowrap`: Posts | Replies | Media | Likes; active `rounded-full border-b-2 border-[var(--lagoon)] px-4 py-1.5 text-sm font-semibold text-[var(--sea-ink)]`; inactive `border-transparent` |
-| Post grid | Below tabs | `grid gap-4 sm:grid-cols-2 lg:grid-cols-3` of PostCard |
+| Post grid | Below tabs | `grid gap-4 sm:grid-cols-2 lg:grid-cols-3` of `PostCard`, from `memberPosts(username, first: 20)` for the displayed member (`/profile/me` resolves to the signed-in username); skeleton while loading, "No posts yet." when empty, visible error message on failure |
 
 **States:** Deactivated → "Deactivated member"; suspended → visible + suspended badge (BR-2.4). Blocked: mutual-effect hiding (BR-2.2).
 

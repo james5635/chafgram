@@ -4,8 +4,10 @@ import { MapPin, Calendar, Settings, Link as LinkIcon, Code2 } from 'lucide-reac
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import AppShell from '@/components/AppShell'
+import PostCard from '@/components/PostCard'
 import { profileCoverPlaceholder } from '@/lib/placeholders'
-import { MemberDocument, MeDocument } from '@/generated/graphql'
+import { toPostCardData } from '@/lib/post-mappers'
+import { MemberDocument, MeDocument, MemberPostsDocument } from '@/generated/graphql'
 
 export const Route = createFileRoute('/profile/$username')({
   component: Profile,
@@ -53,6 +55,15 @@ export function Profile() {
   })
   const { data: meData } = useQuery(MeDocument, { skip: username !== 'me' })
   const member = data?.member ?? meData?.me
+  // The route param can be the literal "me"; the backend needs the real username.
+  const { data: postsData, loading: postsLoading, error: postsError } = useQuery(MemberPostsDocument, {
+    variables: { username: member?.username ?? '', first: 20 },
+    skip: !member?.username,
+  })
+  const posts = (postsData?.memberPosts ?? []).map(toPostCardData)
+  // The posts query is skipped until the member resolves; that pending window
+  // is not an empty result.
+  const postsPending = !member?.username || postsLoading
 
   return (
     <AppShell rightRail={<ProfilePanels />}>
@@ -117,6 +128,34 @@ export function Profile() {
                   {tab}
                 </Button>
               ))}
+            </div>
+
+            <div className="mt-5" aria-busy={postsPending}>
+              {postsError && (
+                <p className="m-0 text-sm text-[#9f3030]" role="alert">
+                  Could not load posts. Please try again.
+                </p>
+              )}
+
+              {postsPending && (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {[0, 1, 2].map((n) => (
+                    <div key={n} className="island-shell h-48 animate-pulse rounded-xl" />
+                  ))}
+                </div>
+              )}
+
+              {!postsPending && !postsError && posts.length === 0 && (
+                <p className="m-0 text-sm text-[var(--sea-ink-soft)]">No posts yet.</p>
+              )}
+
+              {!postsPending && !postsError && posts.length > 0 && (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {posts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>

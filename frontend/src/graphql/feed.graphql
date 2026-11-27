@@ -23,6 +23,28 @@ query FollowingFeed($first: Int = 20, $cursor: String) {
   }
 }
 
+query MemberPosts($username: String!, $first: Int = 20) {
+  memberPosts(username: $username, first: $first) {
+    id
+    type
+    body
+    editedAt
+    createdAt
+    commentCount
+    reactionCount
+    myReaction
+    isSaved
+    mediaIds
+    mediaUrls
+    author {
+      id
+      username
+      displayName
+      avatarMediaId
+    }
+  }
+}
+
 query DiscoverFeed($first: Int = 20, $cursor: String) {
   discoverFeed(first: $first, cursor: $cursor) {
     posts {

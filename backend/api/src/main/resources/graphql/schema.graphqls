@@ -20,6 +20,7 @@ type Query {
   discoverFeed(first: Int = 20, cursor: String): FeedPage!
   watchFeed(first: Int = 20, cursor: String): FeedPage!
   post(id: ID!): Post
+  memberPosts(username: String!, first: Int = 20): [Post!]!
   postComments(postId: ID!, first: Int = 50): [Comment!]!
   searchPosts(query: String!, first: Int = 20, kind: PostType): [Post!]!
   savedPosts(first: Int = 20): [Post!]!
