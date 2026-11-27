@@ -124,11 +124,12 @@ schema/DTO sync (`SchemaDtoSyncTest`). Conventions to respect:
   authenticated member without the role, `BAD_REQUEST`/`NOT_FOUND` for validation and
   lookup failures) — tests assert on `$.errors`, never on the HTTP status. Service-layer
   `ApiException`s are mapped by `common/GraphQlApiExceptionHandler`. Token validity
-  failures are different: missing/invalid/expired bearer → HTTP 401 from the security
-  filter.
+  failures are different: an invalid, expired or foreign-signature bearer → HTTP 401
+  from the security filter.
 - Resolver classes carry class-level `@PreAuthorize("isFullyAuthenticated()")`; only the
-  `permitAll()` operations are public. `/graphql` is public at the HTTP boundary, so an
-  anonymous call reaches the resolver and fails with `errors[]`; a bad token does not.
+  `permitAll()` operations are public. `/graphql` is public at the HTTP boundary, so a
+  call with **no** `Authorization` header reaches the resolver and fails with `errors[]`
+  (HTTP 200); a present but invalid token is rejected before the resolver with 401.
 - Token tests: `TokenServiceTest`, `AuthControllerIntegrationTest` and
   `TokenSecurityIntegrationTest` cover claims/TTLs, rotation, revoked-token replay (any
   revoked row → 401; family-wide revocation only without `replaced_by`), logout, and
@@ -212,7 +213,7 @@ just bootstrap  # one-time: install the pre-push hook from scripts/hooks/pre-pus
 | App fails with `SchemaManagementException … position` | Applied DB drifted from mappings; align with a new migration (see §4), never by editing applied files. |
 | `./gradlew :api:test` fails with "Could not find a valid Docker environment" | Testcontainers needs a running Docker daemon — start Docker (or Podman) and retry. |
 | Tests hit the dev database / the dev DB looks wiped by a test run | They don't: the suite uses its own throwaway container. A test-scoped `application.properties` is the usual culprit for a *misconfigured* run — rename it to `application-test.properties` (see §5). |
-| GraphQL returns 401 from curl | Missing, invalid or expired `Authorization: Bearer ...` header — see §6. Resolver-level authorization failures are HTTP 200 + `errors[]`, not 401. |
+| GraphQL returns 401 from curl | Invalid, expired or foreign-signature `Authorization: Bearer ...` token — see §6. With no header at all the resolver answers HTTP 200 + `errors[]` (`UNAUTHORIZED`), not 401. |
 | `.env` changes ignored by the JVM | The JVM doesn't read `.env`; export the variables or rely on `application.properties` defaults. |
 | Flyway checksum validation failure | An applied migration was edited; restore it and add a new `V<n>` alignment instead. |
 

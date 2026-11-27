@@ -193,8 +193,9 @@ io.github.james5635.chafgram
 
 Public workspace branding is a **GraphQL** operation, not REST: `query { workspace { name slug } }`
 (anonymous, `@PreAuthorize("permitAll()")`). `/graphql` and `/graphiql` are public at the
-HTTP boundary: resolver authorization failures stay HTTP 200 + `errors[]`, while
-missing/invalid/expired access tokens are rejected by the resource-server filter with 401.
+HTTP boundary: a request with **no** `Authorization` header reaches the resolver and
+answers HTTP 200 + `errors[]`; invalid, expired or foreign-signature access tokens are
+rejected by the resource-server filter with 401.
 
 ### 4.2 Cross-cutting
 

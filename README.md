@@ -104,12 +104,12 @@ The API is GraphQL-first (see `docs/architecture.md`): all operations go through
 identity (members, workspace, profile), invites, account flows (email
 verification, password reset), messaging, reports, audit log, and media metadata.
 Explore it with GraphiQL at `http://localhost:8080/graphiql` (dev). Requests carry
-`Authorization: Bearer <accessToken>`; resolver-level authorization failures return
-HTTP 200 with a GraphQL `errors[]` (classification `UNAUTHORIZED` for anonymous,
-`FORBIDDEN` for an authenticated member without the role), while missing, invalid or
-expired token material is rejected at the security filter with HTTP 401. Every resolver
-class enforces `isFullyAuthenticated()` except explicitly-public operations. There are
-no HTTP sessions and no CSRF tokens.
+`Authorization: Bearer <accessToken>`; with **no** `Authorization` header at all, a
+GraphQL call reaches the resolver and returns HTTP 200 with a GraphQL `errors[]`
+(classification `UNAUTHORIZED` for anonymous, `FORBIDDEN` for an authenticated member
+without the role). An invalid, expired or foreign-signature token is rejected at the
+security filter with HTTP 401. Every resolver class enforces `isFullyAuthenticated()`
+except explicitly-public operations. There are no HTTP sessions and no CSRF tokens.
 
 REST exists only for what GraphQL cannot express — the keep-list lives in
 `docs/architecture.md`: auth (`POST /api/v1/auth/login`, `/refresh`, `/logout`),
@@ -230,9 +230,10 @@ Every step below was verified against a fresh `just seed` on a local MySQL.
    only direct GraphiQL/backend calls need the `Authorization` header above.
 
 3. **Public, no sign-in:** `{ workspace { name slug } }` returns the workspace
-   branding. Everything else is `isFullyAuthenticated()` — anonymous GraphQL callers
-   get `HTTP 200` with `errors[]` (`classification: UNAUTHENTICATED`/`UNAUTHORIZED`),
-   while a missing, invalid or expired bearer token gets `HTTP 401`.
+   branding. Everything else is `isFullyAuthenticated()` — a GraphQL call with no
+   `Authorization` header gets `HTTP 200` with `errors[]`
+   (`classification: UNAUTHENTICATED`/`UNAUTHORIZED`), while an invalid, expired or
+   foreign-signature bearer token gets `HTTP 401`.
 4. **Fixture content** to explore once signed in: posts/comments/reactions, a follows
    graph, direct + group conversations, notifications, moderation reports and the
    audit log. Seeded media has real blobs in Garage once you run
