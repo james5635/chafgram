@@ -9,10 +9,11 @@ import { logoutRequest } from '../lib/session-server'
 interface AccountMenuProps {
   displayName: string
   username: string
+  collapsed?: boolean
 }
 
 /** The signed-in member's chip and its Settings / Sign out menu. */
-export default function AccountMenu({ displayName, username }: AccountMenuProps) {
+export default function AccountMenu({ displayName, username, collapsed = false }: AccountMenuProps) {
   const [open, setOpen] = useState(false)
   const { busy, run } = useBusy()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -67,27 +68,31 @@ export default function AccountMenu({ displayName, username }: AccountMenuProps)
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left no-underline transition hover:bg-[var(--brand-light)]/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
+        className={`flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left no-underline transition hover:bg-[var(--brand-light)]/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)] ${collapsed ? 'justify-center' : ''}`}
       >
         <Avatar className="h-8 w-8" aria-label={displayName}>
           <AvatarFallback name={displayName} />
         </Avatar>
-        <span className="min-w-0 flex-1 leading-none">
-          <span className="block truncate text-sm font-semibold text-[var(--sea-ink)]">{displayName}</span>
-          <span className="block truncate text-[0.7rem] text-[var(--sea-ink-soft)]">
-            {username ? `@${username}` : '…'}
-          </span>
-        </span>
-        <ChevronRight
-          className={`h-4 w-4 shrink-0 text-[var(--sea-ink-soft)] transition-transform ${open ? 'rotate-90' : ''}`}
-          aria-hidden="true"
-        />
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1 leading-none">
+              <span className="block truncate text-sm font-semibold text-[var(--sea-ink)]">{displayName}</span>
+              <span className="block truncate text-[0.7rem] text-[var(--sea-ink-soft)]">
+                {username ? `@${username}` : '…'}
+              </span>
+            </span>
+            <ChevronRight
+              className={`h-4 w-4 shrink-0 text-[var(--sea-ink-soft)] transition-transform ${open ? 'rotate-90' : ''}`}
+              aria-hidden="true"
+            />
+          </>
+        )}
       </button>
 
       {open && (
         <div
           aria-label="Account menu options"
-          className="absolute bottom-full left-0 right-0 z-30 mb-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg backdrop-blur-md"
+          className="absolute bottom-full left-0 z-30 mb-2 w-56 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg backdrop-blur-md"
         >
           <Link
             to="/settings"

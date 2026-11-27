@@ -7,6 +7,7 @@ import Header from '../components/Header'
 
 import appCss from '../styles.css?url'
 import { useAuthBootstrap } from '../hooks/useAuthBootstrap'
+import { RailProvider } from '../hooks/useRail'
 import { isPublicPath } from '../lib/public-paths'
 import { apolloClient } from '../lib/apollo'
 
@@ -36,6 +37,15 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+/** Shared providers for the authenticated app shell; exported so wiring is testable. */
+export function AppProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <ApolloProvider client={apolloClient}>
+      <RailProvider>{children}</RailProvider>
+    </ApolloProvider>
+  )
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const isPublic = isPublicPath(location.pathname)
@@ -51,11 +61,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="font-sans antialiased [overflow-wrap:anywhere] selection:bg-[rgba(79,184,178,0.24)]">
-        <ApolloProvider client={apolloClient}>
+        <AppProviders>
           {!isPublic && <Header />}
           {booted ? children : null}
           {!isPublic && <Footer />}
-        </ApolloProvider>
+        </AppProviders>
         <TanStackDevtools
           config={{
             position: 'bottom-right',
