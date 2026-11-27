@@ -137,6 +137,15 @@ describe('Profile screen', () => {
     expect(await screen.findByText('My profile post')).toBeInTheDocument()
   })
 
+  it('renders posts as a full-width list outside the profile card', async () => {
+    renderScreen(<Profile />)
+    const body = await screen.findByText('My profile post')
+    const profileCard = screen.getByRole('heading', { name: 'Rojame' }).closest('.island-shell')
+
+    expect(profileCard).not.toContainElement(body)
+    expect(body.closest('.space-y-6')).not.toBeNull()
+  })
+
   it('shows an empty state when the member has no posts', async () => {
     renderScreen(<Profile />, [memberMock, postsMock([])])
 
