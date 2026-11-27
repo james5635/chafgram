@@ -130,33 +130,36 @@ export function Profile() {
               ))}
             </div>
 
-            <div className="mt-5" aria-busy={postsPending}>
-              {postsError && (
-                <p className="m-0 text-sm text-[#9f3030]" role="alert">
-                  Could not load posts. Please try again.
-                </p>
-              )}
+          </div>
+        </section>
 
-              {postsPending && (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {[0, 1, 2].map((n) => (
-                    <div key={n} className="island-shell h-48 animate-pulse rounded-xl" />
-                  ))}
-                </div>
-              )}
+        <section className="mt-8 space-y-6">
+          <div aria-busy={postsPending}>
+            {postsError && (
+              <p className="m-0 text-sm text-[#9f3030]" role="alert">
+                Could not load posts. Please try again.
+              </p>
+            )}
 
-              {!postsPending && !postsError && posts.length === 0 && (
-                <p className="m-0 text-sm text-[var(--sea-ink-soft)]">No posts yet.</p>
-              )}
+            {postsPending && (
+              <div className="space-y-6">
+                {[0, 1, 2].map((n) => (
+                  <div key={n} className="island-shell h-48 animate-pulse rounded-xl" />
+                ))}
+              </div>
+            )}
 
-              {!postsPending && !postsError && posts.length > 0 && (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {posts.map((post) => (
-                    <PostCard key={post.id} post={post} />
-                  ))}
-                </div>
-              )}
-            </div>
+            {!postsPending && !postsError && posts.length === 0 && (
+              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">No posts yet.</p>
+            )}
+
+            {!postsPending && !postsError && posts.length > 0 && (
+              <div className="space-y-6">
+                {posts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </div>
