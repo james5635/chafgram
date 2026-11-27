@@ -166,6 +166,39 @@ class IdentityFlowIntegrationTest extends AbstractIntegrationTest {
 	}
 
 	@Test
+	@WithMockUser(username = "alice", roles = "ADMIN")
+	void demotedAdminWithStaleJwtIsBlockedOnWrite() throws Exception {
+		User alice = memberService.bootstrap(
+				"alice", "Alice", "alice@example.com", "a-very-strong-password");
+		CreateInviteResponse adminInvite = inviteService.create(null, Role.ADMIN, alice);
+		inviteService.accept(adminInvite.token(),
+				"bob", "Bob", "bob@example.com", "bob-strong-password");
+
+		// The JWT still carries ROLE_ADMIN; the database is authoritative.
+		memberService.updateRole("bob", alice.getId(), Role.MEMBER);
+		assertThat(users.findByUsername("alice").orElseThrow().getRole()).isEqualTo(Role.MEMBER);
+		String workspaceNameBefore = workspaceService.get().name();
+		long invitesBefore = invites.count();
+
+		mockMvc.perform(post("/graphql")
+						.with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"query\":\"mutation { updateWorkspace(name: \\\"Nope\\\") { name } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.errors[0].extensions.classification", is("FORBIDDEN")));
+
+		mockMvc.perform(post("/graphql")
+						.with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"query\":\"mutation { createInvite(email: \\\"recruit@example.com\\\") { token } }\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.errors[0].extensions.classification", is("FORBIDDEN")));
+
+		assertThat(workspaceService.get().name()).isEqualTo(workspaceNameBefore);
+		assertThat(invites.count()).isEqualTo(invitesBefore);
+	}
+
+	@Test
 	void openRegistrationIsDisabledByDefaultAndEnabledOnDemand() {
 		memberService.bootstrap(
 				"alice", "Alice", "alice@example.com", "a-very-strong-password");

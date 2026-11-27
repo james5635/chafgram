@@ -13,6 +13,10 @@ import { parseCookieHeader, serializeCookieHeader } from './http'
  * expired token (401) it exchanges the browser's HttpOnly refresh cookie
  * once, relays the rotated cookie, and resends the original request with the
  * new bearer. A second 401 is terminal.
+ *
+ * Two paths are exceptions: logout forwards the refresh cookie so the backend
+ * can revoke it, and media signed-URL/bytes paths never trigger a refresh
+ * (those requests are validated with a signed URL, not a rotating token).
  */
 
 export interface BackendCall {
@@ -28,6 +32,8 @@ export interface BackendCall {
 
 const AUTH_PATH_PREFIX = '/api/v1/auth/'
 const REFRESH_PATH = '/api/v1/auth/refresh'
+const LOGOUT_PATH = '/api/v1/auth/logout'
+const MEDIA_PATH_PREFIX = '/api/v1/media/'
 
 function apiUrl(): string {
   return process.env.CHAFGRAM_API_URL ?? 'http://localhost:8080'
@@ -62,6 +68,13 @@ function refreshCookieHeader(): string | null {
 async function send(call: BackendCall, authorization: string | null): Promise<Response> {
   const headers = new Headers(call.headers)
   if (authorization) headers.set('Authorization', authorization)
+  if (call.path === LOGOUT_PATH) {
+    // The backend revokes the refresh row named by this cookie. Forward only
+    // chafgram_refresh — never other browser cookies — and never use it to
+    // authenticate ordinary API calls.
+    const cookie = refreshCookieHeader()
+    if (cookie) headers.set('Cookie', cookie)
+  }
 
   return fetch(`${apiUrl()}${call.path}`, {
     method: call.method,
@@ -121,7 +134,11 @@ export async function callBackend(call: BackendCall): Promise<Response> {
   let setCookies = response.headers.getSetCookie()
 
   // Auth endpoints must not recurse into /refresh (e.g. a bad login is a 401).
-  if (response.status === 401 && !call.path.startsWith(AUTH_PATH_PREFIX)) {
+  // Media signed URLs/bytes are validated, not access-token operations: a 401
+  // there is terminal and must never consume or rotate the refresh cookie.
+  if (response.status === 401
+      && !call.path.startsWith(AUTH_PATH_PREFIX)
+      && !call.path.startsWith(MEDIA_PATH_PREFIX)) {
     const refresh = await performRefresh()
     setCookies = [...setCookies, ...refresh.setCookies]
 

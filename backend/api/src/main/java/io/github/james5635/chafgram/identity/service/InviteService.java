@@ -44,14 +44,16 @@ public class InviteService {
 
 	@Transactional
 	public CreateInviteResponse create(String email, Role role, User creator) {
-		access.requireWriteable(creator);
+		// Re-read the role from the database: a demoted admin's JWT can still
+		// carry ROLE_ADMIN until it expires (FR-1.3).
+		User actor = access.requireAdmin(creator.getUsername());
 
 		String token = Tokens.newBearerToken();
 		Invite invite = new Invite();
 		invite.setEmail(Validation.normalizeEmail(email));
 		invite.setTokenHash(Tokens.sha256Hex(token));
 		invite.setRole(role != null ? role : Role.MEMBER);
-		invite.setCreatedBy(creator.getId());
+		invite.setCreatedBy(actor.getId());
 		invite.setExpiresAt(Instant.now().plus(DEFAULT_TTL));
 		invites.save(invite);
 
@@ -73,7 +75,7 @@ public class InviteService {
 
 	@Transactional
 	public void revoke(Long id, User actor) {
-		access.requireWriteable(actor);
+		access.requireAdmin(actor.getUsername());
 		if (!invites.existsById(id)) {
 			throw new ApiException(HttpStatus.NOT_FOUND, "Invite not found");
 		}

@@ -44,8 +44,10 @@ export function mediaAuthHeaders(authorization: string | null | undefined): Reco
 
 /**
  * Re-sign one media asset for the current viewer after a signed URL expires.
- * The backend re-checks media access before issuing the URL and never rotates
- * the refresh cookie; the browser only learns the short-lived URL.
+ * The backend re-checks media access before issuing the URL. Signed-URL and
+ * bytes paths are excluded from the BFF's refresh-and-retry: a 401 here fails
+ * the re-sign instead of consuming or rotating the refresh cookie, and the
+ * browser only learns the short-lived URL.
  */
 export const refreshMediaUrl = createServerFn({ method: 'GET' })
   .validator((input: { mediaId: string }) => input)

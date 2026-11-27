@@ -10,7 +10,7 @@ const fetchMock = vi.hoisted(() => ({ fetch: vi.fn() }))
 
 vi.mock('@tanstack/react-start/server', () => serverMocks)
 
-import { callBackend } from './backend-proxy'
+import { callBackend, refreshAccessToken } from './backend-proxy'
 
 const ACCESS_TOKEN_HEADER = 'x-chafgram-access-token'
 const RELOGIN_HEADER = 'x-chafgram-relogin'
@@ -48,6 +48,7 @@ function authHeaders(callIndex: number): Headers {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  fetchMock.fetch.mockReset()
   process.env.CHAFGRAM_API_URL = API
   vi.stubGlobal('fetch', fetchMock.fetch)
   serverMocks.getRequest.mockReturnValue(
@@ -167,5 +168,61 @@ describe('callBackend bearer + refresh retry', () => {
     expect(result.status).toBe(401)
     expect(fetchMock.fetch).toHaveBeenCalledTimes(1)
     expect(serverMocks.setResponseHeader).toHaveBeenCalledWith(RELOGIN_HEADER, '1')
+  })
+
+  it('forwards only the refresh cookie to backend logout so the token can be revoked', async () => {
+    const clearingCookie = `${REFRESH_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`
+    fetchMock.fetch.mockResolvedValueOnce(fakeResponse(204, { cookies: [clearingCookie] }))
+
+    const result = await callBackend({ path: '/api/v1/auth/logout', method: 'POST' })
+
+    expect(result.status).toBe(204)
+    expect(fetchMock.fetch).toHaveBeenCalledTimes(1)
+    const headers = authHeaders(0)
+    expect(headers.get('cookie')).toBe(`${REFRESH_COOKIE}=old-refresh`)
+    expect(headers.get('authorization')).toBe('Bearer old-access')
+    expect(fetchMock.fetch.mock.calls.some(([url]) => String(url).includes('/refresh'))).toBe(false)
+    expect(serverMocks.appendResponseHeader).toHaveBeenCalledWith('set-cookie', clearingCookie)
+  })
+
+  it('cannot mint a new access token after logout revoked the forwarded refresh cookie', async () => {
+    let revoked = false
+    fetchMock.fetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      const path = String(url).replace(API, '')
+      if (path === '/api/v1/auth/logout') {
+        revoked = new Headers(init?.headers).get('cookie') === `${REFRESH_COOKIE}=old-refresh`
+        return fakeResponse(204)
+      }
+      if (path === '/api/v1/auth/refresh') {
+        return fakeResponse(revoked ? 401 : 200, { body: { accessToken: 'unexpected-access' } })
+      }
+      throw new Error(`Unexpected backend call: ${path}`)
+    })
+
+    await callBackend({ path: '/api/v1/auth/logout', method: 'POST' })
+    expect(revoked).toBe(true)
+
+    const refresh = await refreshAccessToken()
+    expect(refresh).toEqual({ ok: false, accessToken: null })
+    expect(serverMocks.setResponseHeader).not.toHaveBeenCalledWith(ACCESS_TOKEN_HEADER, expect.any(String))
+  })
+
+  it.each([
+    '/api/v1/media/7/bytes?exp=1&uid=2&sig=abc',
+    '/api/v1/media/7/signed-url',
+  ])('does not consume or rotate the refresh cookie on a media 401 for %s', async (path) => {
+    // Queue a refresh response too: pre-fix code consumes it, then the
+    // assertions below fail on the extra backend call rather than a TypeError.
+    fetchMock.fetch
+      .mockResolvedValueOnce(fakeResponse(401))
+      .mockResolvedValueOnce(fakeResponse(401))
+
+    const result = await callBackend({ path, method: 'GET' })
+
+    expect(result.status).toBe(401)
+    expect(fetchMock.fetch).toHaveBeenCalledTimes(1)
+    expect(fetchMock.fetch.mock.calls.some(([url]) => String(url).includes('/api/v1/auth/refresh'))).toBe(false)
+    expect(serverMocks.setResponseHeader).not.toHaveBeenCalledWith(ACCESS_TOKEN_HEADER, expect.any(String))
+    expect(serverMocks.setResponseHeader).not.toHaveBeenCalledWith(RELOGIN_HEADER, '1')
   })
 })

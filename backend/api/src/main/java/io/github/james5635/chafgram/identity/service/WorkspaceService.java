@@ -42,7 +42,9 @@ public class WorkspaceService {
 
 	@Transactional
 	public WorkspaceResponse update(String actorUsername, UpdateWorkspaceRequest request) {
-		access.requireWriteable(actorUsername);
+		// The @PreAuthorize role claim can be one access TTL stale; the database
+		// role is authoritative for an admin write (FR-1.3).
+		access.requireAdmin(actorUsername);
 		WorkspaceSettings workspace = singleton();
 
 		if (request.name() != null) {
