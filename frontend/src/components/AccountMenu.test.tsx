@@ -126,6 +126,7 @@ describe('AccountMenu', () => {
     expect(screen.queryByText('@rojame')).not.toBeInTheDocument()
 
     fireEvent.click(trigger)
+    expect(screen.getByLabelText('Account menu options')).toHaveClass('w-56')
     expect(screen.getByRole('link', { name: /Settings/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Sign out/ })).toBeInTheDocument()
   })

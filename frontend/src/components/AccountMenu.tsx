@@ -92,7 +92,7 @@ export default function AccountMenu({ displayName, username, collapsed = false }
       {open && (
         <div
           aria-label="Account menu options"
-          className="absolute bottom-full left-0 right-0 z-30 mb-2 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg backdrop-blur-md"
+          className="absolute bottom-full left-0 z-30 mb-2 w-56 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg backdrop-blur-md"
         >
           <Link
             to="/settings"
