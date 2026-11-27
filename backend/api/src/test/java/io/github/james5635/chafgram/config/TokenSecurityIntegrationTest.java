@@ -2,9 +2,13 @@ package io.github.james5635.chafgram.config;
 
 import io.github.james5635.chafgram.AbstractIntegrationTest;
 import io.github.james5635.chafgram.identity.User;
+import io.github.james5635.chafgram.identity.auth.RefreshToken;
+import io.github.james5635.chafgram.identity.auth.RefreshTokenRepository;
+import io.github.james5635.chafgram.identity.auth.TokenPair;
 import io.github.james5635.chafgram.identity.auth.TokenService;
 import io.github.james5635.chafgram.identity.repository.UserRepository;
 import io.github.james5635.chafgram.identity.service.MemberService;
+import io.github.james5635.chafgram.identity.utils.Tokens;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,7 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -23,6 +29,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -66,6 +73,12 @@ class TokenSecurityIntegrationTest extends AbstractIntegrationTest {
 	private TokenService tokenService;
 
 	@Autowired
+	private RefreshTokenRepository refreshTokens;
+
+	@Autowired
+	private JwtDecoder jwtDecoder;
+
+	@Autowired
 	private JwtEncoder jwtEncoder;
 
 	@Autowired
@@ -76,6 +89,35 @@ class TokenSecurityIntegrationTest extends AbstractIntegrationTest {
 		jdbc.update("DELETE FROM refresh_tokens");
 		wipeSocial();
 		memberService.bootstrap("alice", "Alice", "alice@example.com", PASSWORD);
+	}
+
+	// ── literal token contract ───────────────────────────────────────────────
+
+	@Test
+	void issuedTokenPairMatchesTheLiteralConfiguredContract() {
+		User alice = alice();
+		TokenPair pair = tokenService.issue(alice);
+
+		// Decode with the production resource-server decoder, not the encoder:
+		// a wrong audience/issuer or an over-long TTL must fail this test even
+		// if encoder and decoder still agree with each other.
+		Jwt access = jwtDecoder.decode(pair.accessToken());
+		assertThat(access.getHeaders().get("alg")).isEqualTo("HS256");
+		assertThat(access.getSubject()).isEqualTo(String.valueOf(alice.getId()));
+		// iss is a plain identifier, so Jwt.getIssuer() would reject it; read the raw claim.
+		assertThat(access.getClaimAsString("iss")).isEqualTo("chafgram");
+		assertThat(access.getAudience()).containsExactly("chafgram-web");
+		assertThat(access.getClaimAsStringList("roles")).containsExactly("admin");
+		assertThat(access.getIssuedAt()).isNotNull();
+		assertThat(access.getExpiresAt()).isNotNull();
+		assertThat(Duration.between(access.getIssuedAt(), access.getExpiresAt()))
+				.isEqualTo(Duration.ofSeconds(15 * 60));
+		assertThat(pair.expiresIn()).isEqualTo(15 * 60L);
+
+		RefreshToken refresh = refreshTokens.findByTokenHash(Tokens.sha256Hex(pair.refreshToken()))
+				.orElseThrow();
+		assertThat(Duration.between(refresh.getCreatedAt(), refresh.getExpiresAt()))
+				.isBetween(Duration.ofDays(14).minusSeconds(5), Duration.ofDays(14).plusSeconds(5));
 	}
 
 	// ── authentication at the HTTP boundary ─────────────────────────────────
