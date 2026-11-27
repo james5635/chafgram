@@ -143,7 +143,18 @@ describe('Profile screen', () => {
     const profileCard = screen.getByRole('heading', { name: 'Rojame' }).closest('.island-shell')
 
     expect(profileCard).not.toContainElement(body)
-    expect(body.closest('.space-y-6')).not.toBeNull()
+    expect(body.closest('.page-wrap')).not.toBeNull()
+
+    const postsSection = body.closest('section')!
+    expect(postsSection).toHaveClass('mt-8', 'space-y-6')
+
+    const list = postsSection.querySelector('.space-y-6') as HTMLElement | null
+    expect(list).not.toBeNull()
+    expect(list).not.toBe(postsSection)
+    expect(list!).not.toHaveClass('grid')
+    expect(list!.className).not.toMatch(/grid-cols-/)
+    expect(list!).toContainElement(body)
+    expect(profileCard!.compareDocumentPosition(postsSection) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('shows an empty state when the member has no posts', async () => {
@@ -159,7 +170,15 @@ describe('Profile screen', () => {
     ])
 
     expect(screen.queryByText('No posts yet.')).not.toBeInTheDocument()
-    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
+
+    const postsRegion = container.querySelector('.mt-8.space-y-6 [aria-busy="true"]') as HTMLElement | null
+    expect(postsRegion).not.toBeNull()
+    const skeletons = postsRegion!.querySelectorAll('.animate-pulse')
+    expect(skeletons).toHaveLength(3)
+    const wrapper = skeletons[0].parentElement!
+    expect(wrapper).toHaveClass('space-y-6')
+    expect(wrapper).not.toHaveClass('grid')
+    expect(wrapper.className).not.toMatch(/grid-cols-/)
   })
 
   it('shows an error state when the query fails', async () => {
