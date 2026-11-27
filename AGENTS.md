@@ -76,7 +76,7 @@ just db-reset              # drop all objects in the dev DB schema via Flyway cl
   touched — no `just seed` afterwards. Test-only config lives in
   `backend/api/src/test/resources/application-test.properties` (profile `test`); never add a
   test-scoped `application.properties`, it shadows the main one on the classpath.
-- Identity Backend modules implemented: `identity` (users/invites/workspace/passkeys/account
+- Identity Backend modules implemented: `identity` (users/invites/workspace/auth token pairs/account
   flows, REST `/api/v1`), `social` (posts/comments/reactions/follows/feed/search + GraphQL at
   `/graphql`), `messaging` (1:1 + groups, REST), `notifications`, `moderation`
   (reports + audit log), `media` (upload/bytes + in-app async video pipeline), `mail`
@@ -89,21 +89,33 @@ just db-reset              # drop all objects in the dev DB schema via Flyway cl
   reach `status='ready'`; images are unaffected.
 - Actuator has its own security chain: `/actuator/health` is public, `/actuator/info`
   and `/actuator/metrics` are admin-only with HTTP Basic (anonymous → 401).
-- Passkeys are handled by Spring Security WebAuthn; the `user_entities` and
-  `user_credentials` tables are framework-managed — do not add JPA entities on top of
-  them or alter their DDL. Configure via env `CHAFGRAM_WEBAUTHN_RP_ID` (default
-  `localhost`) and `CHAFGRAM_WEBAUTHN_ALLOWED_ORIGINS` (default `http://localhost:3000`,
-  comma-separated if several).
-- Authentication is session-cookie based; passkey ceremonies are at
-  `/webauthn/register/*` (authenticated) and `/login/webauthn` +
-  `/webauthn/authenticate/options` (unauthenticated). CSRF: double-submit cookie,
-  readable JS header `X-XSRF-TOKEN` (CookieCsrfTokenRepository) — BFF clients must
-  send it on mutating requests. The cookie value is accepted verbatim: the config
-  uses `CsrfTokenRequestAttributeHandler` instead of Spring's default XOR-masked
-  handler, because a masked token cannot be obtained from the cookie.
+- Authentication is stateless: short-lived HS256 access JWTs (`sub`, `iat`, `exp`,
+  `iss`, `aud`, `roles`) go in `Authorization: Bearer ...` and are validated by
+  Spring Security's resource server. Opaque refresh tokens are stored only as
+  SHA-256 hashes in `refresh_tokens` and travel only in the HttpOnly
+  `chafgram_refresh` cookie (path `/`, `SameSite=Strict`, `Secure` by default
+  outside dev/test). No HTTP sessions or CSRF tokens are created.
+- Auth endpoints: `POST /api/v1/auth/login` (username or email + password),
+  `/refresh` (rotates the row and returns a new pair), `/logout` (bearer + cookie;
+  revokes the row and clears the cookie). **Any** presented revoked refresh row
+  returns 401 and never mints a new token; family-wide revocation applies only
+  to rows revoked without `replaced_by` (logout/suspected theft). Rotation is
+  atomic — a concurrent loser gets 401, not a second live token chain.
+- Token config (see `.env.example`): `CHAFGRAM_JWT_SECRET` (≥32 bytes; dev
+  throwaway default, production must override), `CHAFGRAM_JWT_ISSUER`,
+  `CHAFGRAM_JWT_AUDIENCE`, `CHAFGRAM_ACCESS_TTL` (15m),
+  `CHAFGRAM_REFRESH_TTL` (14d), `CHAFGRAM_COOKIE_SECURE`,
+  `CHAFGRAM_MEDIA_URL_TTL` (1h). Role claims can be up to one access TTL stale;
+  domain services still re-check member status on writes.
+- Media bytes: `GET /api/v1/media/{id}/signed-url` (bearer) issues a URL with
+  `exp`/`sig` and the viewer id, valid for 1h; `GET /api/v1/media/{id}/bytes?…`
+  validates it without a bearer. Signing never touches the refresh token.
 - Public endpoints by design: `GET /api/v1/workspace`, `POST /api/v1/bootstrap`
   (first admin only, no members yet), `POST /api/v1/register` (only when
-  `signup_mode=open`), `POST /api/v1/invites/accept`. Admin-only: member role/status
+  `signup_mode=open`), `POST /api/v1/invites/accept`, `/api/v1/auth/**`, and
+  signed media bytes. `/graphql` and `/graphiql` are public at the HTTP boundary:
+  GraphQL authorization stays in resolvers (HTTP 200 + `errors[]`); token
+  validity failures are filter-level 401. Admin-only: member role/status
   actions, invite create/list/revoke. Method security (`@PreAuthorize`) + service
   layer checks; suspended members can sign in but cannot write (`MemberAccess`).
 - GraphQL client codegen (DGS) runs on `generate` against
@@ -113,7 +125,8 @@ just db-reset              # drop all objects in the dev DB schema via Flyway cl
   The migration files are the schema of record. `spring.jpa.hibernate.ddl-auto`
   is `validate` — Hibernate never creates or updates; Flyway owns the schema.
   Baseline: `V1__init.sql`; `V2` aligns media position columns; `V3` adds
-  `users.email_verified_at` (FR-1.7).
+  `users.email_verified_at` (FR-1.7); `V4` adds `media_assets.thumbnail_key`;
+  `V5` creates `refresh_tokens`; `V6` drops the WebAuthn tables.
 - Both `spring-boot-starter-webmvc` and `-webflux` are present; prefer the MVC/servlet path
   unless a reactive endpoint is explicitly needed.
 
@@ -133,10 +146,12 @@ pnpm run preview           # serve the production build
   that talks to the Spring Boot API; server functions (`graphqlRequest`,
   `loginRequest`, `logoutRequest`, `uploadMedia`) wrap it. Never `fetch` the backend
   from a component, and never expose the backend URL to the browser.
-- **Cookies and CSRF are relayed by the BFF.** The browser holds the session cookie
-  (`JSESSIONID`) and the double-submit `XSRF-TOKEN`; the proxy forwards them and copies
-  the backend's `Set-Cookie` headers back. A 403 that carries a freshly issued CSRF
-  token is retried once — do not bypass that retry.
+- **Bearer tokens and refresh are handled by the BFF.** The browser keeps the access
+  token only in memory and attaches it to every server-function call; `backend-proxy.ts`
+  forwards it as `Authorization` and never relays other browser cookies. On a backend
+  401 it exchanges the HttpOnly refresh cookie once, relays the rotated `Set-Cookie`,
+  and retries the original request once with the new bearer. A second 401 clears the
+  token and requires sign-in — do not bypass that single retry.
 - **GraphQL:** operations live in `src/graphql/*.graphql`; `just generate` regenerates
   `src/generated/graphql.ts` from the backend schema (git-ignored — never hand-edit).
   Read with Apollo `useQuery`, write with `useMutation`; the client is provided once in
@@ -161,26 +176,26 @@ pnpm run preview           # serve the production build
   Put new classes in the matching layer — do not flatten them back into the root.
 - **API surface:** GraphQL-first — everything goes through `/graphql` (social, identity,
   invites, workspace, messaging, moderation). REST only for the documented keep-list in
-  `docs/architecture.md` (session ceremonies, WebAuthn, media upload/bytes, multipart
+  `docs/architecture.md` (auth endpoints, media upload/bytes/signed URLs, multipart
   message sends, Actuator).
   Resolver classes carry class-level `@PreAuthorize("isFullyAuthenticated()")`; only
   explicitly public operations carry `permitAll()` (workspace branding query).
-  Authorization failures return HTTP 200 + `errors[]` with `extensions.classification`,
-  not HTTP 403/401 — tests must assert on `$.errors`, not the status code.
+  Authorization failures return HTTP 200 + `errors[]` with `extensions.classification`;
+  token validity failures are 401 — tests must assert on `$.errors` for the former,
+  not the status code.
 - **Frontend:** TypeScript strict; function components; colocate components in
   `src/components/`; routes thin, components dumb; server logic via TanStack Start server
   functions, not ad-hoc fetch wrappers.
-- **Commits:** `<type>(<scope>): <subject>` — e.g. `feat(backend): add passkey
-  registration`, `fix(db): align media position columns with entity mappings`,
+- **Commits:** `<type>(<scope>): <subject>` — e.g. `feat(backend): add refresh-token
+  rotation`, `fix(db): align media position columns with entity mappings`,
   `docs(docs): split plans into FR/BR`. Types: `feat`, `fix`, `docs`, `refactor`,
   `test`, `chore`, `build`, `ci`. Scope: the area touched (`backend`, `frontend`, `db`,
   `docs`, `justfile`, …). Subject is imperative with no trailing period; describe
   *why*, not just *what*. PR titles follow the same format.
 - **Imports:** Never use fully-qualified class names (FQCN) inline. Always import the class and use the simple name.
   - Test utilities: `import org.springframework.mock.web.MockMultipartFile;` → `new MockMultipartFile(...)`
-  - Test utilities: `import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;` → `.with(csrf())`
   - All other code: same rule — import, don't FQCN.
-  - Avoid `org.springframework.mock.web.MockMultipartFile` or `org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()` inline anywhere.
+  - Avoid `org.springframework.mock.web.MockMultipartFile` inline anywhere.
 - **Docs-first for direction:** if a change contradicts `product.md`/`design.md`, update
   the doc in the same change or flag it — don't fork the truth in code.
 

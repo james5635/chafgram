@@ -18,14 +18,14 @@
 color, signup mode (`invite_only` default | `open`).
 **FR-1.2 (M)** Admins invite members by email or by reusable link; invites carry a role,
 expire (`expires_at`), and are accepted at most once (`accepted_at` is written).
-**FR-1.3 (M)** Members authenticate primarily with passkeys (WebAuthn;
-`user_entities`/`user_credentials`, managed by Spring Security's WebAuthn
-framework), with an optional password fallback per member.
+**FR-1.3 (M)** Members authenticate with a username or email plus password. Login
+issues a short-lived bearer access JWT and an opaque, rotating refresh token stored
+as a hash and carried in an HttpOnly cookie; no HTTP sessions are used.
 **FR-1.4 (M)** Admins can change member roles, suspend, and deactivate; deactivated
 members cannot authenticate; suspended members can read but not write.
 **FR-1.5 (S)** Admins can reactivate suspended/deactivated members.
-**FR-1.6 (S)** A member may register several passkeys and name each
-(`label`), revoke them individually.
+**FR-1.6 (S)** *Removed in the token-auth cutover:* member-managed passkeys
+(registration, naming, individual revocation); no WebAuthn endpoints or UI ship.
 **FR-1.7 (S)** Optional email verification and password-reset flows via single-use,
 time-boxed tokens (`account_tokens`, only SHA-256 hashes stored).
 

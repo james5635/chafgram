@@ -23,9 +23,9 @@ export interface GraphQLResponse {
 /**
  * BFF: the only egress point to the Spring Boot GraphQL endpoint.
  *
- * Runs on the server, forwards the browser's session cookie and the
- * double-submit CSRF token, and never exposes backend URLs or credentials to
- * the browser. Apollo talks to this function through `bffLink`.
+ * Runs on the server; `callBackend` forwards the browser's bearer token and
+ * silently refreshes it on 401. Backend URLs and credentials never reach the
+ * browser. Apollo talks to this function through `bffLink`.
  */
 export const graphqlRequest = createServerFn({ method: 'POST' })
   .validator((payload: GraphQLRequestPayload) => payload)

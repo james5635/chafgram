@@ -39,10 +39,10 @@ just dev               # backend :8080 + frontend :3000 (parallel; Ctrl-C stops 
   password `chafgram-dev-password` — plus a reusable demo invite
   (`/join?token=demo-invite-token`). Details: [README](../README.md#quick-start).
 - `.env` is gitignored; `.env.example` is the committed template. The JVM does **not**
-  read `.env` — the datasource/WebAuthn defaults in `application.properties` match the
-  compose dev credentials; override with real environment variables for anything shared.
-  `just` loads `.env` into recipes (`set dotenv-load := true`); `docker compose`
-  auto-loads it too.
+  read `.env` — the datasource/token defaults in `application.properties` are dev-only
+  throwaway values; override with real environment variables for anything shared or
+  production (especially `CHAFGRAM_JWT_SECRET`). `just` loads `.env` into recipes
+  (`set dotenv-load := true`); `docker compose` auto-loads it too.
 - Required for media uploads/seeding: `docker compose up -d garage garage-init` —
   one-shot, idempotent S3 setup (bucket `chafgram-media`, endpoint
   `http://localhost:3900`, region `garage`). The backend uses this S3-compatible
@@ -71,7 +71,8 @@ regenerate the types automatically, so a fresh clone needs no extra step.
 2. Edit backend Java → devtools restarts the app (logs in the `just dev` output);
    edit frontend → Vite hot-reloads.
 3. Explore the API with GraphiQL at `http://localhost:8080/graphiql` (dev only —
-   disable in production profiles). All operations go through `POST /graphql`.
+   disable in production profiles). All operations go through `POST /graphql` with
+   `Authorization: Bearer <accessToken>` from `POST /api/v1/auth/login` (or `/refresh`).
 4. Before you call it done: `just verify` (tests + build). Pushing runs the same check
    automatically via the pre-push hook installed by `just bootstrap`.
 
@@ -91,6 +92,8 @@ Rules:
   headless Spring context and calls the `:api` services with an explicit acting member.
 - `just db-reset` runs `:api:flywayClean`, dropping all objects in the dev schema
   (WIPES all data). Follow it with `just migrate`, then optionally `just seed`.
+- Current migrations include `V5__create_refresh_tokens.sql` (hashed refresh tokens,
+  rotation lineage) and `V6__drop_webauthn_tables.sql` (passkey tables removed).
 - Dev credentials (`chafgram` / `chafgram`, DB `chafgram`) are throwaway, local-only;
   override via `SPRING_DATASOURCE_*` for anything else. Never commit real credentials.
 
@@ -120,9 +123,16 @@ schema/DTO sync (`SchemaDtoSyncTest`). Conventions to respect:
   `extensions.classification` (`UNAUTHORIZED` for anonymous, `FORBIDDEN` for an
   authenticated member without the role, `BAD_REQUEST`/`NOT_FOUND` for validation and
   lookup failures) — tests assert on `$.errors`, never on the HTTP status. Service-layer
-  `ApiException`s are mapped by `common/GraphQlApiExceptionHandler`.
+  `ApiException`s are mapped by `common/GraphQlApiExceptionHandler`. Token validity
+  failures are different: missing/invalid/expired bearer → HTTP 401 from the security
+  filter.
 - Resolver classes carry class-level `@PreAuthorize("isFullyAuthenticated()")`; only the
-  `permitAll()` operations are public.
+  `permitAll()` operations are public. `/graphql` is public at the HTTP boundary, so an
+  anonymous call reaches the resolver and fails with `errors[]`; a bad token does not.
+- Token tests: `TokenServiceTest`, `AuthControllerIntegrationTest` and
+  `TokenSecurityIntegrationTest` cover claims/TTLs, rotation, revoked-token replay (any
+  revoked row → 401; family-wide revocation only without `replaced_by`), logout, and
+  signed media URL validation.
 - Keep `*.graphqls` files in sync with the DTOs — `SchemaDtoSyncTest` fails otherwise.
 
 **Tests are mandatory for every change** (feature, bug fix, refactor, behavior-affecting
@@ -145,26 +155,28 @@ pre-push hook installed with `just bootstrap`. Docs-only changes are exempt from
 ## 6. API conventions (GraphQL-first)
 
 - Everything is GraphQL at `/graphql`. REST exists only for what GraphQL cannot
-  express — the keep-list (session ceremonies, WebAuthn endpoints, media
-  upload/`bytes`, multipart message sends, Actuator) is documented in
-  [`architecture.md`](architecture.md).
+  express — the keep-list (auth/login/refresh/logout, first-admin bootstrap/signup/invite
+  claim, media upload/`bytes`/signed URLs, multipart message sends, Actuator) is
+  documented in [`architecture.md`](architecture.md).
 - Adding an API: new/extended `.graphqls` (one file per DTO) + resolver + DTO, then
   re-sync `build/generated-sources` via `./gradlew :api:generateJava` (DGS codegen).
-- CSRF: double-submit cookie (`XSRF-TOKEN`, readable JS) with an `X-XSRF-TOKEN` header
-  required on mutating requests. BFF clients (the TanStack Start server) must send it.
-  Anonymous POSTs without a valid pair get 403 — by design, not a bug. The cookie value
-  is accepted verbatim (plain `CsrfTokenRequestAttributeHandler`); Spring's default
-  XOR-masked handler is explicitly replaced because a masked token cannot be obtained
-  from the cookie.
-- GraphiQL executes queries but needs the same CSRF pair; the masked token is exposed
-  as the hidden `_csrf` field on the `/login` page.
+- Auth: every backend call carries `Authorization: Bearer <accessToken>`; the BFF's
+  `callBackend` forwards it and, on 401, calls `/api/v1/auth/refresh` once with the
+  HttpOnly `chafgram_refresh` cookie, relays the rotated cookie, and retries the original
+  request once with the new token. A second 401 clears the token and redirects to
+  `/login`. No session or CSRF cookies are used.
+- GraphiQL executes queries with the `Authorization` header copied from the login JSON;
+  use `/refresh` with the refresh cookie to obtain a new access token after expiry.
+- Signed media URLs: GraphQL `Post.mediaUrls` carries 1-hour signed BFF URLs; the
+  browser route relays `exp`/`uid`/`sig` to `GET /api/v1/media/{id}/bytes` without a
+  bearer. On a load error the client calls `GET /api/v1/media/{id}/signed-url` (bearer)
+  once to re-sign.
 - The operation surface lives in `backend/api/src/main/resources/graphql/schema.graphqls`
   (Query/Mutation roots) with one `.graphqls` file per DTO. Notable groups:
-  profile (`updateProfile`), passkeys (`myPasskeys`/`renamePasskey`/`revokePasskey`),
-  account flows (`requestEmailVerification`, `requestPasswordReset`, `resetPassword`,
-  `verifyEmail`), watch feed (`watchFeed`), message media + editing (`mediaIds`,
-  `editMessage`, `deleteMessage`), admin (`members(query:)`, `auditLog(...)`,
-  `deleteMedia(id:)`).
+  profile (`updateProfile`), account flows (`requestEmailVerification`,
+  `requestPasswordReset`, `resetPassword`, `verifyEmail`), watch feed (`watchFeed`),
+  message media + editing (`mediaIds`, `editMessage`, `deleteMessage`), admin
+  (`members(query:)`, `auditLog(...)`, `deleteMedia(id:)`).
 
 ## 7. Verification & pushing
 
@@ -200,7 +212,7 @@ just bootstrap  # one-time: install the pre-push hook from scripts/hooks/pre-pus
 | App fails with `SchemaManagementException … position` | Applied DB drifted from mappings; align with a new migration (see §4), never by editing applied files. |
 | `./gradlew :api:test` fails with "Could not find a valid Docker environment" | Testcontainers needs a running Docker daemon — start Docker (or Podman) and retry. |
 | Tests hit the dev database / the dev DB looks wiped by a test run | They don't: the suite uses its own throwaway container. A test-scoped `application.properties` is the usual culprit for a *misconfigured* run — rename it to `application-test.properties` (see §5). |
-| GraphQL returns 403 from curl | Missing CSRF double-submit pair (cookie + `X-XSRF-TOKEN`) — see §6. |
+| GraphQL returns 401 from curl | Missing, invalid or expired `Authorization: Bearer ...` header — see §6. Resolver-level authorization failures are HTTP 200 + `errors[]`, not 401. |
 | `.env` changes ignored by the JVM | The JVM doesn't read `.env`; export the variables or rely on `application.properties` defaults. |
 | Flyway checksum validation failure | An applied migration was edited; restore it and add a new `V<n>` alignment instead. |
 

@@ -35,7 +35,7 @@ Same token set as `web-ui.md` §1 (lagoon/palm/sea-ink/sand/foam plus brand blue
 | Path | Auth | Screen | Primary action |
 |------|------|--------|----------------|
 | `/welcome` | No | Welcome / landing | Sign in or contact admin |
-| `/login` | No | Login | Passkey-first sign in; password fallback |
+| `/login` | No | Login | Password sign in (username or email) |
 | `/` | Yes | Home feed | Compose post via FAB; scroll following-feed |
 | `/explore` | Yes | Explore / Watch | Browse For You / Following / Trending / Nearby |
 | `/notifications` | Yes | Notifications | Read + mark activity read |
@@ -44,7 +44,7 @@ Same token set as `web-ui.md` §1 (lagoon/palm/sea-ink/sand/foam plus brand blue
 | `/messages/:conversationId` | Yes | Direct messages (thread) | Read/send messages |
 | `/compose` | Yes | Create post (bottom sheet) | Photo/video/text post; one primary "Post" |
 | `/admin/*` | Admin/Mod | Admin surfaces | Members, settings, audit, reports (mobile-dense) |
-| `/settings` | Yes | Member settings | Theme, passkeys, notification prefs |
+| `/settings` | Yes | Member settings | Theme, notification prefs |
 
 Roles: `member`, `moderator`, `admin`. One workspace per deployment (BR-1.1).
 
@@ -118,18 +118,15 @@ Single column, full viewport height, safe-area insets. No bottom tab bar (unauth
 | Header | Top | `[Back ←]` left, `[Theme ⓘ]` right; minimal |
 | Kicker "Sign in" | Card top | `island-kicker` |
 | h1 "Welcome back" | Below kicker | `display-title` (Fraunces) |
-| [Sign in with passkey 🔑] | Primary | `w-full rounded-full border px-6 py-3 text-sm font-semibold transition`; active `border-[var(--chip-line)] bg-[color-mix(in_oklab,var(--brand)22%,var(--surface-strong))] text-[var(--sea-ink)]`; inactive `border-transparent bg-transparent text-[var(--sea-ink-soft)] hover:bg-[var(--link-bg-hover)]` |
-| ──── or ──── | Divider | `mx-2 mt-1 mb-1 h-[1px] bg-[var(--line)]` |
-| [Sign in with password] | Secondary | Same pill styling → progressive disclose inputs |
-| Email/username input | Password mode | `.demo-input`: `w-full border border-[var(--line)] rounded-full bg-[color-mix(in_oklab,var(--surface-strong)88%,white_12%)] text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none transition focus:border-[color-mix(in_oklab,var(--brand)58%,var(--line))] focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--brand)24%,transparent)]` |
+| Email/username input | Below heading | `.demo-input`: `w-full border border-[var(--line)] rounded-full bg-[color-mix(in_oklab,var(--surface-strong)88%,white_12%)] text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none transition focus:border-[color-mix(in_oklab,var(--brand)58%,var(--line))] focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--brand)24%,transparent)]` |
 | Password input | Below email | Same `.demo-input`, `type="password"` |
 | [Continue] | Below inputs | `w-full rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--brand)22%,var(--surface-strong))] px-6 py-3 text-sm font-semibold text-[var(--sea-ink)] transition disabled:opacity-55 disabled:transform-none hover:!bg-[color-mix(in_oklab,var(--brand)30%,var(--surface-strong))]` |
-| "Don't have an account? Contact your admin" | Below mode toggle | `mb-3 text-sm text-[var(--sea-ink-soft)]` + `font-semibold` "Contact your admin" |
+| "Don't have an account? Contact your admin" | Below inputs | `mb-3 text-sm text-[var(--sea-ink-soft)]` + `font-semibold` "Contact your admin" |
 | [← Back to welcome] | Link | `text-sm font-semibold text-[var(--brand-dark)] no-underline transition hover:text-[var(--brand)]` → `/welcome` |
 | `.demo-alert` | Error state | tinted red, never a bare code — always a path forward |
 | [Need help?] | Footer area | link |
 
-**Flow:** Passkey (primary) → `/webauthn/authenticate/options` → `navigator.credentials.get()` → `/login/webauthn` → session cookie → redirect `/`. Password (secondary) → email/password inputs → [Continue] → session cookie → `/`.
+**Flow:** email/username + password → [Continue] → BFF `loginRequest` → access token in browser memory + HttpOnly `chafgram_refresh` cookie → redirect `/`. A failed refresh clears the token and returns to `/login`.
 
 Traceability: FR-1.3, BR-1.3, BR-1.5, architecture.md §4.1.
 
@@ -258,11 +255,10 @@ Traceability: FR-1.4, FR-1.5, FR-9.1–FR-9.6, FR-10.1–FR-10.5, BR-1.4–BR-1.
 | Component | Where | How |
 |-----------|-------|-----|
 | Theme toggle | Top | light/dark/auto, persisted `localStorage["theme"]`, `design.md` §6 |
-| Passkeys | Below theme | Register several, name each (`label`), revoke individually (FR-1.6) |
-| Notification preferences | Below passkeys | Per-type mute (FR-7.3) |
+| Notification preferences | Below theme | Per-type mute (FR-7.3) |
 | Email verification / password reset | Below notifs | Via single-use tokens (FR-1.7, proposal) |
 
-Traceability: FR-1.6, FR-1.7, FR-7.3, design.md §6.
+Traceability: FR-1.7, FR-7.3, design.md §6.
 
 ---
 
@@ -323,7 +319,7 @@ Traceability: FR-1.6, FR-1.7, FR-7.3, design.md §6.
 
 ## 10. Interaction flows (mobile)
 
-1. **Sign in:** welcome → `/login` → passkey (primary) or password (secondary) → session cookie → `/`.
+1. **Sign in:** welcome → `/login` → email/username + password → token pair (access in memory, refresh in an HttpOnly cookie) → `/`.
 2. **Create post:** FAB `+` → `/compose` sheet → media picker (1..N images \| 1 video) → [Post] → feed insert with `rise-in`.
 3. **Follow:** profile → [Follow] ghost → brand active; follower count derived (BR-2.3, never stored).
 4. **Message:** `/messages` → open conversation → send → history cursor-paginated; unread badge via `last_read_message_id`.
@@ -344,7 +340,7 @@ Traceability: FR-1.6, FR-1.7, FR-7.3, design.md §6.
 | Messages | FR-6.1–FR-6.6 | BR-6.1–BR-6.6 |
 | Compose | FR-3.1, FR-3.2, FR-5.1, FR-5.2 | BR-3.2, BR-3.3 |
 | Admin | FR-1.4, FR-1.5, FR-9.x, FR-10.x | BR-1.4–BR-1.6, BR-9.x, BR-10.x, BR-11.3 |
-| Settings | FR-1.6, FR-1.7, FR-7.3 | design.md §6 |
+| Settings | FR-1.7, FR-7.3 | design.md §6 |
 
 ---
 

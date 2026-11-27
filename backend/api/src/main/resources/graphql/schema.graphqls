@@ -1,7 +1,7 @@
 # Chafgram — GraphQL schema roots (Query, Mutation) and enums.
 # Object types live in one .graphqls file per DTO (MemberDto.graphqls, PostDto.graphqls, …).
 # REST is only used for what cannot be a GraphQL operation (see architecture.md):
-# session ceremonies, OAuth-callback-style flows, file upload/download, Actuator.
+# token auth (login/refresh/logout), file upload/download, Actuator.
 
 schema {
   query: Query

@@ -9,10 +9,10 @@ import { parseCookieHeader, serializeCookieHeader } from './http'
 /**
  * Server-only proxy to the Spring Boot backend — the single BFF egress point.
  *
- * It forwards the browser's in-memory bearer as `Authorization`, never the
- * old session/CSRF cookies. On an expired token (401) it exchanges the
- * browser's HttpOnly refresh cookie once, relays the rotated cookie, and
- * resends the original request with the new bearer. A second 401 is terminal.
+ * It forwards the browser's in-memory bearer as `Authorization`. On an
+ * expired token (401) it exchanges the browser's HttpOnly refresh cookie
+ * once, relays the rotated cookie, and resends the original request with the
+ * new bearer. A second 401 is terminal.
  */
 
 export interface BackendCall {
@@ -55,7 +55,7 @@ function refreshCookieHeader(): string | null {
   const jar = parseCookieHeader(getRequest().headers.get('cookie'))
   const refresh = jar[REFRESH_COOKIE_NAME]
   if (!refresh) return null
-  // Forward only the refresh cookie, never JSESSIONID/XSRF-TOKEN or other cookies.
+  // Forward only the refresh cookie, never other browser cookies.
   return serializeCookieHeader({ [REFRESH_COOKIE_NAME]: refresh })
 }
 

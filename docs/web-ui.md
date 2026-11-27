@@ -78,7 +78,7 @@ Motion (design.md §9): `.rise-in` 700ms `cubic-bezier(0.16,1,0.3,1)`, `translat
 | Path | Auth | Screen | Primary action |
 |------|------|--------|----------------|
 | `/welcome` | No | Welcome / landing | Sign in or contact admin |
-| `/login` | No | Login | Passkey-first sign in; password fallback |
+| `/login` | No | Login | Password sign in (username or email) |
 | `/` | Yes | Home feed | Compose post; scroll following-feed |
 | `/explore` | Yes | Explore / Watch | Browse For You / Following / Trending / Nearby |
 | `/notifications` | Yes | Notifications | Read + mark activity read |
@@ -90,7 +90,7 @@ Motion (design.md §9): `.rise-in` 700ms `cubic-bezier(0.16,1,0.3,1)`, `translat
 | `/admin/settings` | Admin | Admin: workspace settings | Name/slug/logo/color/signup mode |
 | `/admin/audit` | Admin/Mod | Admin: audit log | Filter by actor/action/target/date |
 | `/admin/reports` | Admin/Mod | Admin: reports queue | Review/action/dismiss reports |
-| `/settings` | Yes | Member settings | Theme, passkeys, notification prefs |
+| `/settings` | Yes | Member settings | Theme, notification prefs |
 
 Roles: `member`, `moderator`, `admin`. One workspace per deployment (BR-1.1).
 
@@ -170,17 +170,14 @@ Full-bleed ambient background, centered island-shell card max ~480px. No rails/n
 | Brand chip + wordmark | Top of card | Same as welcome |
 | Kicker "Sign in to your workspace" | Below brand | `island-kicker` |
 | h1 "Welcome back" | Below kicker | `display-title`, `text-3xl font-bold text-[var(--sea-ink)] leading-[1.02] sm:text-4xl`, `mb-2` |
-| [Sign in with passkey 🔑] | Primary | `w-full rounded-full border px-6 py-3 text-sm font-semibold transition`: active `border-[var(--chip-line)] bg-[color-mix(in_oklab,var(--brand)22%,var(--surface-strong))] text-[var(--sea-ink)]`; inactive `border-transparent bg-transparent text-[var(--sea-ink-soft)] hover:bg-[var(--link-bg-hover)]` → WebAuthn ceremony |
-| ──── or ──── | Divider | `mx-2 mt-1 mb-1 h-[1px] bg-[var(--line)]` |
-| [Sign in with password] | Secondary | Same pill styling → progressive disclose inputs |
-| Email/username input | Inside password mode | `.demo-input`: `w-full border border-[var(--line)] rounded-full bg-[color-mix(in_oklab,var(--surface-strong)88%,white_12%)] text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none transition focus:border-[color-mix(in_oklab,var(--brand)58%,var(--line))] focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--brand)24%,transparent)]` |
+| Email/username input | Below heading | `.demo-input`: `w-full border border-[var(--line)] rounded-full bg-[color-mix(in_oklab,var(--surface-strong)88%,white_12%)] text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none transition focus:border-[color-mix(in_oklab,var(--brand)58%,var(--line))] focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--brand)24%,transparent)]` |
 | Password input | Below email | Same `.demo-input`, `type="password"` |
 | [Continue] | Below inputs | `w-full rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--brand)22%,var(--surface-strong))] px-6 py-3 text-sm font-semibold text-[var(--sea-ink)] transition disabled:opacity-55 disabled:transform-none hover:!bg-[color-mix(in_oklab,var(--brand)30%,var(--surface-strong))]`; disabled until email + password filled |
-| "Don't have an account? Contact your admin" | Below mode toggle | `mb-3 text-sm text-[var(--sea-ink-soft)]` + `font-semibold` "Contact your admin" |
+| "Don't have an account? Contact your admin" | Below inputs | `mb-3 text-sm text-[var(--sea-ink-soft)]` + `font-semibold` "Contact your admin" |
 | [← Back to welcome] | Link | `text-sm font-semibold text-[var(--brand-dark)] no-underline transition hover:text-[var(--brand)]` → `/welcome` |
 | `.demo-alert` | Error state | `rounded-lg border border-[rgba(196,71,71,0.3)] bg-[rgba(196,71,71,0.1)] p-3 text-sm text-[#9f3030]` (never shown by default) |
 
-**Flow:** Passkey (primary) → `/webauthn/authenticate/options` → `navigator.credentials.get()` → `/login/webauthn` → session cookie → redirect `/`. Password (secondary) → email/password inputs → [Continue] → session cookie → `/`. Errors: `.demo-alert` tinted red, never a bare code — always a path forward.
+**Flow:** email/username + password → [Continue] → BFF `loginRequest` → access token in browser memory + HttpOnly `chafgram_refresh` cookie → redirect `/`. A 401 on refresh clears the token and redirects back to `/login`. Errors: `.demo-alert` tinted red, never a bare code — always a path forward.
 
 Traceability: FR-1.3, BR-1.3, BR-1.5, architecture.md §4.1.
 
@@ -212,7 +209,7 @@ Traceability: FR-1.3, BR-1.3, BR-1.5, architecture.md §4.1.
 | Avatar + name + time | Header left | `Link to="/profile/$username" params={{username}}` wrapping `Avatar` size 32 + `flex flex-col leading-none`: name `text-sm font-semibold text-[var(--sea-ink)] block`, meta `text-[0.75rem] text-[var(--sea-ink-soft)] block` (`{createdAt} · public`, `edited` marker if applicable) |
 | More menu | Header right | 3-dot circle SVG (`h-4 w-4`) |
 | Body | Below header (if present) | `px-4 sm:px-5 pt-1 sm:pt-0 pb-3`: `m-0 text-base text-[var(--sea-ink)] leading-7` |
-| Media | Below body (if present) | `px-4 sm:px-5 pb-5 sm:pb-0`: `aspect-video rounded-xl overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]` + `img h-full w-full object-cover` for photos; `video h-full w-full object-cover controls preload="metadata" playsInline` for VIDEO posts. Both use `mediaIds[0]` from GraphQL as `/api/media/:id` (BFF proxy of the authorized backend bytes endpoint, with byte-range support for seeking); posts without an attachment keep the SVG gradient placeholder |
+| Media | Below body (if present) | `px-4 sm:px-5 pb-5 sm:pb-0`: `aspect-video rounded-xl overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]` + `img h-full w-full object-cover` for photos; `video h-full w-full object-cover controls preload="metadata" playsInline` for VIDEO posts. Both use the 1-hour signed URL from GraphQL `Post.mediaUrls[0]` (`/api/media/:id?exp=…&uid=…&sig=…`, BFF proxy of the backend bytes endpoint with byte-range support). On `onError`, one BFF re-sign swaps `src`; posts without an attachment keep the SVG gradient placeholder |
 | Interaction bar | Below media/body | `px-4 sm:px-5 pt-4 pb-5 sm:pt-0 border-t border-[var(--line)]`: `flex items-baseline justify-between gap-4 sm:gap-6 mb-3` with `♥ {count}` `text-sm font-semibold text-[var(--sea-ink)]` on the left and `{comments} comments` + `{shares} shares` `text-[var(--sea-ink-soft)] text-sm` grouped on the right. Counts and the viewer's reaction state come from the normalized `Post` cache entity, so they update in every feed query after a like/unlike or comment — not just the query that happened to be active |
 | Action row | Below interaction bar | `flex items-center gap-5 sm:gap-8 pt-2`: [Like]/[Unlike] (`reactToPost`/`unreactToPost`), [Comment] (toggles thread), [Share] `flex items-center gap-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:text-[var(--brand-dark)]` with SVG icons; liked state uses `text-[var(--brand-dark)]`; [Save] `ml-auto p-1.5 text-[var(--sea-ink-soft)] transition hover:text-[var(--sea-ink)]` bookmark SVG |
 | Comment thread | Below action row when [Comment] is active | `mt-4 border-t border-[var(--line)] pt-4`: comments loaded by the `PostComments` query (oldest-first, up to 50) and rendered as rows with avatar + name + relative time + body. Composer below the list: text `Input` + [Post] button (disabled while empty). Submitting appends the returned comment to the visible thread and to the `postComments` cache, and increments the post's `commentCount`, so the new comment is visible immediately without a manual refresh. Empty list → `No comments yet.` |
@@ -339,10 +336,9 @@ Traceability: FR-1.4, FR-1.5, FR-9.1–FR-9.6, FR-10.1–FR-10.5, BR-1.4–BR-1.
 | Component | Where | How |
 |-----------|-------|-----|
 | Appearance section | `.island-shell rise-in rounded-2xl p-6 sm:p-8` | kicker "Appearance"; theme toggle `rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] shadow shadow-[0_8px_22px_rgba(30,90,72,0.08)] transition hover:-translate-y-0.5` |
-| Passkeys section | `.island-shell ...` | kicker "Passkeys"; helper text `max-w-md text-sm text-[var(--sea-ink-soft)]`; [Add a passkey] button `w-full flex items-center justify-between rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)88%,white_12%)] px-4 py-3 text-sm text-left text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]`; existing passkey row `flex items-center justify-between px-4 py-3`: name + registered date + remove button `text-[var(--sea-ink-soft)] transition hover:text-[#9f3030]` |
 | Notifications section | `.island-shell ...` | kicker "Notifications"; checkbox list `flex items-center justify-between px-4 py-3 cursor-pointer group`: label (title + helper `text-[0.75rem] text-[var(--sea-ink-soft)]`) + checkbox `rounded border-[var(--line)] text-[var(--brand)] focus:ring-[var(--brand)]` |
 
-Traceability: FR-1.6, FR-1.7, FR-7.3, design.md §6.
+Traceability: FR-1.7, FR-7.3, design.md §6.
 
 ---
 
@@ -406,7 +402,7 @@ This section lists every reusable component type used across web screens. Each e
 
 ## 10. Interaction flows (web)
 
-1. **Sign in:** welcome → `/login` → passkey (primary) or password (secondary) → session cookie → `/`.
+1. **Sign in:** welcome → `/login` → email/username + password → token pair (access in memory, refresh in an HttpOnly cookie) → `/`.
 2. **Create post:** composer → media picker (1..N images \| 1 video) → [Post] → feed insert with `rise-in`.
 3. **Follow:** profile → [Follow] ghost → brand active; follower count derived (BR-2.3, never stored).
 4. **Message:** `/messages` → open conversation → send → history cursor-paginated; unread badge via `last_read_message_id`.
@@ -427,7 +423,7 @@ This section lists every reusable component type used across web screens. Each e
 | Messages | FR-6.1–FR-6.6 | BR-6.1–BR-6.6 |
 | Compose | FR-3.1, FR-3.2, FR-5.1, FR-5.2 | BR-3.2, BR-3.3 |
 | Admin | FR-1.4, FR-1.5, FR-9.x, FR-10.x | BR-1.4–BR-1.6, BR-9.x, BR-10.x, BR-11.3 |
-| Settings | FR-1.6, FR-1.7, FR-7.3 | design.md §6 |
+| Settings | FR-1.7, FR-7.3 | design.md §6 |
 
 ---
 

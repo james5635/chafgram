@@ -295,8 +295,8 @@ backend connection). It follows this system as follows:
    with a dashed drag-and-drop upload area; one primary "Post"; video upload shows progress
    inline when wired to the backend.
 5. **Auth / landing (done).** `/welcome` is a full-viewport marketing card with its own nav,
-   hero, and illustration; `/login` is passkey-first with password fallback. Both use the
-   ambient hero treatment scoped to those pages (app chrome hidden).
+   hero, and illustration; `/login` is a password-only form (username or email). Both use
+   the ambient hero treatment scoped to those pages (app chrome hidden).
 6. **Admin console (not yet implemented).** Same tokens, denser layout, `.demo-table`
    patterns; clearly separated from member surfaces.
 7. **Empty/loading/error states** follow §8; skeletons use `sand`/`foam` shimmer, never

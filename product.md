@@ -157,9 +157,9 @@ Phasing to be decided by the owner; a sensible order:
 
 These change what gets built and must be answered by the owner:
 
-1. **Identity integration** — built-in accounts only, or SSO/LDAP/OIDC against the
-   company's directory? (Backend already includes Spring Security + WebAuthn — passkeys —
-   which suggests built-in strong auth; directory sync is still undecided.)
+1. **Identity integration** — built-in password accounts only, or SSO/LDAP/OIDC against
+   the company's directory? (Built-in login issues short-lived bearer access tokens and
+   DB-backed refresh tokens; directory sync is still undecided.)
 2. **Video pipeline** — self-hosted transcoding (e.g. ffmpeg workers) vs. external
    service; storage backend (local disk vs S3-compatible).
 3. **Messaging transport** — WebSocket/STOMP vs. WebFlux/SSE; whether messaging is

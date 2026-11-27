@@ -28,7 +28,7 @@ Routes are files in `src/routes/`; `src/routeTree.gen.ts` is **generated — nev
 | Path | Screen |
 |------|--------|
 | `/welcome` | Welcome / landing |
-| `/login` | Passkey-first sign in with password fallback |
+| `/login` | Password sign in (username or email) |
 | `/` | Home feed (composer + posts) |
 | `/explore` | Explore / Watch |
 | `/notifications` | Activity list |

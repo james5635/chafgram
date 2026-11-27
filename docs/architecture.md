@@ -16,8 +16,8 @@
 - **Private by default.** Single tenant per deployment (one company, one workspace).
   No phone-home, no mandatory external services; the instance runs fully inside the
   company's control. *(decided — product.md)*
-- **API-first, not API-everything.** GraphQL for application data; REST/OpenAPI for
-  operations and auth ceremonies.
+- **API-first, not API-everything.** GraphQL for application data; REST for
+  operations and auth endpoints (token issuance/refresh, upload/download, Actuator).
 - **Replaceable boundaries.** Storage and messaging transport sit behind interfaces so
   they can move without touching domain code.
 
@@ -36,7 +36,7 @@
 │                              │  :8080)                 │                  │
 │                              │  GraphQL + REST         │                  │
 │                              │  Spring Security +      │                  │
-│                              │  WebAuthn               │                  │
+│                              │  JWT bearer auth        │                  │
 │                              └──────┬───────────┬─────┘                  │
 │                                     │ JDBC      │ media I/O              │
 │                          ┌──────────▼───┐   ┌───▼──────────────────┐    │
@@ -68,15 +68,18 @@
 - **TanStack Start + TanStack Router (React 19, TypeScript 6, Vite 8)** — SSR with
   streaming; file-based routing under `src/routes/`; generated `routeTree.gen.ts`
   (never hand-edited). Dev-only TanStack Devtools/Router Devtools render in the corner.
-- **Media bytes** — the browser loads images from the server route
-  `/api/media/$id`, which proxies `GET /api/v1/media/{id}/bytes` through
-  `callBackend`, forwarding the session cookie. The backend URL is never
-  exposed to the browser. `Post.mediaIds` from GraphQL supplies the ids.
+- **Media bytes** — GraphQL `Post.mediaUrls` supplies short-lived signed BFF URLs
+  (`/api/media/{id}?exp=…&uid=…&sig=…`, 1-hour TTL). The browser loads them through the
+  `/api/media/$id` route, which proxies `GET /api/v1/media/{id}/bytes` and relays the
+  signature query without a bearer. A media `onError` asks the BFF for one fresh signed
+  URL (`GET /api/v1/media/{id}/signed-url`, bearer-protected) and swaps `src` once.
+  The backend URL is never exposed to the browser.
 - **Server functions** (`createServerFn`) act as the BFF for all backend calls:
   typed, server-only credential handling, single egress point to the Spring Boot API.
-  `src/lib/backend-proxy.ts` is the only module that talks to the backend; it
-  forwards the browser's cookies, echoes the CSRF token, and copies the backend's
-  `Set-Cookie` headers back to the browser.
+  `src/lib/backend-proxy.ts` is the only module that talks to the backend; it forwards
+  the browser's bearer token, performs one refresh-and-retry on 401 using the browser's
+  HttpOnly refresh cookie, and relays the backend's rotated `Set-Cookie`. No session or
+  CSRF cookies are involved.
 - **Apollo Client 4** — the browser-side GraphQL client. Its `bffLink`
   (`src/lib/apollo.ts`) sends every operation through the `graphqlRequest` server
   function, so the browser never learns the backend URL. One `ApolloClient` with
@@ -108,17 +111,18 @@
   `just verify` runs both suites and both builds.
 - **Data fetching** — Apollo `useQuery`/`useMutation` for reads and writes; TanStack
   Router loaders remain an option for route-level data.
-- **Auth flow** — the browser posts credentials to the `loginRequest` server
-  function, which performs the backend's form login and forwards the resulting
-  `JSESSIONID` cookie to the browser. No tokens in `localStorage`; the session
-  cookie and the double-submit `XSRF-TOKEN` cookie live in the browser jar and are
-  relayed by the BFF on every request. `useSessionGuard` (`src/hooks/`) redirects
-  to `/login` when the backend answers an operation with an `UNAUTHORIZED`
-  classification. If OIDC SSO lands, the same BFF shape holds.
-- **CSRF** — the backend issues `XSRF-TOKEN` (JavaScript-readable) and expects the
-  same value in `X-XSRF-TOKEN`. Spring defers issuing that cookie until a request
-  needs it, so the first mutation is rejected once with a fresh token; the BFF
-  retries that call with the token and forwards the cookie to the browser.
+- **Auth flow** — `loginRequest` calls `POST /api/v1/auth/login`; the access JWT is
+  returned to browser memory (never `localStorage`) and the HttpOnly
+  `chafgram_refresh` cookie is relayed by the BFF. `createAuthFetch` attaches the
+  bearer to every server-function call. On a backend 401, `callBackend` calls
+  `/api/v1/auth/refresh` once with the browser's refresh cookie, relays the rotated
+  cookie, swaps the in-memory token, and retries the original request once; a second
+  401 clears the token and signals re-login. Reloads trigger a silent refresh during
+  bootstrap; SSR renders only the public shell, and authenticated data loads after
+  hydration. `useSessionGuard` (`src/hooks/`) redirects to `/login` on that signal.
+- **No CSRF** — the main chain is stateless and CSRF-disabled; no double-submit token
+  exists. Refresh is authenticated by the HttpOnly cookie alone; logout also requires
+  a bearer token. If OIDC SSO lands, the same BFF shape holds.
 
 
 ## 4. Backend architecture
@@ -149,8 +153,8 @@ No seed SQL script is shipped.
 ```
 io.github.james5635.chafgram
 ├── config           Security, CORS, GraphQL scalars, JPA auditing, Actuator
-├── identity         users, invites, passkeys (Spring Security `user_entities`/`user_credentials`),
-│                    workspace_settings, roles & member lifecycle  ← implemented
+├── identity         users, invites, auth token pairs (access JWT + opaque refresh
+│                    tokens), workspace_settings, roles & member lifecycle  ← implemented
 ├── social           posts, comments, reactions, follows, saved_posts, feed,
 │                    user_blocks, search (FULLTEXT)  ← implemented
 ├── media            media_assets lifecycle, upload endpoints, transcode orchestration,
@@ -167,32 +171,38 @@ io.github.james5635.chafgram
 | Surface | Used for | Notes |
 |---------|----------|-------|
 | **GraphQL** (Spring GraphQL) | **Every API operation** — social data, identity, invites, workspace, messaging, moderation, media metadata | Single endpoint `POST /graphql`. Class-level `@PreAuthorize("isFullyAuthenticated()")` on every resolver class; `permitAll()` only on the public `workspace` branding query and the account-flow mutations (`requestPasswordReset`, `resetPassword`, `verifyEmail`). Authorization failures return HTTP 200 with `errors[]` and `extensions.classification` (`UNAUTHORIZED` for anonymous, `FORBIDDEN` for an authenticated member without the role, `BAD_REQUEST`/`NOT_FOUND` for validation and lookup failures); assert on `$.errors`, never the HTTP status. |
-| **REST** | Session ceremonies, WebAuthn, media upload/bytes, Actuator | The keep-list below — mandated by the fact that a GraphQL operation cannot set the session cookie a login needs, cannot receive multipart bodies, and cannot stream bytes. |
+| **REST** | Auth endpoints, media upload/bytes/signed URLs, Actuator | The keep-list below — mandated by the fact that a GraphQL operation cannot set the refresh cookie a login needs, cannot receive multipart bodies, and cannot stream bytes. |
 | **Actuator** | `/actuator/health` for probes; `/actuator/info` + `/actuator/metrics` for ops | Own security chain (`SecurityConfiguration.actuatorFilterChain`): health is public, info and metrics are admin-only. HTTP Basic is the only entry point, so anonymous requests get `401` + `WWW-Authenticate` instead of the member-facing login redirect. |
 | **WebSocket/SSE** *(proposal)* | Messaging delivery (see §6) | Transport decision pending |
 
 **REST keep-list (all other APIs are GraphQL):**
 
-- `POST /api/v1/bootstrap` — first-run setup; creates the first admin session
-- `POST /api/v1/register` — self-serve signup (only when `signup_mode=open`)
-- `POST /api/v1/invites/accept` — invite claim; creates account + session
-- `POST /login/webauthn`, `/webauthn/authenticate/options` — passkey authentication (Spring Security built-ins)
-- `POST /webauthn/register/options`, `POST /webauthn/register` — passkey registration (Spring Security built-ins)
+- `POST /api/v1/auth/login` — username/email + password → access JWT + refresh cookie
+- `POST /api/v1/auth/refresh` — refresh cookie → rotated refresh cookie + new access JWT
+- `POST /api/v1/auth/logout` — bearer + refresh cookie → revoke row + clear cookie
+- `POST /api/v1/bootstrap` — first-run setup; creates the first admin and issues a token pair
+- `POST /api/v1/register` — self-serve signup (only when `signup_mode=open`); issues a token pair
+- `POST /api/v1/invites/accept` — invite claim; creates account + token pair
 - `POST /api/v1/media` — multipart media upload (image/video)
+- `GET /api/v1/media/{id}/signed-url` — bearer-protected; issues a 1-hour signed bytes URL
 - `POST /api/v1/messages` — multipart message send (image attachments inline)
-- `GET /api/v1/media/{id}/bytes` — authorized byte streaming for media
+- `GET /api/v1/media/{id}/bytes` — authorized byte streaming; also accepts signed `exp`/`uid`/`sig` query params without a bearer
 - `GET /actuator/health` — public liveness/readiness probe (status only, no details)
 - `GET /actuator/info`, `/actuator/metrics` — admin-only ops endpoints (HTTP Basic)
 - `/error` — servlet error dispatch
 
 Public workspace branding is a **GraphQL** operation, not REST: `query { workspace { name slug } }`
-(anonymous, `@PreAuthorize("permitAll()")`).
+(anonymous, `@PreAuthorize("permitAll()")`). `/graphql` and `/graphiql` are public at the
+HTTP boundary: resolver authorization failures stay HTTP 200 + `errors[]`, while
+missing/invalid/expired access tokens are rejected by the resource-server filter with 401.
 
 ### 4.2 Cross-cutting
 
-- **Security** — Spring Security, roles `member|moderator|admin`; passkey-first
-  (WebAuthn), optional password; CSRF on cookie-authenticated browser routes;
-  per-route authorization (admin console vs. member surface).
+- **Security** — Spring Security, roles `member|moderator|admin`; password login issuing
+  a 15-minute HS256 access JWT plus a 14-day opaque refresh token; stateless bearer
+  authentication (no sessions, no CSRF); per-route authorization (admin console vs.
+  member surface). Any presented revoked refresh row is rejected with 401; only rows
+  revoked without `replaced_by` revoke the whole user's token family.
 - **Persistence** — JPA/Hibernate, `@Enumerated(STRING)`, UTC `DATETIME(6)`, Flyway
   owns all schema changes; soft-delete via `deleted_at` + query-level filtering;
   audit fields via JPA auditing.
@@ -261,8 +271,10 @@ upload (REST multipart)            in-app async pipeline
   Message attachments require **active** participation: a member who left or was
   removed from a conversation keeps the membership row for history, but `left_at` is
   set and the row no longer grants access to the conversation's attachments.
-- Passkey mutations (`renamePasskey`, `revokePasskey`) require a writeable member
-  (FR-1.4, BR-5.2), like every other write path.
+- Signed media URLs are HMAC-SHA256 over asset id, expiry and viewer id using the JWT
+  secret, with a 1-hour TTL (`CHAFGRAM_MEDIA_URL_TTL`) and `Cache-Control: private,
+  max-age=300` on bytes. A URL signed for one viewer fails for another; tampered and
+  expired URLs are rejected. Re-signing never rotates the refresh token.
 - Image uploads are ready immediately and carry the required metadata: the
   upload reads the stored file back with ImageIO and records `width`/`height`
   and the blurhash (FR-5.2). Formats ImageIO cannot read (e.g. WebP) leave the
@@ -334,7 +346,7 @@ upload (REST multipart)            in-app async pipeline
 | Concern | Approach |
 |---------|----------|
 | Artifact | OCI image for backend + static assets via frontend build; `compose.yaml` for the full self-hosted stack (app + MySQL + volume) — dev compose exists today and doubles as the reference |
-| Migrations | Flyway via `:api:flywayMigrate` (`just migrate`), not at app boot; additive only; `V1__init.sql` baseline, `V2` media column alignment, `V3` `users.email_verified_at`, `V4` `media_assets.thumbnail_key` (migrations in `backend/api/src/main/resources/db/migration/`) |
+| Migrations | Flyway via `:api:flywayMigrate` (`just migrate`), not at app boot; additive only; `V1__init.sql` baseline, `V2` media column alignment, `V3` `users.email_verified_at`, `V4` `media_assets.thumbnail_key`, `V5` `refresh_tokens`, `V6` drop WebAuthn tables (migrations in `backend/api/src/main/resources/db/migration/`) |
 | Backups | `mysqldump`/volume snapshot, admin-facing docs; restore tested per release |
 | TLS | Terminated at company reverse proxy; app serves plain HTTP internally |
 | Observability | Actuator health/metrics; logs to stdout; **no** mandatory external telemetry |
@@ -344,7 +356,10 @@ upload (REST multipart)            in-app async pipeline
 ## 10. Security model
 
 - Threat model: internal-network primary; internet exposure only behind company proxy.
-- AuthN: passkeys first (phishing-resistant, no password store needed for most users).
+- AuthN: password login only; short-lived bearer JWTs are validated on every request,
+  opaque refresh tokens are stored as SHA-256 hashes and rotated on use. Refresh cookies
+  are HttpOnly, `SameSite=Strict`, path `/`, `Secure` outside dev/test. Production must
+  override the throwaway `CHAFGRAM_JWT_SECRET` (≥32 bytes).
 - AuthZ: role-based, least privilege; admin routes enforce `ROLE_ADMIN`; moderator
   routes for `ROLE_MODERATOR|ROLE_ADMIN`.
 - Secrets: environment variables / git-ignored profiles; never in repo, never in logs.
@@ -361,7 +376,7 @@ path; read replicas and sharding; mobile native apps (responsive web/PWA only).
 
 | Decision | Blocks | Source |
 |----------|--------|--------|
-| Built-in passkeys vs. LDAP/OIDC/SAML SSO vs. both | identity module | product.md §Open |
+| Built-in password accounts vs. LDAP/OIDC/SAML SSO vs. both | identity module | product.md §Open |
 | WebSocket/STOMP vs. WebFlux/SSE for messaging | messaging module | product.md §Open |
 | ~~Local disk vs. S3-compatible media storage~~ — resolved: S3-compatible default, local fallback | media module | docs/architecture.md §4 |
 | Group chat semantics (simple groups vs. channels) | conversation model | business-rules.md §12 |

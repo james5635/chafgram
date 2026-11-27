@@ -38,7 +38,7 @@ see [`docs/functional-requirements.md`](docs/functional-requirements.md) and
 
 | Layer    | Technology |
 |----------|------------|
-| Backend  | Spring Boot 4 (Java 21), Spring Security + WebAuthn (passkeys), Spring Data JPA + MySQL, Flyway migrations, Spring GraphQL (GraphQL-first; REST only for the keep-list in `docs/architecture.md`), Actuator |
+| Backend  | Spring Boot 4 (Java 21), Spring Security JWT resource server (bearer access tokens + DB-backed refresh tokens), Spring Data JPA + MySQL, Flyway migrations, Spring GraphQL (GraphQL-first; REST only for the keep-list in `docs/architecture.md`), Actuator |
 | Frontend | TanStack Start + TanStack Router (file-based), React 19, TypeScript 6, Vite 8; Apollo Client 4 with GraphQL Code Generator for typed operations through the BFF |
 | UI       | Tailwind CSS v4 (CSS-first, `@tailwindcss/vite`), shadcn-style primitives in `src/components/ui/` built on Base UI (`@base-ui/react`) + `class-variance-authority`, `lucide-react` icons, `tw-animate-css`; TanStack Devtools in dev only |
 | Testing  | Backend: JUnit + MockMvc + Testcontainers MySQL (hermetic). Frontend: Vitest 5 + React Testing Library (jsdom) |
@@ -101,30 +101,40 @@ Garage bucket; video posts also have short generated MP4 blobs and play inline i
 
 The API is GraphQL-first (see `docs/architecture.md`): all operations go through
 `POST /graphql` — social data (feed, watch feed, posts, comments, reactions, follows),
-identity (members, workspace, profile, passkeys), invites, account flows (email
+identity (members, workspace, profile), invites, account flows (email
 verification, password reset), messaging, reports, audit log, and media metadata.
-Explore it with GraphiQL at `http://localhost:8080/graphiql` (dev). Authorization
-failures return HTTP 200 with a GraphQL `errors[]` (classification `UNAUTHORIZED` for
-anonymous, `FORBIDDEN` for an authenticated member without the role), and every resolver
-class enforces `isFullyAuthenticated()` except explicitly-public operations. CSRF is
-enforced for browser clients.
+Explore it with GraphiQL at `http://localhost:8080/graphiql` (dev). Requests carry
+`Authorization: Bearer <accessToken>`; resolver-level authorization failures return
+HTTP 200 with a GraphQL `errors[]` (classification `UNAUTHORIZED` for anonymous,
+`FORBIDDEN` for an authenticated member without the role), while missing, invalid or
+expired token material is rejected at the security filter with HTTP 401. Every resolver
+class enforces `isFullyAuthenticated()` except explicitly-public operations. There are
+no HTTP sessions and no CSRF tokens.
 
 REST exists only for what GraphQL cannot express — the keep-list lives in
-`docs/architecture.md`: session ceremonies (`/api/v1/bootstrap`, `/api/v1/register`,
-`/api/v1/invites/accept`), Spring Security's WebAuthn endpoints, media upload
-(`POST /api/v1/media`) and byte serving (`GET /api/v1/media/{id}/bytes`), multipart
-message sends (`POST /api/v1/messages`, image attachments inline — videos are
-uploaded first and attached by id once the pipeline marks them ready), and
-Actuator (`/actuator/health` public; `/actuator/info` and `/actuator/metrics`
-admin-only). Public branding is a public GraphQL query: `{ workspace { name slug } }`.
+`docs/architecture.md`: auth (`POST /api/v1/auth/login`, `/refresh`, `/logout`),
+first-admin bootstrap / signup / invite claim (`POST /api/v1/bootstrap`,
+`/api/v1/register`, `/api/v1/invites/accept`, all issuing token pairs), media upload
+(`POST /api/v1/media`), signed media URL creation (`GET /api/v1/media/{id}/signed-url`)
+and byte serving (`GET /api/v1/media/{id}/bytes`), multipart message sends
+(`POST /api/v1/messages`, image attachments inline — videos are uploaded first and
+attached by id once the pipeline marks them ready), and Actuator (`/actuator/health`
+public; `/actuator/info` and `/actuator/metrics` admin-only). Public branding is a
+public GraphQL query: `{ workspace { name slug } }`.
 
 Requires JDK 21. The datasource defaults in `application.properties` match the
 `compose.yaml` dev credentials (`chafgram` / `chafgram`, database `chafgram`); override
 with `SPRING_DATASOURCE_*` environment variables or a git-ignored profile for anything
 beyond local dev — never commit credentials. Migrations are applied by Flyway from
 `db/migration/`.
-`CHAFGRAM_WEBAUTHN_RP_ID` and `CHAFGRAM_WEBAUTHN_ALLOWED_ORIGINS` configure the WebAuthn
-relying party (defaults: `localhost`, `http://localhost:3000`).
+Token auth is configured with `CHAFGRAM_JWT_SECRET` (≥32 bytes, throwaway dev default —
+set a unique secret in production), `CHAFGRAM_JWT_ISSUER` / `CHAFGRAM_JWT_AUDIENCE`,
+`CHAFGRAM_ACCESS_TTL` (15m), `CHAFGRAM_REFRESH_TTL` (14d), `CHAFGRAM_COOKIE_SECURE` and
+`CHAFGRAM_MEDIA_URL_TTL` (1h); see `.env.example`. Login returns a short-lived access
+JWT (kept in browser memory by the BFF) and sets the HttpOnly `chafgram_refresh` cookie
+(path `/`, `SameSite=Strict`, `Secure` outside dev/test). Refresh rotates the row. Any
+presented revoked refresh token is rejected; only one revoked without a replacement
+(logout or suspected theft) also revokes all of that member's refresh tokens.
 
 #### Email (optional)
 
@@ -150,6 +160,15 @@ feed, longer ones in the regular feed. If the pipeline queue is full, the upload
 in `status='failed'` as well — it never stays stuck in `status='processing'`. The
 generated thumbnail is kept and served through the byte endpoint
 (`GET /api/v1/media/{id}/bytes?variant=thumbnail`).
+
+#### Signed media URLs
+
+`<img>`/`<video>` cannot attach a bearer header, so GraphQL `Post.mediaUrls` carries
+backend-signed BFF URLs (`/api/media/{id}?exp=…&uid=…&sig=…`) valid for 1 hour. The BFF
+relays them to `GET /api/v1/media/{id}/bytes`, which validates the signature, expiry
+and viewer id without a bearer. On a media load error the client asks the BFF for one
+fresh signed URL (`GET /api/v1/media/{id}/signed-url`, bearer-protected) and swaps `src`
+once. Signing never consumes or rotates the refresh token.
 
 ### Frontend
 
@@ -187,17 +206,17 @@ Every step below was verified against a fresh `just seed` on a local MySQL.
    There's also a reusable demo invite token: `demo-invite-token` (use at
    `/join?token=demo-invite-token`).
 2. **Query the API after sign-in.** GraphiQL is served at
-   http://localhost:8080/graphiql (dev only). The page loads, but its requests need
-   the CSRF double-submit pair: Spring renders a hidden `_csrf` input on the
-   `/login` page — the masked token that decrypts to the `XSRF-TOKEN` cookie. Copy
-   that value into GraphiQL's **Headers** tab:
+   http://localhost:8080/graphiql (dev only). Sign in through the app (or call
+   `POST /api/v1/auth/login`) and copy the `accessToken` from the JSON response into
+   GraphiQL's **Headers** tab:
 
    ```json
-   { "X-XSRF-TOKEN": "<hidden _csrf value from the /login page>" }
+   { "Authorization": "Bearer <accessToken>" }
    ```
 
-   The session cookie is sent automatically. If requests start returning `403` after
-   you sign in, the token rotated — reload `/login` and copy a fresh `_csrf`.
+   There is no CSRF token to copy. When the 15-minute access JWT expires, call
+   `POST /api/v1/auth/refresh` with the `chafgram_refresh` cookie to get a new pair;
+   the app's BFF does this automatically and retries the failed request once.
 
    Examples (verified against the seeded fixtures):
 
@@ -207,19 +226,20 @@ Every step below was verified against a fresh `just seed` on a local MySQL.
    query { followingFeed(first: 2) { posts { body } } }  # seeded fixture posts
    ```
 
-   **Note:** The frontend handles CSRF automatically via the BFF proxy — you only
-   need the `_csrf` token when calling GraphiQL or the backend directly.
+   **Note:** The frontend carries the access token through the BFF automatically —
+   only direct GraphiQL/backend calls need the `Authorization` header above.
 
 3. **Public, no sign-in:** `{ workspace { name slug } }` returns the workspace
-   branding. Everything else is `isFullyAuthenticated()` — anonymous callers get
-   `HTTP 200` with `errors[]` (`classification: UNAUTHENTICATED`/`UNAUTHORIZED`),
-   or `403` if the CSRF pair is missing entirely (by design).
+   branding. Everything else is `isFullyAuthenticated()` — anonymous GraphQL callers
+   get `HTTP 200` with `errors[]` (`classification: UNAUTHENTICATED`/`UNAUTHORIZED`),
+   while a missing, invalid or expired bearer token gets `HTTP 401`.
 4. **Fixture content** to explore once signed in: posts/comments/reactions, a follows
    graph, direct + group conversations, notifications, moderation reports and the
-   audit log. Seeded media rows reference fake `demo/…` keys (no blobs) — real
-   uploads require Garage (`docker compose up -d garage garage-init`).
-5. **Passkeys** are wired at the WebAuthn endpoints (`/webauthn/register/*`,
-   `/login/webauthn`) but have no UI yet; the seeded accounts use the password path.
+   audit log. Seeded media has real blobs in Garage once you run
+   `docker compose up -d garage garage-init`; feed media is served through 1-hour
+   signed URLs.
+5. **Token auth:** the BFF keeps the access JWT in memory, silently refreshes it on
+   `401`, and sends the visitor to `/login` if refresh fails. Passkeys are removed.
 6. **Invite flow:** accept the seeded reusable demo invite via
    `POST /api/v1/invites/accept` (REST keep-list) — `demo-invite-token`.
 
@@ -233,6 +253,8 @@ Every step below was verified against a fresh `just seed` on a local MySQL.
   compliance & trust and open owner decisions)
 - **[docs/architecture.md](docs/architecture.md)** — architecture: system topology, module
   map, API surface, media/messaging pipelines, deployment and operations
+- **[docs/access-refresh-tokens-design.md](docs/access-refresh-tokens-design.md)** — shipped
+  JWT access / refresh token design (implementation status, replay rules, signed media URLs)
 - **[docs/development-workflow.md](docs/development-workflow.md)** — how to work on the
   repo: first-time setup, the dev loop, database/migrations, testing, pre-push checks
 - **[design.md](design.md)** — design system: tokens, theming, components, motion,
