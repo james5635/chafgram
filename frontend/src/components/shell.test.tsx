@@ -20,7 +20,13 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 
 import LeftRail from './LeftRail'
 import AppShell from './AppShell'
+import { RailProvider, useRail } from '../hooks/useRail'
 import { MeDocument } from '../generated/graphql'
+
+function CollapseControl() {
+  const { toggle } = useRail()
+  return <button type="button" onClick={toggle}>Toggle rail</button>
+}
 
 const MEMBER = {
   __typename: 'Member' as const,
@@ -41,11 +47,21 @@ const sessionMocks = [
 ]
 
 function renderShell(ui: ReactNode) {
-  return render(<MockedProvider mocks={sessionMocks}>{ui}</MockedProvider>)
+  return render(
+    <RailProvider>
+      <MockedProvider mocks={sessionMocks}>
+        <div>
+          {ui}
+          <CollapseControl />
+        </div>
+      </MockedProvider>
+    </RailProvider>,
+  )
 }
 
 beforeEach(() => {
   navigate.mockClear()
+  localStorage.removeItem('rail-collapsed')
 })
 
 describe('LeftRail', () => {
@@ -56,6 +72,26 @@ describe('LeftRail', () => {
     for (const label of ['Home', 'Explore', 'Messages', 'Notifications', 'Profile']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
+  })
+
+  it('collapses the rail to labelled icons', async () => {
+    renderShell(<LeftRail />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle rail' }))
+
+    const rail = screen.getByRole('complementary', { name: 'Main navigation' })
+    expect(rail).toHaveClass('w-16')
+    expect(rail).not.toHaveClass('w-64')
+
+    for (const label of ['Home', 'Explore', 'Messages', 'Notifications', 'Profile']) {
+      const link = screen.getByRole('link', { name: label })
+      expect(link).toBeInTheDocument()
+      expect(link).not.toHaveTextContent(label)
+    }
+    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create post' })).toBeInTheDocument()
+    expect(screen.queryByText('Create Post')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Account menu' })).toBeInTheDocument()
   })
 
   it('shows unread badges for messages and notifications', () => {

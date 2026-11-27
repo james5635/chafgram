@@ -5,6 +5,7 @@ import { MeDocument } from '@/generated/graphql'
 import { Button } from '@/components/ui/button'
 import AccountMenu from './AccountMenu'
 import { useHydrated } from '../hooks/useHydrated'
+import { useRail } from '../hooks/useRail'
 
 const navLinks = [
   { to: '/', label: 'Home', icon: Home },
@@ -16,6 +17,7 @@ const navLinks = [
 
 export default function LeftRail() {
   const location = useLocation()
+  const { collapsed } = useRail()
   const hydrated = useHydrated()
   // The signed-in member is the only source for the user chip — never a
   // hardcoded name, or it disagrees with /profile/me. Wait for hydration so
@@ -26,7 +28,7 @@ export default function LeftRail() {
 
   return (
     <aside
-      className="fixed left-0 top-14 bottom-0 z-20 flex w-64 flex-col border-r border-[var(--line)] bg-[var(--surface)] px-3 py-4 backdrop-blur-md"
+      className={`fixed left-0 top-14 bottom-0 z-20 flex flex-col border-r border-[var(--line)] bg-[var(--surface)] py-4 backdrop-blur-md ${collapsed ? 'w-16 px-2' : 'w-64 px-3'}`}
       aria-label="Main navigation"
     >
       <nav className="flex-1 space-y-1">
@@ -40,16 +42,23 @@ export default function LeftRail() {
               key={link.label}
               to={link.to}
               params={link.to === '/profile/$username' ? { username: 'me' } : undefined}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition no-underline ${
+              aria-label={collapsed ? link.label : undefined}
+              className={`relative flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition no-underline ${
+                collapsed ? 'justify-center px-2' : 'px-3'
+              } ${
                 isActive
                   ? '!bg-[var(--brand-light)] !text-[var(--brand-dark)] font-semibold'
                   : '!text-[var(--sea-ink-soft)] hover:!bg-[var(--brand-light)]/50'
               }`}
             >
               <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
-              {link.label}
+              {!collapsed && link.label}
               {link.badge && (
-                <span className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full border border-white bg-[var(--brand)] px-1 text-[0.625rem] font-bold text-white shadow-sm">
+                <span
+                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full border border-white bg-[var(--brand)] px-1 text-[0.625rem] font-bold text-white shadow-sm ${
+                    collapsed ? 'absolute -right-0.5 -top-0.5 h-4 w-4 text-[0.55rem]' : 'ml-auto'
+                  }`}
+                >
                   {link.badge}
                 </span>
               )}
@@ -62,10 +71,10 @@ export default function LeftRail() {
         <Button className="w-full gap-2" asChild aria-label="Create post">
           <Link to="/compose" className="flex items-center justify-center gap-2">
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Create Post
+            {!collapsed && 'Create Post'}
           </Link>
         </Button>
-        <AccountMenu displayName={displayName} username={username} />
+        <AccountMenu displayName={displayName} username={username} collapsed={collapsed} />
       </div>
     </aside>
   )

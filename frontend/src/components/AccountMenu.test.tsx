@@ -117,6 +117,19 @@ describe('AccountMenu', () => {
     expect(screen.queryByRole('link', { name: /Settings/ })).not.toBeInTheDocument()
   })
 
+  it('shows only the avatar when collapsed', () => {
+    render(<AccountMenu displayName="Rojame" username="rojame" collapsed />)
+
+    const trigger = screen.getByRole('button', { name: 'Account menu' })
+    expect(trigger).toBeInTheDocument()
+    expect(screen.queryByText('Rojame')).not.toBeInTheDocument()
+    expect(screen.queryByText('@rojame')).not.toBeInTheDocument()
+
+    fireEvent.click(trigger)
+    expect(screen.getByRole('link', { name: /Settings/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Sign out/ })).toBeInTheDocument()
+  })
+
   it('closes when the route changes while open', () => {
     const view = renderMenu()
 
