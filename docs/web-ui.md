@@ -130,7 +130,7 @@ Three-column layout: **left rail / content column / right rail**. Content column
 
 **Header** (sticky, `design.md` §7): brand chip + "Chafgram" wordmark (Manrope bold) and a search input (`.demo-input`). No theme toggle or avatar here — theme switching lives in Settings and the user chip lives in the left rail. No nav links here — nav lives in LeftRail.
 
-**Left rail** (`LeftRail` component): fixed `w-64`, `top-14 bottom-0`, `border-r`, `bg-white/60 backdrop-blur-md`. Brand chip + wordmark at top. Nav links: Home, Explore, Messages (badge 3), Notifications (badge 5), Profile, More. Active link: `bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold`. Inactive: `text-[var(--sea-ink-soft)] hover:bg-[var(--brand-light)]/50`. Bottom: blue "Create Post" pill (rounded-full, `border-[var(--brand)] bg-[var(--brand)] text-white`, hover `bg-[var(--brand-dark)] shadow-lg shadow-[var(--brand)]/40`) + user chip with the signed-in member's display name and `@username` from `me`, with a name-initial avatar fallback. No hardcoded member names in the shell.
+**Left rail** (`LeftRail` component): fixed `w-64`, `top-14 bottom-0`, `border-r`, `bg-white/60 backdrop-blur-md`. Brand chip + wordmark at top. Nav links: Home, Explore, Messages (badge 3), Notifications (badge 5), Profile. Active link: `bg-[var(--brand-light)] text-[var(--brand-dark)] font-semibold`. Inactive: `text-[var(--sea-ink-soft)] hover:bg-[var(--brand-light)]/50`. Bottom: blue "Create Post" pill (rounded-full, `border-[var(--brand)] bg-[var(--brand)] text-white`, hover `bg-[var(--brand-dark)] shadow-lg shadow-[var(--brand)]/40`) + user chip with the signed-in member's display name and `@username` from `me`, with a name-initial avatar fallback. The chip is the `AccountMenu` trigger: clicking it opens a popup with only Settings (`/settings`) and Sign out. No hardcoded member names in the shell.
 
 **Right rail** (`RightRail` component): `w-80`, hidden below `lg` breakpoint. "Who to follow" (kicker + member list + "See all →"), "Trending" (numbered list + external arrows), "Join Chafgram Today" card (kicker + line + blue "Sign Up" pill). **Note:** private/invite-only default (BR-1.5) — copy confirmed with owner.
 
@@ -384,6 +384,7 @@ This section lists every reusable component type used across web screens. Each e
 | Composer | Post creation | Home, Compose | `.island-shell rise-in relative overflow-hidden rounded-xl p-6 sm:p-8`; textarea + chips + blue Post button |
 | Post card | Feed item | Home, Explore, Profile | `.island-shell rounded-xl overflow-hidden border border-[var(--line)] bg-white shadow-sm`; header, body, media, interaction bar, action row, optional comment thread |
 | BusyOverlay | Regional indeterminate-action overlay | Login, Composer, Compose, PostCard, Messages, Notifications | `aria-hidden="true"`; `absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[var(--surface-strong)] backdrop-blur-[2px]`; spinner `h-6 w-6 animate-spin rounded-full border-2 border-[var(--lagoon)] border-t-[var(--brand)] motion-reduce:animate-none`; label `text-sm font-semibold text-[var(--sea-ink)]`; sibling of an `inert` content subtree inside a `relative aria-busy` root; live status is a permanently mounted `sr-only` `role="status" aria-live="polite"` sibling of that root; driven by `useBusy` |
+| AccountMenu | Signed-in member chip and account popup | LeftRail bottom | `relative` wrapper; trigger is a `<button aria-label="Account menu" aria-expanded>` holding Avatar + name + `@username` + chevron; popup `absolute bottom-full mb-2 z-30 rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] p-1`; Settings link + Sign out button only, closes on Escape / outside pointerdown / item activation / route change; Sign out uses `logoutRequest` + `useBusy` |
 | Pill / tag | Small label | RightRail, chips | `.demo-pill`: `inline-flex items-center gap-0.35 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-0.35 py-0.65 text-[0.75rem] font-weight-700 text-[var(--sea-ink-soft)]` |
 | Button primary | Main action | Login, Welcome, Composer | `rounded-full border border-[var(--line)] bg-[color-mix(in_oklab,var(--brand)22%,var(--surface-strong))] px-6 py-3 text-sm font-semibold text-[var(--sea-ink)]` active; disabled variants |
 | Button secondary | Ghost action | Login, Welcome | `rounded-full border border-[var(--line)] bg-transparent px-6 py-3 text-sm font-semibold text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)]` |
@@ -448,7 +449,8 @@ This section lists every reusable component type used across web screens. Each e
 |--------------|------------------|---------------|
 | §0/§3 Global shell | AppShell | `src/components/AppShell.tsx` |
 | §3 Global shell | Header | `src/components/Header.tsx` (hidden on `/welcome`, `/login`) |
-| §3 Global shell | LeftRail | `src/components/LeftRail.tsx` (includes user chip) |
+| §3 Global shell | LeftRail | `src/components/LeftRail.tsx` (bottom user chip opens AccountMenu) |
+| §3 Global shell | AccountMenu | `src/components/AccountMenu.tsx` (Settings + Sign out popup) |
 | §3 Global shell | RightRail | `src/components/RightRail.tsx` |
 | §0 Explore | Suggested Topics panel | `src/routes/explore.tsx` |
 | §0 Profile | Cover + About/Skills panels | `src/routes/profile.$username.tsx` |
