@@ -129,6 +129,15 @@ public class SocialQueryResolver {
 	}
 
 	@QueryMapping
+	public List<PostDto> memberPosts(@Argument String username, @Argument Integer first) {
+		User viewer = current.require();
+		User target = findByUsername(username);
+		requireVisible(viewer, target.getId(), "Posts");
+		int limit = first == null ? 20 : Math.min(Math.max(first, 1), 100);
+		return views.posts(posts.listByAuthor(target.getId(), limit), viewer);
+	}
+
+	@QueryMapping
 	public List<CommentDto> postComments(@Argument Long postId, @Argument Integer first) {
 		User actor = current.require();
 		int limit = first == null ? 50 : Math.min(Math.max(first, 1), 200);
