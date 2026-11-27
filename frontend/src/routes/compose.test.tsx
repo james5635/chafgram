@@ -1,8 +1,8 @@
 import { MockedProvider } from '@apollo/client/testing/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { CreatePostDocument, MeDocument } from '../generated/graphql'
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }))
@@ -72,8 +72,14 @@ const mocks = [
   },
 ]
 
-function renderScreen(ui: ReactNode) {
-  return render(<MockedProvider mocks={mocks}>{ui}</MockedProvider>)
+type ScreenMocks = ComponentProps<typeof MockedProvider>['mocks']
+
+function renderScreen(ui: ReactNode, screenMocks: ScreenMocks = mocks) {
+  return render(
+    <MockedProvider mocks={screenMocks} mockLinkDefaultOptions={{ delay: 0 }}>
+      {ui}
+    </MockedProvider>,
+  )
 }
 
 beforeEach(() => {
@@ -107,5 +113,59 @@ describe('Compose screen', () => {
     await user.click(screen.getByRole('button', { name: 'Post' }))
 
     expect(await screen.findByRole('heading', { name: 'Create Post' })).toBeInTheDocument()
+  })
+
+  it('shows Posting… while publishing and ignores a second rapid Post click', async () => {
+    const createPostResult = vi.fn(() => ({
+      data: {
+        createPost: {
+          __typename: 'Post' as const,
+          id: 'p2',
+          type: 'NOTE' as const,
+          body: 'Fresh post',
+          createdAt: '2026-11-21T10:10:00Z',
+          author: { id: '1', username: 'rojame', displayName: 'Rojame' },
+        },
+      },
+    }))
+    const slowMocks = [
+      mocks[0],
+      {
+        request: {
+          query: CreatePostDocument,
+          variables: { type: 'NOTE', body: 'Fresh post', mediaIds: null },
+        },
+        result: createPostResult,
+        delay: 250,
+        maxUsageCount: 5,
+      },
+    ]
+    const user = userEvent.setup()
+    renderScreen(<Compose />, slowMocks)
+
+    await user.type(screen.getByPlaceholderText("What's on your mind?"), 'Fresh post')
+    const postButton = screen.getByRole('button', { name: 'Post' })
+    fireEvent.click(postButton)
+    fireEvent.click(postButton)
+
+    expect(createPostResult).not.toHaveBeenCalled()
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('Posting…')
+    const region = postButton.closest('[aria-busy="true"]')
+    expect(region).not.toBeNull()
+    expect(region).toHaveClass('relative')
+    expect(status.parentElement).toBe(region)
+
+    const inertContent = postButton.closest('[inert]')
+    expect(inertContent).not.toBeNull()
+    expect(inertContent).toContainElement(screen.getByPlaceholderText("What's on your mind?"))
+    expect(inertContent).not.toContainElement(status)
+    expect(postButton).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Photo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Upload Image/ })).toBeDisabled()
+
+    await waitFor(() => expect(createPostResult).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/' }))
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
   })
 })

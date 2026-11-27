@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 
@@ -31,6 +31,14 @@ vi.mock('../lib/auth-client', () => ({
 }))
 
 import LoginScreen from './LoginScreen'
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((res) => {
+    resolve = res
+  })
+  return { promise, resolve }
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -79,5 +87,46 @@ describe('Login screen without passkeys', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Wrong credentials')
     expect(mocks.setAccessToken).not.toHaveBeenCalled()
     expect(mocks.navigate).not.toHaveBeenCalled()
+  })
+
+  it('blocks the form while signing in and ignores a second rapid submit', async () => {
+    const gate = deferred<{
+      ok: true
+      accessToken: string
+      tokenType: string
+      expiresIn: number
+    }>()
+    mocks.loginRequest.mockReturnValue(gate.promise)
+
+    render(<LoginScreen />)
+    await userEvent.type(screen.getByLabelText('Email or username'), 'rojame')
+    await userEvent.type(screen.getByLabelText('Password'), 'hunter2')
+
+    const submit = screen.getByRole('button', { name: 'Continue' })
+    fireEvent.click(submit)
+    fireEvent.click(submit)
+
+    expect(mocks.loginRequest).toHaveBeenCalledTimes(1)
+
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('Signing in…')
+    const region = submit.closest('[aria-busy="true"]')
+    expect(region).not.toBeNull()
+    expect(region).toHaveClass('relative')
+    expect(status.parentElement).toBe(region)
+
+    const inertContent = submit.closest('[inert]')
+    expect(inertContent).not.toBeNull()
+    expect(inertContent).toContainElement(screen.getByLabelText('Email or username'))
+    expect(inertContent).not.toContainElement(status)
+    expect(submit).toBeDisabled()
+
+    await act(async () => {
+      gate.resolve({ ok: true, accessToken: 'jwt-access', tokenType: 'Bearer', expiresIn: 900 })
+    })
+
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/' })
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(region).toHaveAttribute('aria-busy', 'false')
   })
 })
