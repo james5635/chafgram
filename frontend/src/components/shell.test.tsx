@@ -158,6 +158,23 @@ describe('AppShell', () => {
     expect(screen.getByRole('complementary', { name: 'Main navigation' })).toBeInTheDocument()
   })
 
+  it('shrinks the content offset when the rail collapses', () => {
+    const { container } = renderShell(
+      <AppShell>
+        <p data-testid="content">Content</p>
+      </AppShell>,
+    )
+    const offset = screen.getByTestId('content').parentElement!.parentElement!
+
+    expect(offset).toHaveClass('lg:pl-64')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle rail' }))
+
+    expect(offset).toHaveClass('lg:pl-16')
+    expect(offset).not.toHaveClass('lg:pl-64')
+    expect(container).toBeInTheDocument()
+  })
+
   it('works without a right rail', () => {
     renderShell(
       <AppShell>
