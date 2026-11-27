@@ -16,6 +16,7 @@ function post(overrides: Partial<FeedPost> = {}): FeedPost {
     myReaction: null,
     isSaved: false,
     mediaIds: [],
+    mediaUrls: [],
     author: {
       id: '1',
       username: 'rojame',
@@ -60,25 +61,28 @@ describe('toPostCardData', () => {
     expect(toPostCardData(post({ type: 'VIDEO' })).media).toHaveLength(1)
   })
 
-  it('uses BFF media URLs for photo attachments instead of a gradient placeholder', () => {
+  it('uses the signed URL from GraphQL for photo attachments', () => {
+    const signed = '/api/media/41?exp=1791000000&uid=7&sig=abc123'
     const data = toPostCardData(
       post({
         type: 'PHOTO',
         mediaIds: ['41'],
+        mediaUrls: [signed],
         body: 'Team offsite',
       }),
     )
 
     expect(data.media).toEqual([
-      { url: '/api/media/41', alt: 'Post image: Team offsite', kind: 'IMAGE' },
+      { id: '41', url: signed, alt: 'Post image: Team offsite', kind: 'IMAGE' },
     ])
   })
 
-  it('maps video attachments to BFF media URLs marked as video', () => {
-    const data = toPostCardData(post({ type: 'VIDEO', mediaIds: ['9'] }))
+  it('maps video attachments to their signed URL marked as video', () => {
+    const signed = '/api/media/9?exp=1791000000&uid=7&sig=def456'
+    const data = toPostCardData(post({ type: 'VIDEO', mediaIds: ['9'], mediaUrls: [signed] }))
 
     expect(data.media).toEqual([
-      { url: '/api/media/9', alt: 'Post video: Hello team', kind: 'VIDEO' },
+      { id: '9', url: signed, alt: 'Post video: Hello team', kind: 'VIDEO' },
     ])
   })
 

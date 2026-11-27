@@ -1,6 +1,7 @@
 package io.github.james5635.chafgram.social.dto;
 
 import io.github.james5635.chafgram.identity.Role;
+import io.github.james5635.chafgram.media.service.MediaUrlService;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.UserStatus;
 import io.github.james5635.chafgram.identity.repository.UserRepository;
@@ -42,6 +43,8 @@ class ViewsTest {
     private PostService posts;
     @Mock
     private PostMediaRepository postMedia;
+    @Mock
+    private MediaUrlService mediaUrls;
 
     @InjectMocks
     private Views views;
@@ -62,10 +65,12 @@ class ViewsTest {
         PostMedia attachment = mock(PostMedia.class);
         when(attachment.getMediaId()).thenReturn(41L);
         when(postMedia.findByPostIdOrderByPositionAsc(10L)).thenReturn(List.of(attachment));
+        when(mediaUrls.sign(41L, 1L)).thenReturn("/api/media/41?exp=1791000000&sig=abc");
 
         PostDto dto = views.post(post, author);
 
         assertThat(dto.mediaIds()).containsExactly(41L);
+        assertThat(dto.mediaUrls()).containsExactly("/api/media/41?exp=1791000000&sig=abc");
     }
 
     private User author() {

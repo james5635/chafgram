@@ -3,7 +3,10 @@ import { callBackend } from '@/lib/backend-proxy'
 
 /**
  * BFF proxy for authorized media bytes. The browser loads images from
- * `/api/media/:id`, so the backend URL and session cookie stay server-side.
+ * `/api/media/:id?exp=...&uid=...&sig=...` (a short-lived backend-signed URL),
+ * so the backend URL and credentials stay server-side and <img>/<video> need
+ * no bearer header. Unsigned requests keep working for header-authenticated
+ * API clients.
  */
 export const Route = createFileRoute('/api/media/$id')({
   server: {
@@ -14,8 +17,15 @@ export const Route = createFileRoute('/api/media/$id')({
           return new Response('Invalid media id', { status: 400 })
         }
 
+        // Only signature parameters are relayed; never forward arbitrary
+        // query strings to the backend bytes route.
+        const signedQuery = new URL(request.url).searchParams
+        const query = ['exp', 'uid', 'sig']
+          .filter((key) => signedQuery.has(key))
+          .map((key) => `${key}=${encodeURIComponent(signedQuery.get(key) ?? '')}`)
+          .join('&')
         const backend = await callBackend({
-          path: `/api/v1/media/${id}/bytes`,
+          path: `/api/v1/media/${id}/bytes${query ? `?${query}` : ''}`,
           method: 'GET',
         })
         if (!backend.ok) {
@@ -26,7 +36,7 @@ export const Route = createFileRoute('/api/media/$id')({
         const contentType = backend.headers.get('content-type') ?? 'application/octet-stream'
         const headers = {
           'content-type': contentType,
-          'cache-control': 'private, max-age=3600',
+          'cache-control': 'private, max-age=300',
           'accept-ranges': 'bytes',
         }
 

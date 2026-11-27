@@ -4,9 +4,9 @@ vi.mock('@/lib/backend-proxy', () => ({ callBackend: mockCallBackend }))
 
 import { Route } from '../routes/api/media/$id'
 
-function get(params: { id: string }, range?: string) {
+function get(params: { id: string }, range?: string, search?: string) {
   const handlers = (Route as any).options.server.handlers
-  const request = new Request('http://localhost/api/media/' + params.id)
+  const request = new Request('http://localhost/api/media/' + params.id + (search ?? ''))
   if (range) request.headers.set('range', range)
   return handlers.GET({ params, request })
 }
@@ -28,6 +28,26 @@ describe('media BFF route', () => {
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toBe('image/png')
     expect((await response.arrayBuffer()).byteLength).toBe(4)
+  })
+
+  it('forwards signed URL parameters and keeps the private short cache', async () => {
+    mockCallBackend.mockResolvedValue(
+      new Response(new Uint8Array([1, 2, 3]), {
+        headers: { 'content-type': 'image/png' },
+      }),
+    )
+
+    const response = await get(
+      { id: '41' },
+      undefined,
+      '?exp=1791000000&uid=7&sig=abc123',
+    )
+
+    expect(mockCallBackend).toHaveBeenCalledWith({
+      path: '/api/v1/media/41/bytes?exp=1791000000&uid=7&sig=abc123',
+      method: 'GET',
+    })
+    expect(response.headers.get('cache-control')).toBe('private, max-age=300')
   })
 
   it('rejects a non-numeric media id before calling the backend', async () => {

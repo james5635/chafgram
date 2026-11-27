@@ -1,6 +1,7 @@
 package io.github.james5635.chafgram.social.dto;
 
 import io.github.james5635.chafgram.common.ApiException;
+import io.github.james5635.chafgram.media.service.MediaUrlService;
 import io.github.james5635.chafgram.identity.User;
 import io.github.james5635.chafgram.identity.repository.UserRepository;
 import io.github.james5635.chafgram.notifications.Notification;
@@ -32,15 +33,18 @@ public class Views {
 	private final ReactionService reactions;
 	private final PostService posts;
 	private final PostMediaRepository postMedia;
+	private final MediaUrlService mediaUrls;
 
 	public Views(UserRepository users, FollowService follows, CommentService comments,
-			ReactionService reactions, PostService posts, PostMediaRepository postMedia) {
+			ReactionService reactions, PostService posts, PostMediaRepository postMedia,
+			MediaUrlService mediaUrls) {
 		this.users = users;
 		this.follows = follows;
 		this.comments = comments;
 		this.reactions = reactions;
 		this.posts = posts;
 		this.postMedia = postMedia;
+		this.mediaUrls = mediaUrls;
 	}
 
 	public User findUser(Long id) {
@@ -68,14 +72,19 @@ public class Views {
 		User author = requireUser(p.getAuthorId());
 		boolean edited = p.getUpdatedAt() != null && p.getCreatedAt() != null
 				&& p.getUpdatedAt().isAfter(p.getCreatedAt());
+		List<Long> mediaIds = postMedia.findByPostIdOrderByPositionAsc(p.getId()).stream()
+				.map(pm -> pm.getMediaId()).toList();
+		// Signed URLs are viewer-bound and short-lived; feed posts are always
+		// assembled for an authenticated viewer, so every id gets a URL.
+		List<String> mediaUrlsForViewer = viewer == null ? List.of()
+				: mediaIds.stream().map(id -> mediaUrls.sign(id, viewer.getId())).toList();
 		return new PostDto(
 				p.getId(), member(author, viewer), p.getType(), p.getBody(),
 				edited ? p.getUpdatedAt() : null, p.getCreatedAt(),
 				comments.countByPost(p.getId()), reactions.postReactionCount(p.getId()),
 				reactions.myPostReaction(viewer, p.getId()).orElse(null),
 				viewer != null && posts.isSaved(viewer.getId(), p.getId()),
-				postMedia.findByPostIdOrderByPositionAsc(p.getId()).stream()
-						.map(pm -> pm.getMediaId()).toList());
+				mediaIds, mediaUrlsForViewer);
 	}
 
 	public List<PostDto> posts(List<Post> page, User viewer) {

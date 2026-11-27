@@ -44,6 +44,11 @@ public class JwtConfig {
 		return audience;
 	}
 
+	/** Shared HMAC key for viewer-bound media URLs; never leaves the server. */
+	public byte[] signingSecret() {
+		return secret.getBytes(StandardCharsets.UTF_8);
+	}
+
 	@Bean
 	JwtEncoder jwtEncoder() {
 		return NimbusJwtEncoder.withSecretKey(secretKey()).build();

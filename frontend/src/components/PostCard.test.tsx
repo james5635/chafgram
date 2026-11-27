@@ -3,6 +3,8 @@ import type { TypedDocumentNode } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
 import { MockedProvider } from '@apollo/client/testing/react'
 import { vi, describe, it, expect } from 'vitest'
+const { refreshMediaUrl } = vi.hoisted(() => ({ refreshMediaUrl: vi.fn() }))
+vi.mock('@/lib/media-server', () => ({ refreshMediaUrl }))
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import {
@@ -83,6 +85,88 @@ describe('PostCard', () => {
     renderPostCard(<PostCard post={post} />)
 
     expect(screen.getByAltText('Mountain landscape')).toBeInTheDocument()
+  })
+
+  it('refreshes an expired signed image URL once and swaps src', async () => {
+    refreshMediaUrl.mockReset()
+    refreshMediaUrl.mockResolvedValue({
+      url: '/api/media/9?exp=fresh&sig=new',
+      expiresAt: '2026-11-27T12:00:00Z',
+    })
+
+    renderPostCard(
+      <PostCard
+        post={{
+          ...post,
+          id: 'refresh-image',
+          media: [
+            {
+              id: '9',
+              url: '/api/media/9?exp=old&sig=old',
+              alt: 'Expiring image',
+              kind: 'IMAGE' as const,
+            },
+          ],
+        }}
+      />,
+    )
+
+    fireEvent.error(screen.getByAltText('Expiring image'))
+
+    await waitFor(() =>
+      expect(refreshMediaUrl).toHaveBeenCalledWith({ data: { mediaId: '9' } }),
+    )
+    await waitFor(() =>
+      expect(screen.getByAltText('Expiring image')).toHaveAttribute(
+        'src',
+        '/api/media/9?exp=fresh&sig=new',
+      ),
+    )
+
+    // A second failure must not trigger a second refresh or revert the src.
+    fireEvent.error(screen.getByAltText('Expiring image'))
+    expect(refreshMediaUrl).toHaveBeenCalledTimes(1)
+    expect(screen.getByAltText('Expiring image')).toHaveAttribute(
+      'src',
+      '/api/media/9?exp=fresh&sig=new',
+    )
+  })
+
+  it('refreshes an expired signed video URL once', async () => {
+    refreshMediaUrl.mockReset()
+    refreshMediaUrl.mockResolvedValue({
+      url: '/api/media/10?exp=fresh&sig=new',
+      expiresAt: '2026-11-27T12:00:00Z',
+    })
+
+    renderPostCard(
+      <PostCard
+        post={{
+          ...post,
+          id: 'refresh-video',
+          media: [
+            {
+              id: '10',
+              url: '/api/media/10?exp=old&sig=old',
+              alt: 'Expiring video',
+              kind: 'VIDEO' as const,
+            },
+          ],
+        }}
+      />,
+    )
+
+    fireEvent.error(screen.getByLabelText('Expiring video'))
+
+    await waitFor(() =>
+      expect(refreshMediaUrl).toHaveBeenCalledWith({ data: { mediaId: '10' } }),
+    )
+    await waitFor(() =>
+      expect(screen.getByLabelText('Expiring video')).toHaveAttribute(
+        'src',
+        '/api/media/10?exp=fresh&sig=new',
+      ),
+    )
   })
 
   it('renders a video attachment with native controls', () => {

@@ -8,7 +8,7 @@ export interface PostCardData {
   author: { name: string; username: string; avatar?: string; initials?: string }
   createdAt: string
   body: string
-  media?: { url: string; alt: string; kind: 'IMAGE' | 'VIDEO' }[]
+  media?: { id?: string; url: string; alt: string; kind: 'IMAGE' | 'VIDEO' }[]
   reactions: { count: number; myReaction: FeedPost['myReaction'] }
   comments: number
   shares: number
@@ -34,7 +34,7 @@ export function toPostCardData(post: FeedPost): PostCardData {
     },
     createdAt: formatCreatedAt(post.createdAt),
     body: post.body ?? '',
-    media: mediaFor(type, post.mediaIds, post.body),
+    media: mediaFor(type, post.mediaIds, post.mediaUrls, post.body),
     reactions: { count: post.reactionCount, myReaction: post.myReaction },
     comments: post.commentCount,
     shares: 0,
@@ -43,21 +43,30 @@ export function toPostCardData(post: FeedPost): PostCardData {
 }
 
 /**
- * Real attachments are streamed through the BFF's `/api/media/:id` route so
- * the browser never needs the backend URL. A post without an image still gets
- * a generated placeholder so the card keeps its shape.
+ * Attachments use the backend-issued short-lived signed URLs from GraphQL:
+ * the browser loads them through the BFF's `/api/media/:id` route, so the
+ * backend URL stays private and no bearer header is needed on <img>/<video>.
+ * A post without an image still gets a generated placeholder so the card
+ * keeps its shape. The media id travels with the item so PostCard can ask the
+ * BFF to re-sign once if a URL has expired on a long-open page.
  */
 function mediaFor(
   type: FeedPost['type'],
   mediaIds: string[],
+  mediaUrls: string[],
   body: string | null,
 ): PostCardData['media'] {
   if (mediaIds.length > 0 && (type === 'PHOTO' || type === 'VIDEO')) {
-    return mediaIds.map((id) => ({
-      url: `/api/media/${id}`,
-      alt: body?.trim() ? `${type === 'VIDEO' ? 'Post video' : 'Post image'}: ${body}` : `Post ${type.toLowerCase()}`,
-      kind: type === 'VIDEO' ? 'VIDEO' : 'IMAGE',
-    }))
+    return mediaIds.flatMap((id, index) => {
+      const url = mediaUrls[index]
+      if (!url) return []
+      return [{
+        id,
+        url,
+        alt: body?.trim() ? `${type === 'VIDEO' ? 'Post video' : 'Post image'}: ${body}` : `Post ${type.toLowerCase()}`,
+        kind: type === 'VIDEO' ? 'VIDEO' : 'IMAGE',
+      } as const]
+    })
   }
   if (type === 'NOTE') return []
   return [

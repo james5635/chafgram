@@ -10,4 +10,5 @@ type Post {
   myReaction: ReactionType
   isSaved: Boolean!
   mediaIds: [ID!]!
+  mediaUrls: [String!]!
 }

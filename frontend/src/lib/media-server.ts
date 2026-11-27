@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
 import { callBackend } from './backend-proxy'
 
 /** Uploads above this size are rejected before they reach the backend. */
@@ -26,6 +27,37 @@ export function decodeBase64(data: string): Uint8Array<ArrayBuffer> {
   }
   return bytes
 }
+
+export interface SignedMediaUrl {
+  url: string
+  expiresAt: string
+}
+
+/**
+ * Re-sign one media asset for the current viewer after a signed URL expires.
+ * The backend re-checks media access before issuing the URL and never rotates
+ * the refresh cookie; the browser only learns the short-lived URL.
+ */
+export const refreshMediaUrl = createServerFn({ method: 'GET' })
+  .validator((input: { mediaId: string }) => input)
+  .handler(async ({ data }): Promise<SignedMediaUrl> => {
+    if (!/^\d+$/.test(data.mediaId)) {
+      throw new Error('Invalid media id')
+    }
+
+    // The browser's access token is in memory; the BFF attaches it to the
+    // backend call so /signed-url can authenticate the viewer.
+    const authorization = getRequestHeader('Authorization')
+    const response = await callBackend({
+      path: `/api/v1/media/${data.mediaId}/signed-url`,
+      method: 'GET',
+      headers: authorization ? { Authorization: authorization } : {},
+    })
+    if (!response.ok) {
+      throw new Error(`Media URL refresh failed: ${response.status}`)
+    }
+    return (await response.json()) as SignedMediaUrl
+  })
 
 /**
  * Media upload (REST keep-list): multipart upload of the bytes, GraphQL for

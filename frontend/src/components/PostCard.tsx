@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@apollo/client/react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Heart, MessageSquare, Share2, Bookmark, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,7 @@ import {
   UnreactToPostDocument,
 } from '@/generated/graphql'
 import type { PostCommentsQuery, ReactToPostMutation } from '@/generated/graphql'
+import { refreshMediaUrl } from '@/lib/media-server'
 import { formatCreatedAt } from '../lib/post-mappers'
 
 type ThreadComment = PostCommentsQuery['postComments'][number]
@@ -22,7 +23,7 @@ interface PostCardProps {
     author: { name: string; username: string; avatar?: string; initials?: string }
     createdAt: string
     body: string
-    media?: { url: string; alt: string; kind: 'IMAGE' | 'VIDEO' }[]
+    media?: { id?: string; url: string; alt: string; kind: 'IMAGE' | 'VIDEO' }[]
     reactions: { count: number; myReaction?: string | null }
     comments: number
     shares: number
@@ -118,6 +119,28 @@ export default function PostCard({ post }: PostCardProps) {
       )
     },
   })
+  // Signed media URLs are short-lived. A long-open feed can hit an expiry;
+  // ask the BFF to re-sign that one asset exactly once, then swap its src.
+  const [refreshedUrls, setRefreshedUrls] = useState<Record<number, string>>({})
+  const refreshedOnce = useRef<Set<number>>(new Set())
+
+  useEffect(() => {
+    refreshedOnce.current.clear()
+    setRefreshedUrls({})
+  }, [post.id, post.media?.[0]?.url])
+
+  const handleMediaError = async (index: number) => {
+    const media = post.media?.[index]
+    if (!media?.id || refreshedOnce.current.has(index)) return
+    refreshedOnce.current.add(index)
+    try {
+      const fresh = await refreshMediaUrl({ data: { mediaId: media.id } })
+      setRefreshedUrls((current) => ({ ...current, [index]: fresh.url }))
+    } catch (error) {
+      console.error('Failed to refresh media URL:', error)
+    }
+  }
+
   const [showComments, setShowComments] = useState(false)
   const [showCommentInput, setShowCommentInput] = useState(false)
   const [commentText, setCommentText] = useState('')
@@ -207,15 +230,23 @@ export default function PostCard({ post }: PostCardProps) {
           <div className="aspect-video rounded-lg overflow-hidden border border-[var(--line)] bg-[color-mix(in_oklab,var(--surface-strong)70%,white_30%)]">
             {post.media[0].kind === 'VIDEO' ? (
               <video
-                src={post.media[0].url}
+                src={refreshedUrls[0] ?? post.media[0].url}
                 aria-label={post.media[0].alt}
                 className="h-full w-full object-cover"
                 controls
                 preload="metadata"
                 playsInline
+                onError={() => void handleMediaError(0)}
               />
             ) : (
-              <img src={post.media[0].url} alt={post.media[0].alt} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+              <img
+                src={refreshedUrls[0] ?? post.media[0].url}
+                alt={post.media[0].alt}
+                className="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
+                onError={() => void handleMediaError(0)}
+              />
             )}
           </div>
         </div>

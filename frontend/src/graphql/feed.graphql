@@ -11,6 +11,7 @@ query FollowingFeed($first: Int = 20, $cursor: String) {
       myReaction
       isSaved
       mediaIds
+      mediaUrls
       author {
         id
         username

@@ -17,5 +17,6 @@ public record PostDto(
 		long reactionCount,
 		ReactionType myReaction,
 		boolean isSaved,
-		List<Long> mediaIds) {
+		List<Long> mediaIds,
+		List<String> mediaUrls) {
 }
