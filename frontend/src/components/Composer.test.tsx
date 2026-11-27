@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import Composer from './Composer'
 
 const { uploadMedia } = vi.hoisted(() => ({ uploadMedia: vi.fn() }))
@@ -17,6 +17,14 @@ beforeAll(() => {
 })
 
 const MEMBER = { name: 'Dara', username: 'dara', initials: 'DR' }
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((res) => {
+    resolve = res
+  })
+  return { promise, resolve }
+}
 
 describe('Composer', () => {
   it('renders the composer with a solid Post button', () => {
@@ -138,5 +146,42 @@ describe('Composer', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Media upload failed')
     expect(onSubmit).not.toHaveBeenCalled()
     expect(textarea.value).toBe('A photo')
+  })
+
+  it('shows Posting… while publishing and ignores a second rapid Post click', async () => {
+    const gate = deferred<boolean>()
+    const onSubmit = vi.fn(() => gate.promise)
+    render(<Composer member={MEMBER} onSubmit={onSubmit} />)
+
+    const textarea = screen.getByPlaceholderText("What's on your mind?") as HTMLTextAreaElement
+    fireEvent.input(textarea, { target: { value: 'Hello world' } })
+    const postButton = screen.getByRole('button', { name: 'Post' })
+    fireEvent.click(postButton)
+    fireEvent.click(postButton)
+
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent('Posting…')
+    const region = postButton.closest('[aria-busy="true"]')
+    expect(region).not.toBeNull()
+    expect(region).toHaveClass('relative')
+    expect(region).not.toContainElement(status)
+    expect(status.closest('[aria-busy]')).toBeNull()
+    expect(status.closest('[inert]')).toBeNull()
+
+    const inertContent = postButton.closest('[inert]')
+    expect(inertContent).not.toBeNull()
+    expect(inertContent).toContainElement(textarea)
+    expect(inertContent).not.toContainElement(status)
+    expect(postButton).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Photo' })).toBeDisabled()
+
+    await act(async () => {
+      gate.resolve(true)
+    })
+
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+    expect(region).toHaveAttribute('aria-busy', 'false')
   })
 })

@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client'
+import { ApolloLink, gql, Observable } from '@apollo/client'
 import type { TypedDocumentNode } from '@apollo/client'
 import { useQuery } from '@apollo/client/react'
 import { MockedProvider } from '@apollo/client/testing/react'
@@ -46,6 +46,38 @@ const post = {
 
 function renderPostCard(ui: ReactNode) {
   return render(<MockedProvider mocks={[]}>{ui}</MockedProvider>)
+}
+
+/**
+ * A link that holds the named operations open until `release()` is called, so
+ * tests can inspect the running overlay/counts mid-request. `immediate`
+ * operations resolve right away; anything else resolves with empty data.
+ */
+function gatedLink(
+  results: Record<string, Record<string, unknown>>,
+  immediate: Record<string, Record<string, unknown>> = {},
+) {
+  const calls: string[] = []
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const link = new ApolloLink((operation) => {
+    const name = operation.operationName ?? ''
+    calls.push(name)
+    return new Observable((observer) => {
+      if (!(name in results)) {
+        observer.next({ data: immediate[name] ?? {} })
+        observer.complete()
+        return
+      }
+      void gate.then(() => {
+        observer.next({ data: results[name] })
+        observer.complete()
+      })
+    })
+  })
+  return { link, calls, release }
 }
 
 describe('PostCard', () => {
@@ -416,5 +448,120 @@ describe('PostCard engagement', () => {
     )
     expect(screen.getByText('Looks good')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('33 comments')).toBeInTheDocument())
+  })
+})
+
+describe('PostCard busy overlays', () => {
+  it('blocks a rapid second Like and shows Updating… while the reaction is pending', async () => {
+    const { link, calls, release } = gatedLink({
+      ReactToPost: {
+        reactToPost: {
+          __typename: 'ReactionSummary',
+          count: 249,
+          myReaction: 'LIKE',
+        },
+      },
+    })
+    render(
+      <MockedProvider link={link} mocks={[]}>
+        <PostCard post={post} />
+      </MockedProvider>,
+    )
+
+    const like = screen.getByLabelText('Like')
+    fireEvent.click(like)
+
+    const status = await screen.findByRole('status')
+    expect(status).toHaveTextContent('Updating…')
+    expect(calls.filter((name) => name === 'ReactToPost')).toHaveLength(1)
+    expect(like).toBeDisabled()
+
+    const region = like.closest('[aria-busy="true"]')
+    expect(region).not.toBeNull()
+    expect(region).toHaveClass('relative')
+    expect(region).not.toContainElement(status)
+    expect(status.closest('[aria-busy]')).toBeNull()
+    expect(status.closest('[inert]')).toBeNull()
+    const inertSubtree = like.closest('[inert]')
+    expect(inertSubtree).not.toBeNull()
+    expect(inertSubtree).not.toContainElement(status)
+
+    // A second click while the first request is in flight cannot duplicate it.
+    fireEvent.click(like)
+    expect(calls.filter((name) => name === 'ReactToPost')).toHaveLength(1)
+
+    release()
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement())
+    expect(region).toHaveAttribute('aria-busy', 'false')
+    expect(like).toBeEnabled()
+  })
+
+  it('blocks a rapid second comment submit and shows Saving… while pending', async () => {
+    const { link, calls, release } = gatedLink({
+      CreateComment: {
+        createComment: {
+          __typename: 'Comment',
+          id: 'c2',
+          postId: '1',
+          body: 'Looks good',
+          createdAt: '2026-11-25T11:00:00Z',
+          author: {
+            __typename: 'Member',
+            id: 'me',
+            username: 'me',
+            displayName: 'You',
+            avatarMediaId: null,
+          },
+          reactionCount: 0,
+          myReaction: null,
+        },
+      },
+    }, { PostComments: { postComments: [] } })
+    render(
+      <MockedProvider link={link} mocks={[]}>
+        <PostCard post={post} />
+      </MockedProvider>,
+    )
+
+    fireEvent.click(screen.getByLabelText('Comment'))
+    const input = screen.getByPlaceholderText('Write a comment…')
+    fireEvent.change(input, { target: { value: 'Looks good' } })
+    const submit = screen.getByRole('button', { name: 'Post' })
+    fireEvent.click(submit)
+
+    const status = await screen.findByRole('status')
+    expect(status).toHaveTextContent('Saving…')
+    expect(calls.filter((name) => name === 'CreateComment')).toHaveLength(1)
+    expect(submit).toBeDisabled()
+    expect(input).toBeDisabled()
+
+    fireEvent.click(submit)
+    expect(calls.filter((name) => name === 'CreateComment')).toHaveLength(1)
+
+    release()
+    await waitFor(() => expect(screen.getByRole('status')).toBeEmptyDOMElement())
+    await waitFor(() =>
+      expect(screen.queryByPlaceholderText('Write a comment…')).not.toBeInTheDocument(),
+    )
+    expect(screen.getByText('Looks good')).toBeInTheDocument()
+  })
+
+  it('keeps comment query loading visible without a status overlay', async () => {
+    const { link, calls, release } = gatedLink({ PostComments: { postComments: [] } })
+    render(
+      <MockedProvider link={link} mocks={[]}>
+        <PostCard post={post} />
+      </MockedProvider>,
+    )
+
+    fireEvent.click(screen.getByLabelText('Comment'))
+
+    expect(await screen.findByText('Loading comments…')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+    expect(calls.filter((name) => name === 'PostComments')).toHaveLength(1)
+
+    release()
+    await waitFor(() => expect(screen.queryByText('Loading comments…')).not.toBeInTheDocument())
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 })

@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import AppShell from '@/components/AppShell'
+import { BusyOverlay } from '@/components/BusyOverlay'
+import { useBusy } from '@/hooks/useBusy'
 import {
   ConversationsDocument,
   MarkConversationReadDocument,
@@ -21,8 +23,9 @@ export const Route = createFileRoute('/messages')({
 export function Messages() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
-  const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { busy, run } = useBusy()
+  const busyLabel = 'Sending…'
 
   const { data: meData } = useQuery(MeDocument)
   const { data: conversationsData, loading: conversationsLoading } = useQuery(ConversationsDocument)
@@ -47,18 +50,17 @@ export function Messages() {
 
   async function send() {
     const body = draft.trim()
-    if (!body || !activeId || sending) return
+    if (!body || !activeId) return
 
-    setSending(true)
-    setError(null)
-    try {
-      await sendMessage({ variables: { conversationId: activeId, body } })
-      setDraft('')
-    } catch {
-      setError('Could not send that message.')
-    } finally {
-      setSending(false)
-    }
+    await run(async () => {
+      setError(null)
+      try {
+        await sendMessage({ variables: { conversationId: activeId, body } })
+        setDraft('')
+      } catch {
+        setError('Could not send that message.')
+      }
+    })
   }
 
   return (
@@ -110,70 +112,76 @@ export function Messages() {
             </ul>
           </div>
 
-          <div className="hidden flex-1 flex-col sm:flex">
-              <div className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
-              <ChevronLeft className="h-5 w-5 text-[var(--sea-ink-soft)] sm:hidden" aria-hidden="true" />
-              <div className="flex-1">
-                <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-                  {conversations.find((conversation) => conversation.id === activeId)?.title ?? 'Select a conversation'}
-                </p>
-                <p className="m-0 text-[0.7rem] text-[var(--sea-ink-soft)]">Direct message</p>
-              </div>
-                <Button variant="ghost" size="icon-sm" aria-label="Start voice call"><Phone /></Button>
-                <Button variant="ghost" size="icon-sm" aria-label="Start video call"><Video /></Button>
-                <Button variant="ghost" size="icon-sm" aria-label="Conversation options"><Plus /></Button>
-            </div>
-
-            <div className="flex-1 space-y-3 overflow-y-auto bg-[var(--foam)]/40 p-4" aria-busy={messagesLoading}>
-              {!activeId && <p className="text-center text-sm text-[var(--sea-ink-soft)]">Choose a conversation to start reading.</p>}
-              {messagesLoading && <div className="h-20 animate-pulse rounded-xl" />}
-              {!messagesLoading && activeId && messages.length === 0 && (
-                <p className="text-center text-sm text-[var(--sea-ink-soft)]">No messages yet.</p>
-              )}
-              {messages.map((message) => (
-                <div key={message.id} className={`flex ${message.senderId === meData?.me.id ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${message.senderId === meData?.me.id ? 'bg-[var(--brand)] text-white' : 'border border-[var(--line)] bg-white text-[var(--sea-ink)]'}`}>
-                    <p className="m-0 leading-6">{message.body}</p>
-                    <p className={`m-0 mt-0.5 text-right text-[0.65rem] ${message.senderId === meData?.me.id ? 'text-white/75' : 'text-[var(--sea-ink-soft)]'}`}>{message.createdAt}</p>
+          <>
+            <span className="sr-only" role="status" aria-live="polite">{busy ? busyLabel : ''}</span>
+            <div className="relative hidden flex-1 flex-col sm:flex" aria-busy={busy}>
+              <div inert={busy ? true : undefined} className="flex flex-1 flex-col">
+                <div className="flex items-center gap-2 border-b border-[var(--line)] px-4 py-3">
+                  <ChevronLeft className="h-5 w-5 text-[var(--sea-ink-soft)] sm:hidden" aria-hidden="true" />
+                  <div className="flex-1">
+                    <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+                      {conversations.find((conversation) => conversation.id === activeId)?.title ?? 'Select a conversation'}
+                    </p>
+                    <p className="m-0 text-[0.7rem] text-[var(--sea-ink-soft)]">Direct message</p>
+                  </div>
+                  <Button variant="ghost" size="icon-sm" aria-label="Start voice call" disabled={busy}><Phone /></Button>
+                  <Button variant="ghost" size="icon-sm" aria-label="Start video call" disabled={busy}><Video /></Button>
+                  <Button variant="ghost" size="icon-sm" aria-label="Conversation options" disabled={busy}><Plus /></Button>
+                </div>
+  
+                <div className="flex-1 space-y-3 overflow-y-auto bg-[var(--foam)]/40 p-4" aria-busy={messagesLoading}>
+                  {!activeId && <p className="text-center text-sm text-[var(--sea-ink-soft)]">Choose a conversation to start reading.</p>}
+                  {messagesLoading && <div className="h-20 animate-pulse rounded-xl" />}
+                  {!messagesLoading && activeId && messages.length === 0 && (
+                    <p className="text-center text-sm text-[var(--sea-ink-soft)]">No messages yet.</p>
+                  )}
+                  {messages.map((message) => (
+                    <div key={message.id} className={`flex ${message.senderId === meData?.me.id ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[75%] rounded-xl px-3 py-2 text-sm ${message.senderId === meData?.me.id ? 'bg-[var(--brand)] text-white' : 'border border-[var(--line)] bg-white text-[var(--sea-ink)]'}`}>
+                        <p className="m-0 leading-6">{message.body}</p>
+                        <p className={`m-0 mt-0.5 text-right text-[0.65rem] ${message.senderId === meData?.me.id ? 'text-white/75' : 'text-[var(--sea-ink-soft)]'}`}>{message.createdAt}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+  
+                {error && (
+                  <p className="m-0 px-4 pb-2 text-sm text-[#9f3030]" role="alert">
+                    {error}
+                  </p>
+                )}
+  
+                <div className="border-t border-[var(--line)] p-3">
+                  <div className="relative flex items-center gap-2">
+                    <Input
+                      type="text"
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') void send()
+                      }}
+                      placeholder="Type a message..."
+                      aria-label="Type a message"
+                      disabled={!activeId || busy}
+                      className="flex-1 rounded-full border border-[var(--line)] bg-white py-2 pl-4 pr-10 text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none focus:border-[var(--brand)] disabled:opacity-50"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => void send()}
+                      disabled={!activeId || !draft.trim() || busy}
+                      aria-label="Send message"
+                      variant="default"
+                      size="icon"
+                      className="absolute right-1.5 h-7 w-7 rounded-full bg-[var(--brand)] text-white transition hover:bg-[var(--brand-dark)] disabled:opacity-50"
+                    >
+                      <Send className="h-4 w-4" aria-hidden="true" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {error && (
-              <p className="m-0 px-4 pb-2 text-sm text-[#9f3030]" role="alert">
-                {error}
-              </p>
-            )}
-
-            <div className="border-t border-[var(--line)] p-3">
-              <div className="relative flex items-center gap-2">
-                <Input
-                  type="text"
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') void send()
-                  }}
-                  placeholder="Type a message..."
-                  aria-label="Type a message"
-                  disabled={!activeId}
-                  className="flex-1 rounded-full border border-[var(--line)] bg-white py-2 pl-4 pr-10 text-sm text-[var(--sea-ink)] placeholder-[var(--sea-ink-soft)] outline-none focus:border-[var(--brand)] disabled:opacity-50"
-                />
-                <Button
-                  type="button"
-                  onClick={() => void send()}
-                  disabled={!activeId || !draft.trim() || sending}
-                  aria-label="Send message"
-                  variant="default"
-                  size="icon"
-                  className="absolute right-1.5 h-7 w-7 rounded-full bg-[var(--brand)] text-white transition hover:bg-[var(--brand-dark)] disabled:opacity-50"
-                >
-                  <Send className="h-4 w-4" aria-hidden="true" />
-                </Button>
               </div>
+              {busy && <BusyOverlay label={busyLabel} />}
             </div>
-          </div>
+          </>
         </div>
       </div>
     </AppShell>

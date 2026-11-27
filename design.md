@@ -208,6 +208,7 @@ use blue for static text or decoration.
 | Button (secondary) | transparent/ghost, `--sea-ink`, hover `--link-bg-hover` |
 | Card / post | `.island-shell rounded-xl overflow-hidden border border-[var(--line)] bg-white shadow-sm`; header, body, media, interaction bar, action row |
 | Composer | `.island-shell rounded-xl`; prompt row → `--line` divider → icon chips [Photo][Video][Feeling][Poll] + solid brand Post button |
+| Busy overlay (indeterminate action) | `aria-hidden`, `absolute inset-0 z-10` over a `relative`, `aria-busy` region: `--surface-strong` surface + `backdrop-blur-[2px]`, `--lagoon`/`--brand` spin ring (§9), action-specific label; content subtree `inert` (§10). The `sr-only` live status is a permanently mounted sibling of the busy root (§10) |
 | Pill / tag | `.demo-pill` — rounded-full, chip tokens, 0.75rem 700 |
 | Input | `.demo-input` — 0.75rem radius, `--line` border, focus `--lagoon-deep` border + 3px `--lagoon` 24% ring *(legacy; new inputs use `--brand` focus — migrate on touch)* |
 | Alert | `.demo-alert` tinted amber/red variants, 1rem radius |
@@ -231,6 +232,11 @@ Per-component what/where/how detail lives in [`docs/web-ui.md`](docs/web-ui.md) 
 - **Rules:** no springs/bounce; no parallax; durations ≤ 700ms; everything must respect
   `prefers-reduced-motion: reduce` (disable `rise-in`, keep only instant state changes).
   Infinite motion (spinners, pulsing dots) only for genuinely indeterminate states.
+- **Indeterminate action overlays:** an action with no known duration (login, posting,
+  liking, commenting, sending, mark-all-read) uses a busy overlay — a token
+  (`--surface-strong`) surface with a short `animate-spin` ring, not a skeleton, plus an
+  action-specific label. The spinner uses `motion-reduce:animate-none`. **Content
+  regions keep `sand`/`foam` skeletons** (§13 #7): never use a spinner for data loading.
 
 ## 10. Accessibility
 
@@ -244,6 +250,13 @@ Per-component what/where/how detail lives in [`docs/web-ui.md`](docs/web-ui.md) 
 - Touch targets ≥ 44px on mobile; nav wraps to a second row at ≤ 640px where a horizontal
   nav is used.
 - Colour is never the only signal (status pills pair tint + text; unread pairs badge + text).
+- **Busy regions:** the `relative` region root carries `aria-busy`, its content subtree is
+  `inert` while busy so pointer and keyboard input cannot reach it, and controls are
+  `disabled`. The visual overlay is `aria-hidden` and sits outside the inert subtree. The
+  wait is announced by a permanently mounted `sr-only` sibling of the busy root with
+  `role="status" aria-live="polite"` and the action label: as a descendant of `aria-busy`
+  the live region could be ignored until the root stops being busy — by which point the
+  overlay is removed.
 - Reduced motion honored (§9). Document language `en` is set on `<html>`.
 
 ## 11. Iconography & imagery
@@ -300,7 +313,8 @@ backend connection). It follows this system as follows:
 6. **Admin console (not yet implemented).** Same tokens, denser layout, `.demo-table`
    patterns; clearly separated from member surfaces.
 7. **Empty/loading/error states** follow §8; skeletons use `sand`/`foam` shimmer, never
-   spinners for content regions.
+   spinners for content regions. Indeterminate action overlays use the token surface +
+   spinner instead (§8–§10), for explicit user mutations only.
 8. **What stays:** the token set, the flat canvas, `island-shell`, `rise-in`, theme toggle,
    Fraunces/Manrope pairing — these are the brand.
 
