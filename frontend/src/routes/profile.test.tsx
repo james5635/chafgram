@@ -143,6 +143,16 @@ describe('Profile screen', () => {
     expect(await screen.findByText('No posts yet.')).toBeInTheDocument()
   })
 
+  it('does not show the empty state while the member query is still loading', () => {
+    const { container } = renderScreen(<Profile />, [
+      { ...memberMock, delay: 5000 },
+      postsMock([MEMBER_POST]),
+    ])
+
+    expect(screen.queryByText('No posts yet.')).not.toBeInTheDocument()
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
+  })
+
   it('shows an error state when the query fails', async () => {
     renderScreen(<Profile />, [
       memberMock,

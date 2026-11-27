@@ -61,6 +61,9 @@ export function Profile() {
     skip: !member?.username,
   })
   const posts = (postsData?.memberPosts ?? []).map(toPostCardData)
+  // The posts query is skipped until the member resolves; that pending window
+  // is not an empty result.
+  const postsPending = !member?.username || postsLoading
 
   return (
     <AppShell rightRail={<ProfilePanels />}>
@@ -127,14 +130,14 @@ export function Profile() {
               ))}
             </div>
 
-            <div className="mt-5" aria-busy={postsLoading}>
+            <div className="mt-5" aria-busy={postsPending}>
               {postsError && (
                 <p className="m-0 text-sm text-[#9f3030]" role="alert">
                   Could not load posts. Please try again.
                 </p>
               )}
 
-              {postsLoading && (
+              {postsPending && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {[0, 1, 2].map((n) => (
                     <div key={n} className="island-shell h-48 animate-pulse rounded-xl" />
@@ -142,11 +145,11 @@ export function Profile() {
                 </div>
               )}
 
-              {!postsLoading && !postsError && posts.length === 0 && (
+              {!postsPending && !postsError && posts.length === 0 && (
                 <p className="m-0 text-sm text-[var(--sea-ink-soft)]">No posts yet.</p>
               )}
 
-              {!postsLoading && !postsError && posts.length > 0 && (
+              {!postsPending && !postsError && posts.length > 0 && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {posts.map((post) => (
                     <PostCard key={post.id} post={post} />
