@@ -104,17 +104,30 @@ export interface BootstrapOptions {
  * protected page with no in-memory token we ask it once, and a failed exchange
  * is treated as signed out.
  */
-export async function bootstrapAuth({ isPublic, refresh }: BootstrapOptions): Promise<void> {
-  if (isPublic || getAccessToken()) return
+let bootstrapInFlight: Promise<void> | null = null
 
-  try {
-    const result = await refresh()
-    if (result.ok && result.accessToken) {
-      setAccessToken(result.accessToken)
-    } else {
+export function bootstrapAuth({ isPublic, refresh }: BootstrapOptions): Promise<void> {
+  if (isPublic || getAccessToken()) return Promise.resolve()
+
+  // React StrictMode runs effects twice in development. A refresh rotates the
+  // opaque token, so a second concurrent exchange would replay the revoked
+  // token and falsely log the visitor out. Share one in-flight attempt.
+  if (bootstrapInFlight) return bootstrapInFlight
+
+  bootstrapInFlight = (async () => {
+    try {
+      const result = await refresh()
+      if (result.ok && result.accessToken) {
+        setAccessToken(result.accessToken)
+      } else {
+        signalReLogin()
+      }
+    } catch {
       signalReLogin()
     }
-  } catch {
-    signalReLogin()
-  }
+  })().finally(() => {
+    bootstrapInFlight = null
+  })
+
+  return bootstrapInFlight
 }

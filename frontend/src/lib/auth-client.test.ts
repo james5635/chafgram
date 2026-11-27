@@ -151,6 +151,24 @@ describe('silent bootstrap refresh', () => {
     expect(consumeReLogin()).toBe(true)
   })
 
+  it('shares one refresh across concurrent callers (StrictMode double effect)', async () => {
+    let resolveRefresh!: (value: { ok: boolean; accessToken: string }) => void
+    const refresh = vi.fn(() => new Promise<{ ok: boolean; accessToken: string }>((resolve) => {
+      resolveRefresh = resolve
+    }))
+
+    const first = bootstrapAuth({ isPublic: false, refresh })
+    const second = bootstrapAuth({ isPublic: false, refresh })
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    resolveRefresh({ ok: true, accessToken: 'silent-access' })
+    await Promise.all([first, second])
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(getAccessToken()).toBe('silent-access')
+    expect(consumeReLogin()).toBe(false)
+  })
+
   it('signals re-login when the refresh call itself throws', async () => {
     const refresh = vi.fn().mockRejectedValue(new Error('offline'))
 
